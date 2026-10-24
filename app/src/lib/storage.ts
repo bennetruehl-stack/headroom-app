@@ -26,6 +26,32 @@ function today(): string {
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10);
 }
 
+// Monatssummen der Demo-Minijobs für Januar bis November (beide Jobs zusammen).
+// Leicht schwankend, immer unter der Monatsgrenze, damit Monat und Jahresprognose zusammenpassen.
+const demoPastMonthTotals = [462, 498, 455, 510, 487, 530, 470, 495, 505, 480, 515];
+
+function pad(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
+/** Schichten von Januar bis zum Vormonat; Pub trägt 55 %, Restaurant 45 %. */
+function demoPastShifts(year: string, currentMonth: number, minimumWage: number): Shift[] {
+  const shifts: Shift[] = [];
+  for (let month = 1; month < currentMonth; month += 1) {
+    const total = demoPastMonthTotals[month - 1];
+    const pub = Math.round(total * 0.55 * 100) / 100;
+    const restaurant = total - pub;
+    const prefix = year + '-' + pad(month) + '-';
+    shifts.push(
+      { id: 'demo-pub-' + month + '-a', jobId: 'demo-pub', date: prefix + '06', hours: pub / 2 / minimumWage },
+      { id: 'demo-pub-' + month + '-b', jobId: 'demo-pub', date: prefix + '20', hours: pub / 2 / minimumWage },
+      { id: 'demo-restaurant-' + month + '-a', jobId: 'demo-restaurant', date: prefix + '13', hours: restaurant / 2 / minimumWage },
+      { id: 'demo-restaurant-' + month + '-b', jobId: 'demo-restaurant', date: prefix + '27', hours: restaurant / 2 / minimumWage },
+    );
+  }
+  return shifts;
+}
+
 export function createDemoState(): AppState {
   const date = today();
   const year = date.slice(0, 4);
@@ -46,7 +72,7 @@ export function createDemoState(): AppState {
         title: 'Barkeeper:in',
         type: 'mini-job',
         wage: minimumWage,
-        startDate: year + '-' + month + '-01',
+        startDate: year + '-01-01',
         industry: '56',
         skillLevel: 1,
         company: 'Irish Pub',
@@ -57,7 +83,7 @@ export function createDemoState(): AppState {
         title: 'Service / Kellner:in',
         type: 'mini-job',
         wage: minimumWage,
-        startDate: year + '-' + month + '-01',
+        startDate: year + '-01-01',
         industry: '56',
         skillLevel: 1,
         company: 'Restaurant',
@@ -74,6 +100,7 @@ export function createDemoState(): AppState {
       },
     ],
     shifts: [
+      ...demoPastShifts(year, Number(month), minimumWage),
       {
         id: 'demo-festival-shift',
         jobId: 'demo-festival',
