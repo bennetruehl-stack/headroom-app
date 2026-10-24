@@ -912,7 +912,7 @@ function InformationCards({
           <div>
             <strong>{language === 'de' ? youthLimit.name : youthLimit.name_en}</strong>
             <p>{limitConsequence(youthLimit, language)}</p>
-            <span className="pill-unverified">{t(language, 'unverified')}</span>
+            {!youthLimit.verified && <span className="pill-unverified">{t(language, 'unverified')}</span>}
           </div>
         </article>
       )}

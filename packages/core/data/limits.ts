@@ -14,6 +14,8 @@ const minijobSource =
 const multipleJobsSource =
   'https://www.minijob-zentrale.de/DE/die-minijobs/mehrere-jobs/mehrere-jobs_node.html';
 const dateChecked = '2026-10-23';
+const dateRechecked = '2026-10-24';
+const estgSource = (section: string) => 'https://www.gesetze-im-internet.de/estg/__' + section + '.html';
 const employeeLumpSumText =
   'Pauschale für Werbungskosten aus Arbeitslohn. Sie wird automatisch abgezogen, wenn keine höheren Kosten nachgewiesen werden.';
 const specialExpensesText =
@@ -254,13 +256,13 @@ const sourceLimits: Limit[] = [
   record(
     'incomeTaxThreshold',
     'Orientierungswert für regulären Arbeitslohn',
-    null,
+    12_348 + 1_230 + 36,
     'EUR',
     'year',
     ['Student', 'Working student', 'Employee'],
-    '',
-    '',
-    '',
+    'Grobe Orientierung aus Grundfreibetrag und Pauschbeträgen. Das ist keine persönliche Steuerfreigrenze; weitere Einkünfte und Abzüge verändern die Berechnung. Pauschal versteuerte Minijobs sind gesondert zu betrachten.',
+    'EStG §§ 9a, 10c und 32a – vereinfachte Orientierung',
+    estgSource('32a'),
     '2027-01-01',
     '2027-12-31',
     false,
@@ -282,16 +284,16 @@ const sourceLimits: Limit[] = [
   record(
     'incomeTaxBasicAllowance',
     'Grundfreibetrag Einkommensteuer',
-    null,
+    12_348,
     'EUR',
     'year',
     ['Student', 'Working student', 'Employee'],
-    '',
+    'Grundfreibetrag nach § 32a EStG. Das zu versteuernde Einkommen ist nicht mit dem Bruttoarbeitslohn gleichzusetzen.',
     'Einkommensteuergesetz § 32a',
-    'https://www.gesetze-im-internet.de/estg/__32a.html',
+    estgSource('32a'),
     '2027-01-01',
     '2027-12-31',
-    false,
+    true,
   ),
   record(
     'employeeLumpSum',
@@ -302,24 +304,24 @@ const sourceLimits: Limit[] = [
     ['Student', 'Working student', 'Employee'],
     employeeLumpSumText,
     'Einkommensteuergesetz § 9a',
-    'https://www.gesetze-im-internet.de/estg/__9a.html',
+    estgSource('9a'),
     '2026-01-01',
     '2026-12-31',
-    false,
+    true,
   ),
   record(
     'employeeLumpSum',
     'Arbeitnehmer-Pauschbetrag',
-    null,
+    1_230,
     'EUR',
     'year',
     ['Student', 'Working student', 'Employee'],
-    '',
+    employeeLumpSumText,
     'Einkommensteuergesetz § 9a',
-    'https://www.gesetze-im-internet.de/estg/__9a.html',
+    estgSource('9a'),
     '2027-01-01',
     '2027-12-31',
-    false,
+    true,
   ),
   record(
     'specialExpensesLumpSum',
@@ -330,24 +332,24 @@ const sourceLimits: Limit[] = [
     ['Student', 'Working student', 'Employee'],
     specialExpensesText,
     'Einkommensteuergesetz § 10c',
-    'https://www.gesetze-im-internet.de/estg/__10c.html',
+    estgSource('10c'),
     '2026-01-01',
     '2026-12-31',
-    false,
+    true,
   ),
   record(
     'specialExpensesLumpSum',
     'Sonderausgaben-Pauschbetrag',
-    null,
+    36,
     'EUR',
     'year',
     ['Student', 'Working student', 'Employee'],
-    '',
+    specialExpensesText,
     'Einkommensteuergesetz § 10c',
-    'https://www.gesetze-im-internet.de/estg/__10c.html',
+    estgSource('10c'),
     '2027-01-01',
     '2027-12-31',
-    false,
+    true,
   ),
   record(
     'minimumWage',
@@ -384,12 +386,12 @@ const sourceLimits: Limit[] = [
     'Information',
     'year',
     ['Pupil'],
-    'Für Jugendliche unter 18 gelten besondere Regeln zu Arbeitszeit, Pausen und Nachtarbeit. Headroom zeigt das nur als Information.',
-    '',
-    '',
+    'Unter 18 gilt grundsätzlich: höchstens 8 Stunden am Tag und 40 Stunden pro Woche, Arbeit nur zwischen 6 und 20 Uhr, 30 Minuten Pause ab mehr als 4,5 Stunden und 60 Minuten ab mehr als 6 Stunden. Das Gesetz kennt Ausnahmen. Headroom zeigt das nur als Information.',
+    'Jugendarbeitsschutzgesetz §§ 8, 11, 14',
+    'https://www.gesetze-im-internet.de/jarbschg/',
     '2026-01-01',
     '2027-12-31',
-    false,
+    true,
     'age < 18',
   ),
 ];
@@ -445,24 +447,37 @@ const englishText: Record<string, { name_en: string; consequence_en: string }> =
   },
   youthWorkProtection: {
     name_en: 'Youth employment protection',
-    consequence_en: 'Special rules on working hours, breaks and night work apply to young people under 18. Headroom shows this as information only.',
+    consequence_en: 'Under 18, the general rules are: at most 8 hours a day and 40 hours a week, work only between 6 am and 8 pm, a 30-minute break after more than 4.5 hours and 60 minutes after more than 6 hours. The law has exceptions. Headroom shows this as information only.',
   },
 };
 
 // Interne Prüfnotizen. Werden nie angezeigt. Schlüssel: id@validFrom
 const reviewNotes: Record<string, string> = {
-  'familyInsurance@2027-01-01': 'Einkommensgrenze und Minijob-Ausnahme für 2027 anhand einer aktuellen Krankenkassen- oder amtlichen Quelle verifizieren. Kein Wert wird geschätzt.',
-  'bafoegSideIncome@2026-01-01': 'Freibetrag und Anrechnung offiziell verifizieren; Minijob-Zentrale-Magazin als Ausgangsquelle gegen BAföG-Regelung prüfen.',
+  'familyInsurance@2026-01-01': 'Am 2026-10-24 gegen § 10 Abs. 1 SGB V (1/7 der Bezugsgröße, Minijob bis Geringfügigkeitsgrenze) und SVBezGrV 2026 § 1 (3.955 €/Monat → 565 €) bestätigt.',
+  'familyInsurance@2027-01-01': 'Regel nach § 10 Abs. 1 SGB V bekannt (1/7 der monatlichen Bezugsgröße). SVBezGrV 2027 am 2026-10-24 auf gesetze-im-internet.de noch nicht veröffentlicht; Wert erst danach eintragen. Kein Wert wird geschätzt.',
+  'bafoegSideIncome@2026-01-01': '§ 23 Abs. 1 Nr. 1 BAföG nennt 353 € (netto, Anrechnungsfreibetrag) vorbehaltlich Bekanntmachung nach Abs. 6; die Bekanntmachung für 2026 und bafoeg.de waren am 2026-10-24 nicht abrufbar. Der eingetragene Bruttowert 603 € stammt aus dem Minijob-Zentrale-Magazin und ist gegen die amtliche Bekanntmachung zu prüfen.',
   'bafoegSideIncome@2027-01-01': 'Für 2027 geltenden BAföG-Freibetrag und Anrechnung anhand einer aktuellen offiziellen Quelle prüfen. Kein Wert wird geschätzt.',
-  'incomeTaxThreshold@2026-01-01': 'Zusammensetzung aus Grundfreibetrag und Pauschbeträgen sowie Brutto-Orientierungscharakter bestätigen.',
-  'incomeTaxThreshold@2027-01-01': 'Grundfreibetrag und Pauschbeträge für 2027 verifizieren. Kein Brutto-Orientierungswert wird geschätzt.',
-  'incomeTaxBasicAllowance@2027-01-01': 'Für 2027 geltenden Grundfreibetrag anhand der aktuellen Fassung des Einkommensteuergesetzes prüfen.',
-  'employeeLumpSum@2026-01-01': 'Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung vor Veröffentlichung verifizieren.',
-  'employeeLumpSum@2027-01-01': 'Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung für 2027 verifizieren.',
-  'specialExpensesLumpSum@2026-01-01': 'Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung vor Veröffentlichung verifizieren.',
-  'specialExpensesLumpSum@2027-01-01': 'Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung für 2027 verifizieren.',
-  'youthWorkProtection@2026-01-01': 'Arbeitszeit, Pausen, Tätigkeitsverbote und Nachtarbeit anhand amtlicher Quellen prüfen. Nur Information anzeigen; ungeprüfte Werte lösen keine Warnungen aus.',
+  'incomeTaxThreshold@2026-01-01': 'Bestandteile am 2026-10-24 im EStG bestätigt (12.348 + 1.230 + 36 = 13.614). Offen bleibt die Methode: Vorsorgepauschale und Brutto/zu versteuerndes Einkommen sind vereinfacht; fachlich prüfen lassen.',
+  'incomeTaxThreshold@2027-01-01': 'Aus den am 2026-10-24 im EStG bestätigten Bestandteilen abgeleitet. Methode wie 2026 ungeprüft.',
+  'incomeTaxBasicAllowance@2027-01-01': '§ 32a EStG (Stand 2026-10-24): Tarif gilt „ab dem Veranlagungszeitraum 2026“. Vor dem Jahreswechsel auf eine Änderung für 2027 prüfen.',
+  'employeeLumpSum@2027-01-01': '§ 9a EStG ohne Befristung (Stand 2026-10-24). Vor dem Jahreswechsel auf Änderungen prüfen.',
+  'specialExpensesLumpSum@2027-01-01': '§ 10c EStG ohne Befristung (Stand 2026-10-24). Vor dem Jahreswechsel auf Änderungen prüfen.',
+  'youthWorkProtection@2026-01-01': '§§ 8 Abs. 1, 11 Abs. 1, 14 Abs. 1 JArbSchG am 2026-10-24 bestätigt. Ausnahmen (z. B. § 14 Abs. 2) werden nicht abgebildet. Nur Information; keine Warnung daraus berechnen.',
 };
+
+// Am 2026-10-24 gegen amtliche Quellen geprüft.
+const recheckedKeys = new Set([
+  'familyInsurance@2026-01-01',
+  'incomeTaxThreshold@2026-01-01',
+  'incomeTaxThreshold@2027-01-01',
+  'incomeTaxBasicAllowance@2026-01-01',
+  'incomeTaxBasicAllowance@2027-01-01',
+  'employeeLumpSum@2026-01-01',
+  'employeeLumpSum@2027-01-01',
+  'specialExpensesLumpSum@2026-01-01',
+  'specialExpensesLumpSum@2027-01-01',
+  'youthWorkProtection@2026-01-01',
+]);
 
 export const limits: Limit[] = sourceLimits.map((limit) => ({
   ...limit,
@@ -470,6 +485,7 @@ export const limits: Limit[] = sourceLimits.map((limit) => ({
   // Ohne deutschen Nutzertext bleibt auch der englische leer; die App zeigt dann einen neutralen Hinweis.
   ...(limit.consequence === '' ? { consequence_en: '' } : {}),
   reviewNote: reviewNotes[limit.id + '@' + limit.validFrom],
+  ...(recheckedKeys.has(limit.id + '@' + limit.validFrom) ? { asOf: dateRechecked } : {}),
 }));
 
 export function limitsForYear(year: number): Limit[] {

@@ -70,21 +70,27 @@ Der Server ist ausschließlich als lokaler Demo-Server ausgelegt. Für einen öf
 
 Alle fachlichen Grenzwerte liegen zentral in `packages/core/data/limits.ts` und enthalten Quelle, Gültigkeitszeitraum, Prüfdatum und `verified`. Die App zeigt Quelle und Prüfdatum an. Ein `verified: false`-Wert wird sichtbar als ungeprüft markiert und erzeugt keine automatische Grenzwarnung. Die 2027-Minijobgrenze wird aus dem Mindestlohn mit `ceil(Mindestlohn × 130 / 3)` abgeleitet; sie ist nicht als Konstante dupliziert.
 
-Die Datensätze und Rechenwege bleiben vor Veröffentlichung fachlich zu prüfen. Insbesondere sind folgende elf Datensätze derzeit `verified: false`:
+Die Datensätze und Rechenwege bleiben vor Veröffentlichung fachlich zu prüfen. Interne Prüfnotizen stehen im Feld `reviewNote` und werden nie angezeigt. Folgende fünf Datensätze sind derzeit `verified: false` (Stand 24.10.2026):
 
 | Datensatz | Zeitraum | Eingetragener Wert | Offen |
 | --- | --- | ---: | --- |
-| Familienversicherung | 2027 | kein Wert | Einkommensgrenze und Minijob-Ausnahme anhand einer aktuellen offiziellen oder Krankenkassenquelle bestätigen |
-| BAföG-Hinzuverdienst | 2026 | 603 €/Monat | Freibetrag und Anrechnung offiziell verifizieren; Minijob-Zentrale als verwendete Ausgangsquelle gegen BAföG-Regelung prüfen |
+| Familienversicherung | 2027 | kein Wert | Regel nach § 10 SGB V bekannt (1/7 der monatlichen Bezugsgröße); die Sozialversicherungs-Rechengrößenverordnung 2027 ist noch nicht veröffentlicht |
+| BAföG-Hinzuverdienst | 2026 | 603 €/Monat | § 23 BAföG verweist für 2026 auf eine Bekanntmachung, die nicht abrufbar war; bafoeg.de war nicht erreichbar |
 | BAföG-Hinzuverdienst | 2027 | kein Wert | Geltenden Freibetrag und Anrechnung offiziell verifizieren |
-| Steuerlicher Orientierungswert für regulären Arbeitslohn | 2026 | 13.614 €/Jahr | Zusammensetzung aus Grundfreibetrag und Pauschbeträgen sowie Brutto-Orientierungscharakter bestätigen |
-| Steuerlicher Orientierungswert für regulären Arbeitslohn | 2027 | kein Wert | Werte und Berechnung verifizieren |
-| Einkommensteuer-Grundfreibetrag | 2027 | kein Wert | Betrag anhand der geltenden Fassung des EStG bestätigen |
-| Arbeitnehmer-Pauschbetrag | 2026 | 1.230 €/Jahr | Betrag und Zusammenspiel mit dem Orientierungswert verifizieren |
-| Arbeitnehmer-Pauschbetrag | 2027 | kein Wert | Betrag und Zusammenspiel verifizieren |
-| Sonderausgaben-Pauschbetrag | 2026 | 36 €/Jahr | Betrag und Zusammenspiel verifizieren |
-| Sonderausgaben-Pauschbetrag | 2027 | kein Wert | Betrag und Zusammenspiel verifizieren |
-| Jugendarbeitsschutz | 2026–2027 | kein Wert | Arbeitszeiten, Pausen, Tätigkeitsverbote und Nachtarbeit aus amtlichen Quellen ergänzen; nur als Information verwenden |
+| Steuerlicher Orientierungswert für regulären Arbeitslohn | 2026 | 13.614 €/Jahr | Bestandteile im EStG bestätigt; die vereinfachte Methode (Brutto statt zu versteuerndes Einkommen, ohne Vorsorgepauschale) fachlich prüfen |
+| Steuerlicher Orientierungswert für regulären Arbeitslohn | 2027 | 13.614 €/Jahr | Wie 2026; aus geprüften Bestandteilen abgeleitet |
+
+Am 24.10.2026 gegen amtliche Quellen bestätigt und auf `verified: true` gesetzt:
+
+| Datensatz | Zeitraum | Wert | Quelle |
+| --- | --- | ---: | --- |
+| Einkommensteuer-Grundfreibetrag | 2027 | 12.348 €/Jahr | [§ 32a EStG](https://www.gesetze-im-internet.de/estg/__32a.html) („ab dem Veranlagungszeitraum 2026“) |
+| Arbeitnehmer-Pauschbetrag | 2026 und 2027 | 1.230 €/Jahr | [§ 9a EStG](https://www.gesetze-im-internet.de/estg/__9a.html) |
+| Sonderausgaben-Pauschbetrag | 2026 und 2027 | 36 €/Jahr | [§ 10c EStG](https://www.gesetze-im-internet.de/estg/__10c.html) |
+| Jugendarbeitsschutz (nur Information) | 2026–2027 | 8 h/Tag, 40 h/Woche, 6–20 Uhr, Pausen | [§§ 8, 11, 14 JArbSchG](https://www.gesetze-im-internet.de/jarbschg/) |
+| Familienversicherung (erneut geprüft) | 2026 | 565 €/Monat | [§ 10 SGB V](https://www.gesetze-im-internet.de/sgb_5/__10.html) und [SVBezGrV 2026 § 1](https://www.gesetze-im-internet.de/svbezgrv_2026/__1.html) (3.955 € / 7) |
+
+Die 2027-Werte im EStG gelten nach heutigem Gesetzesstand; vor dem Jahreswechsel auf Änderungen prüfen.
 
 Weitere bewusst offene Prüfpunkte und Produktgrenzen:
 
