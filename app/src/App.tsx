@@ -494,6 +494,8 @@ function monthlyAmountForLimit(
   return { total, cap };
 }
 
+type DashboardPeriod = 'month' | 'year' | 'season';
+
 function Dashboard({
   data,
   language,
@@ -560,6 +562,12 @@ function Dashboard({
   });
   const pureMiniJobs = !hasNonMiniIncome;
   const familyCap = pureMiniJobs ? limitValue('miniJobMonthly', year) : familyLimit?.value ?? 0;
+  const [period, setPeriod] = useState<DashboardPeriod>('month');
+  const kickerKey: Record<DashboardPeriod, MessageKey> = {
+    month: 'welcomeKicker',
+    year: 'welcomeKickerYear',
+    season: 'welcomeKickerSeason',
+  };
   const familyMonthTotal = data.shifts.reduce((sum, shift) => {
     if (!shift.date.startsWith(month)) return sum;
     const job = data.jobs.find((entry) => entry.id === shift.jobId);
@@ -570,7 +578,7 @@ function Dashboard({
     <div className="page-enter">
       <section className="page-heading dashboard-heading">
         <div>
-        <p className="eyebrow">{t(language, 'welcomeKicker')}</p>
+          <p className="eyebrow">{t(language, kickerKey[period])}</p>
           <h1>{t(language, 'welcomeTitle')}</h1>
         </div>
         <time className="date-stamp" dateTime={today}>{dateText(today, language)}</time>
@@ -597,6 +605,8 @@ function Dashboard({
         familyAge={familyAge}
         familyCap={familyCap}
         familyMonthTotal={familyMonthTotal}
+        period={period}
+        onPeriod={setPeriod}
       />
     </div>
   );
@@ -622,6 +632,8 @@ function DashboardMetrics({
   familyAge,
   familyCap,
   familyMonthTotal,
+  period,
+  onPeriod,
 }: {
   data: AppState;
   language: Language;
@@ -643,8 +655,9 @@ function DashboardMetrics({
   familyAge: number | null;
   familyCap: number;
   familyMonthTotal: number;
+  period: DashboardPeriod;
+  onPeriod: (period: DashboardPeriod) => void;
 }) {
-  const [period, setPeriod] = useState<'month' | 'year' | 'season'>('month');
   const [showShiftForm, setShowShiftForm] = useState(false);
   const monthLimitText = strictest ? limitName(strictest.limit, language) : t(language, 'miniJobCap');
   const miniMonthCap = limitValue('miniJobMonthly', year);
@@ -665,7 +678,7 @@ function DashboardMetrics({
             type="button"
             className={period === tab ? 'selected' : ''}
             aria-pressed={period === tab}
-            onClick={() => setPeriod(tab)}
+            onClick={() => onPeriod(tab)}
           >
             {t(language, tab)}
           </button>
