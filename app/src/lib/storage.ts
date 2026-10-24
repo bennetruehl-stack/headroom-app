@@ -13,7 +13,11 @@ export type AppState = {
   dismissedRecommendations: number[];
   peerOptIn: boolean;
   peerToken?: string;
+  /** Gesetzt, wenn Beispieldaten geladen sind. Die App kennzeichnet das sichtbar. */
+  example?: ExampleProfile;
 };
+
+export type ExampleProfile = 'standard' | 'lena';
 
 const DATABASE = 'headroom-local';
 const STORE = 'app-state';
@@ -127,6 +131,90 @@ export function createDemoState(): AppState {
     isPremium: false,
     dismissedRecommendations: [],
     peerOptIn: false,
+    example: 'standard',
+  };
+}
+
+/**
+ * Lena, 20, Studentin: Kneipe ganzjährig 340 €/Monat, ab dem laufenden Monat
+ * zusätzlich Café 280 €/Monat → 620 € und damit über 603 €. Dazu 15 Tage
+ * Festival im Juli (kurzfristig). Spätere Monate des Jahres sind als geplant
+ * eingetragen, damit die Jahresprognose der Geschichte entspricht.
+ */
+export function createLenaState(): AppState {
+  const date = today();
+  const year = date.slice(0, 4);
+  const currentMonth = Number(date.slice(5, 7));
+  const minimumWage = limitValue('minimumWage', Number(year));
+  const pub = 340;
+  const cafe = 280;
+  const shifts: Shift[] = [];
+  for (let month = 1; month <= 12; month += 1) {
+    const prefix = year + '-' + pad(month) + '-';
+    const planned = month > currentMonth;
+    shifts.push(
+      { id: 'lena-pub-' + month + '-a', jobId: 'lena-pub', date: prefix + '04', hours: pub / 2 / minimumWage, planned },
+      { id: 'lena-pub-' + month + '-b', jobId: 'lena-pub', date: prefix + '18', hours: pub / 2 / minimumWage, planned },
+    );
+    if (month >= currentMonth) {
+      shifts.push(
+        { id: 'lena-cafe-' + month + '-a', jobId: 'lena-cafe', date: prefix + '08', hours: cafe / 2 / minimumWage, planned },
+        { id: 'lena-cafe-' + month + '-b', jobId: 'lena-cafe', date: prefix + '22', hours: cafe / 2 / minimumWage, planned },
+      );
+    }
+  }
+  shifts.push({ id: 'lena-festival', jobId: 'lena-festival', date: year + '-07-10', hours: 120, days: 15, planned: currentMonth < 7 });
+  return {
+    profile: {
+      status: 'Student',
+      age: 20,
+      familyInsured: true,
+      bafoeg: false,
+      hasMainJob: false,
+      semesterPeriods: [],
+    },
+    jobs: [
+      {
+        id: 'lena-pub',
+        title: 'Kneipe',
+        type: 'mini-job',
+        wage: minimumWage,
+        startDate: year + '-01-01',
+        industry: '56',
+        skillLevel: 1,
+        company: 'Zum Anker',
+        city: 'Köln',
+      },
+      {
+        id: 'lena-cafe',
+        title: 'Café',
+        type: 'mini-job',
+        wage: minimumWage,
+        startDate: year + '-' + pad(currentMonth) + '-01',
+        industry: '56',
+        skillLevel: 1,
+        company: 'Café Lindgrün',
+        city: 'Köln',
+      },
+      {
+        id: 'lena-festival',
+        title: 'Festival',
+        type: 'short-term',
+        wage: minimumWage,
+        startDate: year + '-07-01',
+        endDate: year + '-07-31',
+        industry: '90–93',
+        skillLevel: 1,
+      },
+    ],
+    shifts,
+    onboarded: true,
+    language: 'de',
+    darkMode: false,
+    isPremium: false,
+    dismissedRecommendations: [],
+    peerOptIn: false,
+    example: 'lena',
   };
 }
 
@@ -222,6 +310,7 @@ export function normalizeState(value: unknown): AppState | null {
       : [],
     peerOptIn: Boolean(candidate.peerOptIn),
     peerToken: typeof candidate.peerToken === 'string' ? candidate.peerToken : undefined,
+    example: candidate.example === 'standard' || candidate.example === 'lena' ? candidate.example : undefined,
   };
 }
 

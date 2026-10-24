@@ -9,8 +9,10 @@ import {
   isInLecturePeriod,
   hoursInWeek,
   limitValue,
+  miniJobRoomBesideOthers,
   monthlyIncomeForLimit,
   monthlySummary,
+  multipleMiniJobsOverCap,
   peerMedian,
   peerWagePosition,
   recommendationLevel,
@@ -36,10 +38,12 @@ import { t, type Language, type MessageKey } from './i18n/translations';
 import {
   clearLocalState,
   createDemoState,
+  createLenaState,
   loadState,
   normalizeState,
   saveState,
   type AppState,
+  type ExampleProfile,
 } from './lib/storage';
 
 type Screen =
@@ -282,12 +286,14 @@ function Onboarding({
   onLanguage,
   onContinue,
   onReadLimits,
+  onExample,
 }: {
   profile: Profile;
   language: Language;
   onLanguage: (language: Language) => void;
   onContinue: (profile: Profile) => void;
   onReadLimits: () => void;
+  onExample: (example: ExampleProfile) => void;
 }) {
   const [draft, setDraft] = useState<Profile>(profile);
   const update = (values: Partial<Profile>) => setDraft((current) => ({ ...current, ...values }));
@@ -448,6 +454,19 @@ function Onboarding({
           {t(language, 'readLimits')}
         </button>
       </div>
+
+      <section className="example-picker" aria-labelledby="example-title">
+        <h2 id="example-title">{t(language, 'exampleTitle')}</h2>
+        <p className="muted">{t(language, 'exampleIntro')}</p>
+        <div className="example-options">
+          <button className="button button-quiet button-wide" type="button" onClick={() => onExample('standard')}>
+            <span>{t(language, 'exampleStandard')}</span><span aria-hidden="true">→</span>
+          </button>
+          <button className="button button-quiet button-wide" type="button" onClick={() => onExample('lena')}>
+            <span>{t(language, 'exampleLena')}</span><span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </section>
     </section>
   );
 }
@@ -580,6 +599,11 @@ function Dashboard({
         <div>
           <p className="eyebrow">{t(language, kickerKey[period])}</p>
           <h1>{t(language, 'welcomeTitle')}</h1>
+          {data.example && (
+            <span className="badge-demo example-badge">
+              {t(language, data.example === 'lena' ? 'exampleBadgeLena' : 'exampleBadge')}
+            </span>
+          )}
         </div>
         <time className="date-stamp" dateTime={today}>{dateText(today, language)}</time>
       </section>
@@ -664,7 +688,9 @@ function DashboardMetrics({
   const annualMiniRecord = limitsForYear(year).find((limit) => limit.id === 'miniJobYearly');
   const taxLimitRecord = limitsForYear(year).find((limit) => limit.id === 'incomeTaxThreshold');
   const shortTermRecord = limitsForYear(year).find((limit) => limit.id === 'shortTermEmployment');
+  const multipleOver = multipleMiniJobsOverCap(data.shifts, data.jobs, month, miniMonthCap);
   const monthOverYearSafe =
+    !multipleOver &&
     miniMonthCap > 0 &&
     monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', month) > miniMonthCap &&
     annualMini <= yearlyMiniCap;
@@ -696,7 +722,11 @@ function DashboardMetrics({
               <StatusBadge status={monthSummary.status} language={language} />
             </div>
             <div className="metric-number">{money(monthSummary.remaining, language)}</div>
-            <div className="metric-caption">{t(language, 'hoursApprox', { hours: Math.round(monthSummary.hours) })}</div>
+            <div className="metric-caption">
+              {monthSummary.over > 0
+                ? t(language, 'overBy', { amount: money(monthSummary.over, language) })
+                : t(language, 'hoursApprox', { hours: Math.round(monthSummary.hours) })}
+            </div>
             <ProgressBar ratio={monthSummary.ratio} label={t(language, 'progress')} />
             <div className="metric-foot">
               <span>{t(language, 'usedOf', { used: money(monthSummary.total, language), limit: money(strictest?.value.cap ?? miniMonthCap, language) })}</span>
@@ -708,6 +738,13 @@ function DashboardMetrics({
                   })()}
             </div>
           </section>
+
+          {multipleOver && (
+            <div className="notice notice-over" role="status">
+              <span className="info-mark" aria-hidden="true">!</span>
+              <p>{t(language, 'multipleMiniJobsOver', { cap: miniMonthCap })}</p>
+            </div>
+          )}
 
           {monthOverYearSafe && (
             <div className="notice notice-lime">
@@ -771,6 +808,12 @@ function DashboardMetrics({
           <p className="metric-caption">{t(language, 'projection')} · {t(language, 'annualLimit')}: {money(yearlyMiniCap, language)}</p>
           {annualMiniRecord && <SourceStamp limit={annualMiniRecord} language={language} />}
           <ProgressBar ratio={yearlyMiniCap > 0 ? annualMini / yearlyMiniCap : 0} label={t(language, 'annualMiniJobs')} />
+          {multipleOver && (
+            <div className="notice notice-over">
+              <span className="info-mark" aria-hidden="true">!</span>
+              <p>{t(language, 'multipleMiniJobsOver', { cap: miniMonthCap })}</p>
+            </div>
+          )}
           <details className="method-details">
             <summary>{t(language, 'projectionMethod').split('.')[0]}</summary>
             <p>{t(language, 'projectionMethod')}</p>
@@ -1146,12 +1189,14 @@ function JobForm({
   language,
   initial,
   jobs,
+  shifts,
   onSave,
   onCancel,
 }: {
   language: Language;
   initial?: Job;
   jobs: Job[];
+  shifts: Shift[];
   onSave: (job: Job) => void;
   onCancel: () => void;
 }) {
@@ -1182,6 +1227,13 @@ function JobForm({
     setSkillLevel(preset.skillLevel);
     setType(preset.typicalEmploymentTypes[0] ?? 'mini-job');
   }, [presetId, language]);
+
+  const thisMonth = localToday().slice(0, 7);
+  const miniJobCapRecord = limitsForYear(Number(thisMonth.slice(0, 4))).find((limit) => limit.id === 'miniJobMonthly');
+  // Vorab-Hinweis nur mit geprüfter Grenze und nur, wenn schon andere Minijobs Verdienst haben.
+  const miniRoom = type === 'mini-job' && miniJobCapRecord?.verified && miniJobCapRecord.value
+    ? miniJobRoomBesideOthers(shifts, jobs, thisMonth, initial?.id, miniJobCapRecord.value)
+    : null;
 
   const matches = jobPresets.filter((item) => {
     const haystack = [item.title_de, item.title_en, item.area, item.area_en].join(' ').toLocaleLowerCase();
@@ -1247,6 +1299,17 @@ function JobForm({
           {employmentTypes.map((item) => <option value={item.value} key={item.value}>{t(language, item.key)}</option>)}
         </select>
       </label>
+
+      {miniRoom && miniRoom.otherJobsWithIncome > 0 && miniJobCapRecord?.value && (
+        <div className={'notice ' + (miniRoom.room > 0 ? 'notice-amber' : 'notice-over')} role="status">
+          <span className="info-mark" aria-hidden="true">!</span>
+          <p>
+            {miniRoom.room > 0
+              ? t(language, 'miniJobRoomHint', { room: money(miniRoom.room, language), cap: money(miniJobCapRecord.value, language) })
+              : t(language, 'miniJobRoomNone', { cap: money(miniJobCapRecord.value, language) })}
+          </p>
+        </div>
+      )}
 
       <div className="form-grid two-columns">
         <label className="field">
@@ -1397,6 +1460,7 @@ function JobsPage({
             language={language}
             initial={activeEdit}
             jobs={data.jobs}
+            shifts={data.shifts}
             onCancel={() => setEditing(null)}
             onSave={(job) => {
               onUpdate(editing === 'new'
@@ -2694,6 +2758,11 @@ function App() {
               setPage('Dashboard');
             }}
             onReadLimits={() => setPage('Limits')}
+            onExample={(example) => {
+              const fresh = example === 'lena' ? createLenaState() : createDemoState();
+              setData({ ...fresh, language: data.language, darkMode: data.darkMode, onboarded: true });
+              setPage('Dashboard');
+            }}
           />
         );
       case 'Dashboard':

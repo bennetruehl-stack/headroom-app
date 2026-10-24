@@ -326,6 +326,28 @@ h3 {
   padding: 22px;
 }
 
+.example-picker {
+  margin-top: 28px;
+  padding: 0 2px;
+}
+
+.example-picker h2 {
+  margin-bottom: 4px;
+}
+
+.example-picker > .muted {
+  margin: 0 0 12px;
+}
+
+.example-options {
+  display: grid;
+  gap: 8px;
+}
+
+.example-badge {
+  margin-top: 8px;
+}
+
 /* ---------- Choices & form ---------- */
 
 .choice-grid {
@@ -807,6 +829,11 @@ input::placeholder {
 .notice-lime {
   background: var(--accent-soft);
   color: #1b3a9a;
+}
+
+.notice-over {
+  background: var(--over-bg);
+  color: #8a1c13;
 }
 
 .info-mark {
@@ -2005,6 +2032,10 @@ input::placeholder {
 
 .theme-dark .notice-lime {
   color: #c9d6ff;
+}
+
+.theme-dark .notice-over {
+  color: #ffd1cc;
 }
 
 .theme-dark .button-primary {

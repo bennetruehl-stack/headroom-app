@@ -150,6 +150,42 @@ export function monthlyIncomeForLimit(
   return monthTotal(shifts, jobs, month);
 }
 
+/**
+ * Wie viel ein Minijob im Monat noch verdienen darf, ohne dass alle Minijobs
+ * zusammen über der Monatsgrenze liegen. Der Job mit `excludeJobId` (z. B. der
+ * gerade bearbeitete) zählt nicht mit.
+ */
+export function miniJobRoomBesideOthers(
+  shifts: Shift[],
+  jobs: Job[],
+  month: string,
+  excludeJobId?: string,
+  cap = limitValue('miniJobMonthly'),
+) {
+  const others = jobs.filter((job) => job.type === 'mini-job' && job.id !== excludeJobId);
+  const used = monthTotal(shifts, others, month, ['mini-job']);
+  const otherJobsWithIncome = others.filter((job) =>
+    shifts.some((shift) => shift.jobId === job.id && shift.date.startsWith(month)),
+  ).length;
+  return { used, room: Math.max(0, cap - used), otherJobsWithIncome };
+}
+
+/**
+ * Mehrere Minijobs werden Monat für Monat zusammengerechnet. Liegt die Summe
+ * über der Grenze, hilft eine Jahresbetrachtung nicht (Minijob-Zentrale, „Mehrere Minijobs“).
+ */
+export function multipleMiniJobsOverCap(
+  shifts: Shift[],
+  jobs: Job[],
+  month: string,
+  cap = limitValue('miniJobMonthly'),
+): boolean {
+  const miniJobsWithIncome = jobs.filter((job) =>
+    job.type === 'mini-job' && shifts.some((shift) => shift.jobId === job.id && shift.date.startsWith(month)),
+  ).length;
+  return cap > 0 && miniJobsWithIncome >= 2 && monthTotal(shifts, jobs, month, ['mini-job']) > cap;
+}
+
 export function shortDays(shifts: Shift[], year?: number): number {
   const relevant = shifts.filter(
     (shift) => !year || shift.date.startsWith(String(year)),
