@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   activeLimits,
   annualIncomeProjection,
@@ -213,6 +213,39 @@ function AppFooter({ language }: { language: Language }) {
   return <footer className="app-footer">{t(language, 'infoOnly')}</footer>;
 }
 
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** Zählt sanft (250 ms) vom alten zum neuen Betrag; ohne Animation bei reduzierter Bewegung. */
+function AnimatedMoney({ value, language }: { value: number; language: Language }) {
+  const [shown, setShown] = useState(value);
+  const from = useRef(value);
+  useEffect(() => {
+    const start = from.current;
+    if (start === value || prefersReducedMotion()) {
+      from.current = value;
+      setShown(value);
+      return;
+    }
+    let frame = 0;
+    const began = performance.now();
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - began) / 250);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setShown(start + (value - start) * eased);
+      if (progress < 1) frame = requestAnimationFrame(step);
+      else from.current = value;
+    };
+    frame = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(frame);
+      from.current = value;
+    };
+  }, [value]);
+  return <>{money(shown, language)}</>;
+}
+
 function StatusBadge({
   status,
   language,
@@ -221,7 +254,7 @@ function StatusBadge({
   language: Language;
 }) {
   return (
-    <span className={'status-badge status-' + status.toLowerCase()}>
+    <span key={status} className={'status-badge status-' + status.toLowerCase()}>
       <span className="status-dot" aria-hidden="true" />
       {t(language, statusKey(status))}
     </span>
@@ -250,12 +283,19 @@ function ProgressBar({
   );
 }
 
+/** Kurzname für Karten: alles vor „ – “, der volle Name steht im Tooltip. */
+function shortSourceName(limit: Limit, language: Language): string {
+  return limitSourceName(limit, language).split(' – ')[0];
+}
+
 function SourceStamp({ limit, language }: { limit: Limit; language: Language }) {
+  const full = limitSourceName(limit, language);
+  const short = shortSourceName(limit, language);
   return (
     <small className="source-stamp">
       {t(language, 'source')}: {limit.sourceUrl
-        ? <a href={limit.sourceUrl} target="_blank" rel="noreferrer">{limitSourceName(limit, language)}</a>
-        : limitSourceName(limit, language)}
+        ? <a href={limit.sourceUrl} target="_blank" rel="noreferrer" title={full}>{short}</a>
+        : <span title={full}>{short}</span>}
       {' · '}{t(language, 'asOf', { date: dateText(limit.asOf, language) })}
     </small>
   );
@@ -603,13 +643,15 @@ function Dashboard({
         <div>
           <p className="eyebrow">{t(language, kickerKey[period])}</p>
           <h1>{t(language, 'welcomeTitle')}</h1>
-          {data.example && (
-            <span className="badge-demo example-badge">
-              {t(language, data.example === 'lena' ? 'exampleBadgeLena' : 'exampleBadge')}
-            </span>
-          )}
+          <div className="heading-meta">
+            <time className="date-stamp" dateTime={today}>{dateText(today, language)}</time>
+            {data.example && (
+              <span className="badge-demo">
+                {t(language, data.example === 'lena' ? 'exampleBadgeLena' : 'exampleBadge')}
+              </span>
+            )}
+          </div>
         </div>
-        <time className="date-stamp" dateTime={today}>{dateText(today, language)}</time>
       </section>
 
       <DashboardMetrics
@@ -693,6 +735,33 @@ function DashboardMetrics({
   const taxLimitRecord = limitsForYear(year).find((limit) => limit.id === 'incomeTaxThreshold');
   const shortTermRecord = limitsForYear(year).find((limit) => limit.id === 'shortTermEmployment');
   const multipleOver = multipleMiniJobsOverCap(data.shifts, data.jobs, month, miniMonthCap);
+  // Eine Hauptaktion pro Bildschirm: „Schicht eintragen“ direkt unter der großen Zahl.
+  const actions = (
+    <>
+      <div className="action-row">
+        <button className="button button-primary button-wide" type="button" aria-expanded={showShiftForm} onClick={() => setShowShiftForm((value) => !value)}>
+          <span>{t(language, 'logShift')}</span><span aria-hidden="true">+</span>
+        </button>
+        <button className="button button-quiet button-wide" type="button" onClick={onShiftCheck}>
+          <span>{t(language, 'shiftCheck')}</span><span aria-hidden="true">↗</span>
+        </button>
+      </div>
+      {showShiftForm && (
+        <section className="surface form-surface">
+          <div className="section-heading">
+            <div><p className="eyebrow">{t(language, 'quickEntry')}</p><h2>{t(language, 'logShift')}</h2></div>
+            <button className="icon-button" type="button" aria-label={t(language, 'closeDialog')} onClick={() => setShowShiftForm(false)}>×</button>
+          </div>
+          <ShiftForm
+            jobs={data.jobs}
+            language={language}
+            onCancel={() => setShowShiftForm(false)}
+            onSave={(items) => { onAddShift(items); setShowShiftForm(false); }}
+          />
+        </section>
+      )}
+    </>
+  );
   const monthOverYearSafe =
     !multipleOver &&
     miniMonthCap > 0 &&
@@ -725,7 +794,7 @@ function DashboardMetrics({
               </div>
               <StatusBadge status={monthSummary.status} language={language} />
             </div>
-            <div className="metric-number">{money(monthSummary.remaining, language)}</div>
+            <div className="metric-number"><AnimatedMoney value={monthSummary.remaining} language={language} /></div>
             <div className="metric-caption">
               {monthSummary.over > 0
                 ? t(language, 'overBy', { amount: money(monthSummary.over, language) })
@@ -756,15 +825,13 @@ function DashboardMetrics({
             </div>
           )}
 
+          {actions}
+
           <RoleLimits
             rows={roleRows(data, language, month, year, localToday(), daysUsed, annualRegular)}
             status={data.profile.status}
             language={language}
           />
-
-          <button className="button button-dark button-wide shift-check-cta" type="button" onClick={onShiftCheck}>
-            <span>{t(language, 'shiftCheck')}</span><span aria-hidden="true">↗</span>
-          </button>
         </>
       )}
 
@@ -795,12 +862,15 @@ function DashboardMetrics({
             <p>{t(language, 'projectionMethod')}</p>
           </details>
           <div className="tax-reference">
-            <div>
+            <div className="tax-reference-head">
               <strong>{t(language, 'approximateTaxThreshold')}</strong>
-              <p>{t(language, 'taxThresholdNote')}</p>
-              {taxLimitRecord && <SourceStamp limit={taxLimitRecord} language={language} />}
+              <span className="tax-reference-value">
+                {taxLimitRecord?.value === null || !taxLimitRecord ? '–' : money(taxLimit, language)}
+                {taxLimitRecord && !taxLimitRecord.verified && <span className="pill-unverified">{t(language, 'unverified')}</span>}
+              </span>
             </div>
-            <span className="tax-reference-value">{taxLimitRecord?.value === null || !taxLimitRecord ? '–' : money(taxLimit, language)}{taxLimitRecord && !taxLimitRecord.verified && <span className="pill-unverified">{t(language, 'unverified')}</span>}</span>
+            <p>{t(language, 'taxThresholdNote')}</p>
+            {taxLimitRecord && <SourceStamp limit={taxLimitRecord} language={language} />}
           </div>
           <div className="annual-breakdown">
             <div><span>{t(language, 'actualSoFar')}</span><strong>{money(annualMiniBreakdown.actual, language)}</strong></div>
@@ -814,6 +884,7 @@ function DashboardMetrics({
           )}
         </section>
       )}
+      {period === 'year' && actions}
 
       {period === 'season' && (
         <section className="surface season-panel">
@@ -835,6 +906,7 @@ function DashboardMetrics({
           )}
         </section>
       )}
+      {period === 'season' && actions}
 
       <section className="content-section jobs-overview">
         <div className="section-heading">
@@ -861,30 +933,6 @@ function DashboardMetrics({
           ))
         )}
       </section>
-
-      <div className="action-row">
-        <button className="button button-primary" type="button" onClick={() => setShowShiftForm((value) => !value)}>
-          {t(language, 'logShift')} <span aria-hidden="true">+</span>
-        </button>
-        <button className="button button-quiet" type="button" onClick={() => onNavigate('Limits')}>
-          {t(language, 'limits')} <span aria-hidden="true">↗</span>
-        </button>
-      </div>
-
-      {showShiftForm && (
-        <section className="surface form-surface">
-          <div className="section-heading">
-            <div><p className="eyebrow">{t(language, 'quickEntry')}</p><h2>{t(language, 'logShift')}</h2></div>
-            <button className="icon-button" type="button" aria-label={t(language, 'closeDialog')} onClick={() => setShowShiftForm(false)}>×</button>
-          </div>
-          <ShiftForm
-            jobs={data.jobs}
-            language={language}
-            onCancel={() => setShowShiftForm(false)}
-            onSave={(items) => { onAddShift(items); setShowShiftForm(false); }}
-          />
-        </section>
-      )}
 
       <InformationCards
         data={data}
@@ -2860,6 +2908,10 @@ function App() {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/sw.js').catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [page]);
 
   const update = (values: Partial<AppState>) =>
     setData((current) => ({ ...current, ...values }));

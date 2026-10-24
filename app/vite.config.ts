@@ -9,5 +9,5 @@ export default defineConfig({
       '/health': 'http://127.0.0.1:8787',
     },
   },
-  test: { environment: 'jsdom', exclude: ['e2e/**', 'node_modules/**'] },
+  test: { environment: 'jsdom', exclude: ['e2e/**', 'e2e-screens/**', 'node_modules/**'] },
 });
