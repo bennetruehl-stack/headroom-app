@@ -14,6 +14,10 @@ const minijobSource =
 const multipleJobsSource =
   'https://www.minijob-zentrale.de/DE/die-minijobs/mehrere-jobs/mehrere-jobs_node.html';
 const dateChecked = '2026-10-23';
+const employeeLumpSumText =
+  'Pauschale für Werbungskosten aus Arbeitslohn. Sie wird automatisch abgezogen, wenn keine höheren Kosten nachgewiesen werden.';
+const specialExpensesText =
+  'Pauschale für Sonderausgaben. Sie wird automatisch abgezogen, wenn keine höheren Sonderausgaben nachgewiesen werden.';
 export const statutoryMinimumWage2026 = 13.9;
 export const statutoryMinimumWage2027 = 14.6;
 export const miniJobCapFormula = {
@@ -151,8 +155,8 @@ const sourceLimits: Limit[] = [
     'EUR',
     'month',
     ['Student', 'Working student', 'Mini-jobber', 'Pupil'],
-    'TODO: Einkommensgrenze und Minijob-Ausnahme für 2027 anhand einer aktuellen Krankenkassen- oder amtlichen Quelle verifizieren. Kein Wert wird geschätzt.',
-    'TODO: Quelle für 2027 ergänzen',
+    '',
+    '',
     '',
     '2027-01-01',
     '2027-12-31',
@@ -225,8 +229,8 @@ const sourceLimits: Limit[] = [
     'EUR',
     'month',
     ['Student'],
-    'TODO: Für 2027 geltenden BAföG-Freibetrag und Anrechnung anhand einer aktuellen offiziellen Quelle prüfen. Kein Wert wird geschätzt.',
-    'TODO: Quelle für 2027 ergänzen',
+    '',
+    '',
     '',
     '2027-01-01',
     '2027-12-31',
@@ -254,8 +258,8 @@ const sourceLimits: Limit[] = [
     'EUR',
     'year',
     ['Student', 'Working student', 'Employee'],
-    'TODO: Grundfreibetrag und Pauschbeträge für 2027 verifizieren. Kein Brutto-Orientierungswert wird geschätzt.',
-    'TODO: Werte und Quelle für 2027 ergänzen',
+    '',
+    '',
     '',
     '2027-01-01',
     '2027-12-31',
@@ -282,8 +286,8 @@ const sourceLimits: Limit[] = [
     'EUR',
     'year',
     ['Student', 'Working student', 'Employee'],
-    'TODO: Für 2027 geltenden Grundfreibetrag anhand der aktuellen Fassung des Einkommensteuergesetzes prüfen.',
-    'Einkommensteuergesetz § 32a – Wert für 2027 offen',
+    '',
+    'Einkommensteuergesetz § 32a',
     'https://www.gesetze-im-internet.de/estg/__32a.html',
     '2027-01-01',
     '2027-12-31',
@@ -296,7 +300,7 @@ const sourceLimits: Limit[] = [
     'EUR',
     'year',
     ['Student', 'Working student', 'Employee'],
-    'TODO: Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung vor Veröffentlichung verifizieren.',
+    employeeLumpSumText,
     'Einkommensteuergesetz § 9a',
     'https://www.gesetze-im-internet.de/estg/__9a.html',
     '2026-01-01',
@@ -310,8 +314,8 @@ const sourceLimits: Limit[] = [
     'EUR',
     'year',
     ['Student', 'Working student', 'Employee'],
-    'TODO: Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung für 2027 verifizieren.',
-    'Einkommensteuergesetz § 9a – Wert für 2027 offen',
+    '',
+    'Einkommensteuergesetz § 9a',
     'https://www.gesetze-im-internet.de/estg/__9a.html',
     '2027-01-01',
     '2027-12-31',
@@ -324,7 +328,7 @@ const sourceLimits: Limit[] = [
     'EUR',
     'year',
     ['Student', 'Working student', 'Employee'],
-    'TODO: Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung vor Veröffentlichung verifizieren.',
+    specialExpensesText,
     'Einkommensteuergesetz § 10c',
     'https://www.gesetze-im-internet.de/estg/__10c.html',
     '2026-01-01',
@@ -338,8 +342,8 @@ const sourceLimits: Limit[] = [
     'EUR',
     'year',
     ['Student', 'Working student', 'Employee'],
-    'TODO: Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung für 2027 verifizieren.',
-    'Einkommensteuergesetz § 10c – Wert für 2027 offen',
+    '',
+    'Einkommensteuergesetz § 10c',
     'https://www.gesetze-im-internet.de/estg/__10c.html',
     '2027-01-01',
     '2027-12-31',
@@ -380,8 +384,8 @@ const sourceLimits: Limit[] = [
     'Information',
     'year',
     ['Pupil'],
-    'TODO: Arbeitszeit, Pausen, Tätigkeitsverbote und Nachtarbeit anhand amtlicher Quellen prüfen. Nur Information anzeigen; ungeprüfte Werte lösen keine Warnungen aus.',
-    'TODO: amtliche Quelle ergänzen',
+    'Für Jugendliche unter 18 gelten besondere Regeln zu Arbeitszeit, Pausen und Nachtarbeit. Headroom zeigt das nur als Information.',
+    '',
     '',
     '2026-01-01',
     '2027-12-31',
@@ -429,11 +433,11 @@ const englishText: Record<string, { name_en: string; consequence_en: string }> =
   },
   employeeLumpSum: {
     name_en: 'Employee allowance',
-    consequence_en: 'TODO: verify this allowance and how it interacts with the simplified wage-tax reference before release.',
+    consequence_en: 'Lump sum for work-related expenses from wages. It is deducted automatically unless higher costs are shown.',
   },
   specialExpensesLumpSum: {
     name_en: 'Special-expenses lump sum',
-    consequence_en: 'TODO: verify this allowance and how it interacts with the simplified wage-tax reference before release.',
+    consequence_en: 'Lump sum for special expenses. It is deducted automatically unless higher special expenses are shown.',
   },
   minimumWage: {
     name_en: 'Statutory minimum wage',
@@ -441,25 +445,31 @@ const englishText: Record<string, { name_en: string; consequence_en: string }> =
   },
   youthWorkProtection: {
     name_en: 'Youth employment protection',
-    consequence_en: 'Work hours and prohibited work still need to be checked against official sources. Do not calculate warnings from unverified values.',
+    consequence_en: 'Special rules on working hours, breaks and night work apply to young people under 18. Headroom shows this as information only.',
   },
 };
 
-const englishTodoText: Record<string, string> = {
-  familyInsurance: 'TODO: Verify the 2027 family-insurance income limit and mini-job exception against a current official or insurer source. No value is estimated.',
-  bafoegSideIncome: 'TODO: Verify the 2027 BAföG allowance and income treatment against a current official source. No value is estimated.',
-  incomeTaxThreshold: 'TODO: Verify the 2027 basic allowance and lump sums. No gross-wage reference value is estimated.',
-  incomeTaxBasicAllowance: 'TODO: Verify the 2027 basic allowance against the current Income Tax Act.',
-  employeeLumpSum: 'TODO: Verify the 2027 employee allowance and its interaction with the simplified wage-tax reference.',
-  specialExpensesLumpSum: 'TODO: Verify the 2027 special-expenses allowance and its interaction with the simplified wage-tax reference.',
+// Interne Prüfnotizen. Werden nie angezeigt. Schlüssel: id@validFrom
+const reviewNotes: Record<string, string> = {
+  'familyInsurance@2027-01-01': 'Einkommensgrenze und Minijob-Ausnahme für 2027 anhand einer aktuellen Krankenkassen- oder amtlichen Quelle verifizieren. Kein Wert wird geschätzt.',
+  'bafoegSideIncome@2026-01-01': 'Freibetrag und Anrechnung offiziell verifizieren; Minijob-Zentrale-Magazin als Ausgangsquelle gegen BAföG-Regelung prüfen.',
+  'bafoegSideIncome@2027-01-01': 'Für 2027 geltenden BAföG-Freibetrag und Anrechnung anhand einer aktuellen offiziellen Quelle prüfen. Kein Wert wird geschätzt.',
+  'incomeTaxThreshold@2026-01-01': 'Zusammensetzung aus Grundfreibetrag und Pauschbeträgen sowie Brutto-Orientierungscharakter bestätigen.',
+  'incomeTaxThreshold@2027-01-01': 'Grundfreibetrag und Pauschbeträge für 2027 verifizieren. Kein Brutto-Orientierungswert wird geschätzt.',
+  'incomeTaxBasicAllowance@2027-01-01': 'Für 2027 geltenden Grundfreibetrag anhand der aktuellen Fassung des Einkommensteuergesetzes prüfen.',
+  'employeeLumpSum@2026-01-01': 'Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung vor Veröffentlichung verifizieren.',
+  'employeeLumpSum@2027-01-01': 'Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung für 2027 verifizieren.',
+  'specialExpensesLumpSum@2026-01-01': 'Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung vor Veröffentlichung verifizieren.',
+  'specialExpensesLumpSum@2027-01-01': 'Pauschbetrag und Zusammenwirken mit der vereinfachten Lohnsteuer-Orientierung für 2027 verifizieren.',
+  'youthWorkProtection@2026-01-01': 'Arbeitszeit, Pausen, Tätigkeitsverbote und Nachtarbeit anhand amtlicher Quellen prüfen. Nur Information anzeigen; ungeprüfte Werte lösen keine Warnungen aus.',
 };
 
 export const limits: Limit[] = sourceLimits.map((limit) => ({
   ...limit,
   ...englishText[limit.id],
-  ...(limit.value === null && limit.validFrom.startsWith('2027')
-    ? { consequence_en: englishTodoText[limit.id] ?? limit.consequence }
-    : {}),
+  // Ohne deutschen Nutzertext bleibt auch der englische leer; die App zeigt dann einen neutralen Hinweis.
+  ...(limit.consequence === '' ? { consequence_en: '' } : {}),
+  reviewNote: reviewNotes[limit.id + '@' + limit.validFrom],
 }));
 
 export function limitsForYear(year: number): Limit[] {

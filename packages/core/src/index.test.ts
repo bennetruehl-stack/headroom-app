@@ -4,6 +4,7 @@ import {
   annualMiniProjection,
   companyPlausibility,
   employeeMiniJobStatus,
+  limits,
   miniJobCap2027,
   monthlySummary,
   peerMedian,
@@ -119,5 +120,12 @@ describe('core calculations', () => {
     expect(companyPlausibility('1234').ok).toBe(false);
     expect(companyPlausibility('asdf').ok).toBe(false);
     expect(companyPlausibility('Irish Pbu', ['Irish Pub']).suggestion).toBe('Irish Pub');
+  });
+
+  it('keeps internal review notes out of every user-facing limit text', () => {
+    for (const limit of limits) {
+      const shown = [limit.name, limit.name_en, limit.consequence, limit.consequence_en, limit.sourceName];
+      for (const text of shown) expect(text ?? '').not.toMatch(/TODO/i);
+    }
   });
 });

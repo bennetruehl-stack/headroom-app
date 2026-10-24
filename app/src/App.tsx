@@ -131,13 +131,14 @@ function limitName(limit: Limit, language: Language): string {
   return language === 'en' ? limit.name_en ?? limit.name : limit.name;
 }
 
+// Interne Prüfnotizen (limit.reviewNote) werden hier bewusst nie verwendet.
 function limitConsequence(limit: Limit, language: Language): string {
-  return language === 'en' ? limit.consequence_en ?? limit.consequence : limit.consequence;
+  const text = language === 'en' ? limit.consequence_en ?? limit.consequence : limit.consequence;
+  return text || t(language, 'valuePending');
 }
 
 function limitSourceName(limit: Limit, language: Language): string {
-  if (language === 'en' && limit.sourceName.startsWith('TODO:')) return 'TODO: add a verified 2027 source';
-  return limit.sourceName;
+  return limit.sourceName || t(language, 'sourcePending');
 }
 
 function companyErrorMessage(code: string | undefined, language: Language): string {
@@ -910,7 +911,7 @@ function InformationCards({
           <span className="info-mark" aria-hidden="true">i</span>
           <div>
             <strong>{language === 'de' ? youthLimit.name : youthLimit.name_en}</strong>
-            <p>{language === 'de' ? youthLimit.consequence : youthLimit.consequence_en}</p>
+            <p>{limitConsequence(youthLimit, language)}</p>
             <span className="pill-unverified">{t(language, 'unverified')}</span>
           </div>
         </article>
@@ -1497,7 +1498,7 @@ function LimitsPage({ language, profile }: { language: Language; profile: Profil
             )}
             {limit.condition && <p className="condition-note">{t(language, 'conditionsApply')}</p>}
             <div className="source-row">
-              <span>{limitSourceName(limit, language)}<small>{t(language, 'asOf', { date: dateText(limit.asOf, language) })}</small></span>
+              <span>{limit.sourceName || t(language, 'source')}<small>{t(language, 'asOf', { date: dateText(limit.asOf, language) })}</small></span>
               {limit.sourceUrl ? (
                 <a href={limit.sourceUrl} target="_blank" rel="noreferrer" aria-label={t(language, 'officialSource') + ': ' + limitSourceName(limit, language)}>↗</a>
               ) : (

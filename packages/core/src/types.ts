@@ -36,6 +36,8 @@ export type Limit = {
   validFrom: string;
   validTo: string;
   verified: boolean;
+  /** Interne Prüfnotiz. Wird nie in der Oberfläche angezeigt. */
+  reviewNote?: string;
 };
 
 export type SemesterPeriod = {
