@@ -1,0 +1,19 @@
+{
+  "name": "Headroom – Einkommen im Überblick",
+  "short_name": "Headroom",
+  "description": "Einkommen aus mehreren Jobs addieren und relevante Grenzwerte im Blick behalten.",
+  "lang": "de-DE",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F4F1EA",
+  "theme_color": "#0F2A2E",
+  "icons": [
+    {
+      "src": "/headroom.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

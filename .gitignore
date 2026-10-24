@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+app/test-results/
+app/playwright-report/
+*.tsbuildinfo
+server/data/*.sqlite
+server/data/*.sqlite-*
+.DS_Store
+.claude/

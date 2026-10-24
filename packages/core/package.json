@@ -1,0 +1,19 @@
+{
+  "name": "@headroom/core",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./data/limits": "./data/limits.ts",
+    "./data/jobPresets": "./data/jobPresets.ts",
+    "./data/references": "./data/references.ts",
+    "./data/privacy": "./data/privacy.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "latest",
+    "typescript": "latest"
+  }
+}

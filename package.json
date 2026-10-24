@@ -1,0 +1,18 @@
+{
+  "name": "headroom",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "app",
+    "packages/core",
+    "server"
+  ],
+  "scripts": {
+    "dev": "npm --workspace app run dev",
+    "build": "npm --workspace app run build",
+    "test": "npm --workspace packages/core run test && npm --workspace app run test",
+    "dev:all": "npm run dev:server & npm run dev",
+    "dev:server": "npm --workspace server run dev",
+    "test:e2e": "npm --workspace app run test:e2e"
+  }
+}
