@@ -34,7 +34,11 @@
   --radius-sm: 10px;
   --surface-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 8px rgba(16, 24, 40, 0.04);
   --lift-shadow: 0 12px 32px rgba(16, 24, 40, 0.1);
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Bewegung (Emil Kowalski): starke Kurven, kurze Dauern */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --press: 160ms;
 
   color: var(--ink);
   background: var(--bg);
@@ -90,8 +94,10 @@ a {
   text-underline-offset: 3px;
 }
 
-a:hover {
-  text-decoration-thickness: 2px;
+@media (hover: hover) and (pointer: fine) {
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
 }
 
 button:focus-visible,
@@ -377,11 +383,13 @@ h3 {
   background: var(--card);
   font-weight: 600;
   text-align: left;
-  transition: border-color 160ms var(--ease), background-color 160ms var(--ease), box-shadow 160ms var(--ease);
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform var(--press) var(--ease-out);
 }
 
-.radio-choice:hover {
-  border-color: var(--line-strong);
+@media (hover: hover) and (pointer: fine) {
+  .radio-choice:hover {
+    border-color: var(--line-strong);
+  }
 }
 
 .radio-choice.is-selected {
@@ -398,7 +406,7 @@ h3 {
   border: 1.5px solid var(--line-strong);
   border-radius: 50%;
   background: var(--card);
-  transition: border 160ms var(--ease);
+  transition: border 160ms ease;
 }
 
 .is-selected .radio-indicator {
@@ -447,7 +455,7 @@ select {
   background-color: var(--card);
   color: var(--ink);
   font-size: 16px;
-  transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .field input:focus,
@@ -508,17 +516,49 @@ input::placeholder {
   color: var(--ink-soft);
   font-size: 14px;
   font-weight: 600;
-  transition: color 160ms var(--ease), background-color 160ms var(--ease), box-shadow 160ms var(--ease);
+  transition: color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform var(--press) var(--ease-out);
 }
 
-.segmented button:hover {
-  color: var(--ink);
+@media (hover: hover) and (pointer: fine) {
+  .segmented button:hover {
+    color: var(--ink);
+  }
 }
 
 .segmented button.selected {
   background: var(--card);
   color: var(--ink);
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08), 0 1px 6px rgba(16, 24, 40, 0.06);
+}
+
+.segmented-sliding {
+  position: relative;
+  isolation: isolate;
+}
+
+.segmented-sliding::before {
+  position: absolute;
+  z-index: -1;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px - (var(--count) - 1) * 2px) / var(--count));
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08), 0 1px 6px rgba(16, 24, 40, 0.06);
+  content: '';
+  transform: translateX(calc(var(--index) * (100% + 2px)));
+  transition: transform 220ms var(--ease-out);
+}
+
+.segmented-sliding button.selected {
+  background: transparent;
+  box-shadow: none;
+}
+
+.theme-dark .segmented-sliding::before {
+  background: var(--line-strong);
+  box-shadow: none;
 }
 
 .dashboard-tabs {
@@ -541,7 +581,19 @@ input::placeholder {
   line-height: 1.35;
   text-align: left;
   text-decoration: none;
-  transition: background-color 160ms var(--ease), border-color 160ms var(--ease), color 160ms var(--ease), box-shadow 160ms var(--ease);
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform var(--press) var(--ease-out);
+}
+
+/* Alles, was man drücken kann, gibt sofort nach. */
+.button:active:not(:disabled),
+.radio-choice:active,
+.icon-button:active,
+.more-link:active,
+.source-row a:active,
+.reference-list a:active,
+.segmented button:active,
+.nav-item:active {
+  transform: scale(0.97);
 }
 
 .button-primary {
@@ -550,8 +602,10 @@ input::placeholder {
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1), 0 6px 16px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
-.button-primary:hover {
-  background: var(--accent-strong);
+@media (hover: hover) and (pointer: fine) {
+  .button-primary:hover {
+    background: var(--accent-strong);
+  }
 }
 
 .button-dark {
@@ -559,8 +613,10 @@ input::placeholder {
   color: var(--paper);
 }
 
-.button-dark:hover {
-  background: color-mix(in srgb, var(--ink) 86%, var(--paper));
+@media (hover: hover) and (pointer: fine) {
+  .button-dark:hover {
+    background: color-mix(in srgb, var(--ink) 86%, var(--paper));
+  }
 }
 
 .button-quiet {
@@ -569,8 +625,10 @@ input::placeholder {
   color: var(--ink);
 }
 
-.button-quiet:hover {
-  background: var(--card-soft);
+@media (hover: hover) and (pointer: fine) {
+  .button-quiet:hover {
+    background: var(--card-soft);
+  }
 }
 
 .button-danger {
@@ -594,9 +652,11 @@ input::placeholder {
   text-align: left;
 }
 
-.text-button:hover {
-  text-decoration: underline;
-  text-underline-offset: 4px;
+@media (hover: hover) and (pointer: fine) {
+  .text-button:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
 }
 
 .danger-text {
@@ -614,11 +674,13 @@ input::placeholder {
   background: var(--card);
   font-size: 22px;
   line-height: 1;
-  transition: background-color 160ms var(--ease);
+  transition: background-color 160ms ease, transform var(--press) var(--ease-out);
 }
 
-.icon-button:hover {
-  background: var(--card-soft);
+@media (hover: hover) and (pointer: fine) {
+  .icon-button:hover {
+    background: var(--card-soft);
+  }
 }
 
 /* ---------- Hero metric ---------- */
@@ -739,11 +801,15 @@ input::placeholder {
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
-  animation: status-in 220ms var(--ease) both;
+}
+
+/* Nur wenn sich der Status ändert, nicht bei jedem Seitenaufruf. */
+.status-badge.status-changed {
+  animation: status-in 220ms var(--ease-out) both;
 }
 
 @keyframes status-in {
-  from { opacity: 0; transform: scale(0.92); }
+  from { opacity: 0; transform: scale(0.94); }
   to { opacity: 1; transform: scale(1); }
 }
 
@@ -784,15 +850,10 @@ input::placeholder {
   height: 100%;
   min-width: 0;
   border-radius: inherit;
+  width: 100%;
   background: var(--accent);
-  transform-origin: left center;
-  transition: width 300ms var(--ease), background-color 300ms var(--ease);
-  animation: bar-grow 300ms var(--ease) both;
-}
-
-@keyframes bar-grow {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+  /* clip-path statt width: kein Layout, Rundung bleibt erhalten */
+  transition: clip-path 280ms var(--ease-out), background-color 200ms ease;
 }
 
 .progress-track[data-level='safe'] span {
@@ -1030,12 +1091,37 @@ input::placeholder {
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
   transform: translateY(-2px) rotate(45deg);
-  transition: transform 200ms var(--ease);
+  transition: transform 200ms var(--ease-in-out);
 }
 
 .row-explain[open] summary::after,
 .more-limits[open] > summary::after {
   transform: translateY(1px) rotate(-135deg);
+}
+
+.row-explain,
+.more-limits,
+.method-details,
+.info-details {
+  interpolate-size: allow-keywords;
+}
+
+.row-explain::details-content,
+.more-limits::details-content,
+.method-details::details-content,
+.info-details::details-content {
+  height: 0;
+  overflow: clip;
+  opacity: 0;
+  transition: height 220ms var(--ease-out), opacity 180ms ease, content-visibility 220ms allow-discrete;
+}
+
+.row-explain[open]::details-content,
+.more-limits[open]::details-content,
+.method-details[open]::details-content,
+.info-details[open]::details-content {
+  height: auto;
+  opacity: 1;
 }
 
 .row-explain p {
@@ -1242,7 +1328,7 @@ input::placeholder {
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
   transform: translateY(-2px) rotate(45deg);
-  transition: transform 200ms var(--ease);
+  transition: transform 200ms var(--ease-in-out);
 }
 
 .method-details[open] summary::after {
@@ -1576,11 +1662,13 @@ input::placeholder {
   color: var(--accent);
   font-size: 17px;
   text-decoration: none;
-  transition: background-color 160ms var(--ease);
+  transition: background-color 160ms ease, transform var(--press) var(--ease-out);
 }
 
-.source-row a:hover {
-  background: color-mix(in srgb, var(--accent) 18%, var(--card));
+@media (hover: hover) and (pointer: fine) {
+  .source-row a:hover {
+    background: color-mix(in srgb, var(--accent) 18%, var(--card));
+  }
 }
 
 .reference-list {
@@ -1601,15 +1689,17 @@ input::placeholder {
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
-  transition: background-color 160ms var(--ease);
+  transition: background-color 160ms ease, transform var(--press) var(--ease-out);
 }
 
 .reference-list a + a {
   border-top: 1px solid var(--line);
 }
 
-.reference-list a:hover {
-  background: var(--card-soft);
+@media (hover: hover) and (pointer: fine) {
+  .reference-list a:hover {
+    background: var(--card-soft);
+  }
 }
 
 .year-picker select {
@@ -1632,12 +1722,14 @@ input::placeholder {
   color: var(--ink);
   text-align: left;
   cursor: pointer;
-  transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform var(--press) var(--ease-out);
 }
 
-.more-link:hover {
-  border-color: var(--line-strong);
-  box-shadow: var(--lift-shadow);
+@media (hover: hover) and (pointer: fine) {
+  .more-link:hover {
+    border-color: var(--line-strong);
+    box-shadow: var(--lift-shadow);
+  }
 }
 
 .more-link > span:first-child {
@@ -2029,23 +2121,27 @@ input::placeholder {
   color: var(--muted);
   font-size: 11px;
   font-weight: 600;
-  transition: color 160ms var(--ease), background-color 160ms var(--ease);
+  transition: color 160ms ease, background-color 160ms ease, transform var(--press) var(--ease-out);
 }
 
-.nav-item:hover {
-  color: var(--ink);
+@media (hover: hover) and (pointer: fine) {
+  .nav-item:hover {
+    color: var(--ink);
+  }
 }
 
 .nav-indicator {
   display: block;
-  width: 22px;
+  width: 28px;
   height: 4px;
   overflow: hidden;
   border-radius: 999px;
   background: transparent;
   color: transparent;
   font-size: 0;
-  transition: background-color 160ms var(--ease), width 200ms var(--ease);
+  transform: scaleX(0.4);
+  opacity: 0;
+  transition: transform 200ms var(--ease-out), opacity 150ms ease;
 }
 
 .nav-item.is-current {
@@ -2054,8 +2150,9 @@ input::placeholder {
 }
 
 .nav-item.is-current .nav-indicator {
-  width: 28px;
   background: var(--accent);
+  transform: scaleX(1);
+  opacity: 1;
 }
 
 .app-footer {
@@ -2081,6 +2178,16 @@ input::placeholder {
   background: rgba(14, 17, 22, 0.45);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  transition: opacity 200ms ease;
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.dialog-backdrop.is-closing {
+  opacity: 0;
+  transition-duration: 160ms;
 }
 
 .dialog {
@@ -2090,12 +2197,17 @@ input::placeholder {
   padding: 22px;
   border-radius: 24px;
   box-shadow: 0 24px 64px rgba(16, 24, 40, 0.25);
-  animation: sheet 240ms var(--ease) both;
+  transition: transform 320ms var(--ease-drawer);
+
+  @starting-style {
+    transform: translateY(100%);
+  }
 }
 
-@keyframes sheet {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Austritt schneller als Eintritt */
+.is-closing .dialog {
+  transform: translateY(100%);
+  transition: transform 180ms var(--ease-out);
 }
 
 .dialog .section-heading {
@@ -2166,12 +2278,12 @@ input::placeholder {
 }
 
 .page-enter {
-  animation: enter 220ms var(--ease) both;
+  animation: fade-in 150ms ease-out both;
 }
 
-@keyframes enter {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .sr-only {
@@ -2328,12 +2440,54 @@ input::placeholder {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  /* Weniger Bewegung, nicht null: Ein- und Ausblenden bleibt, Bewegung entfällt. */
+  html {
+    scroll-behavior: auto;
+  }
+
+  .button:active:not(:disabled),
+  .radio-choice:active,
+  .icon-button:active,
+  .more-link:active,
+  .source-row a:active,
+  .reference-list a:active,
+  .segmented button:active,
+  .nav-item:active {
+    transform: none;
+  }
+
+  .progress-track span,
+  .segmented-sliding::before,
+  .nav-indicator,
+  .row-explain summary::after,
+  .more-limits > summary::after,
+  .method-details summary::after {
+    transition-property: opacity, background-color;
+  }
+
+  .status-badge.status-changed {
+    animation-name: fade-in;
+  }
+
+  .dialog,
+  .is-closing .dialog {
+    transform: none;
+    transition: opacity 200ms ease;
+
+    @starting-style {
+      transform: none;
+      opacity: 0;
+    }
+  }
+
+  .is-closing .dialog {
+    opacity: 0;
+  }
+
+  .row-explain::details-content,
+  .more-limits::details-content,
+  .method-details::details-content,
+  .info-details::details-content {
+    transition-property: opacity, content-visibility;
   }
 }

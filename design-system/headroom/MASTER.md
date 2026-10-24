@@ -109,14 +109,28 @@ Base unit 4px. Common steps: 4, 8, 12, 16, 20, 24, 32.
 
 Dark mode: no card shadows.
 
-### Motion
+### Motion (nach Emil Kowalski)
 
-- Easing: `--ease: cubic-bezier(0.2, 0.7, 0.2, 1)`
-- Hover / state changes: 160ms
-- Page enter: 220ms fade + 6px rise
-- Bottom sheet dialog: 240ms slide up
-- Progress bar width: 400ms
-- `prefers-reduced-motion` disables all of the above.
+Erst fragen: Wie oft sieht man das? Häufiges (Seitenwechsel, Tabs) bewegt sich kaum, Seltenes darf mehr.
+
+| Token | Wert | Einsatz |
+|-------|------|---------|
+| `--ease-out` | `cubic-bezier(0.23, 1, 0.32, 1)` | Ein- und Austritte, Druck-Feedback, Balken |
+| `--ease-in-out` | `cubic-bezier(0.77, 0, 0.175, 1)` | Bewegung auf dem Bildschirm (Chevrons) |
+| `--ease-drawer` | `cubic-bezier(0.32, 0.72, 0, 1)` | Bottom Sheet |
+| `ease` | – | Farb- und Hover-Wechsel |
+
+- Druck: alles Drückbare `scale(0.97)` auf `:active`, 160 ms.
+- Hover nur unter `@media (hover: hover) and (pointer: fine)`.
+- Nur `transform`, `opacity` und `clip-path` animieren, nie `width`/`height`/`margin`.
+- Balken: `clip-path: inset(...)`, 280 ms. Hauptbetrag zählt in 250 ms.
+- Status-Badge animiert nur bei einem echten Wechsel (220 ms), nicht bei jedem Aufruf.
+- Segmented Control: gleitender Indikator per `transform`, 220 ms.
+- Seitenwechsel: nur Opacity, 150 ms.
+- Sheet: Eintritt 320 ms mit `--ease-drawer` über `@starting-style`, Austritt 180 ms; Escape schließt.
+- Aufklapper: Höhe über `::details-content` + `interpolate-size` (wo unterstützt).
+- Nie aus `scale(0)` einblenden; nie `ease-in`; UI-Animationen unter 300 ms.
+- `prefers-reduced-motion`: Bewegung entfällt, Ein- und Ausblenden bleibt.
 
 ---
 

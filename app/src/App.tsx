@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import {
   activeLimits,
   annualIncomeProjection,
@@ -253,8 +253,17 @@ function StatusBadge({
   status: 'Safe' | 'Close' | 'Over';
   language: Language;
 }) {
+  // Animation nur bei einem echten Wechsel, nicht bei jedem Seitenaufruf.
+  const previous = useRef(status);
+  const [changes, setChanges] = useState(0);
+  useEffect(() => {
+    if (previous.current !== status) {
+      previous.current = status;
+      setChanges((count) => count + 1);
+    }
+  }, [status]);
   return (
-    <span key={status} className={'status-badge status-' + status.toLowerCase()}>
+    <span key={changes} className={'status-badge status-' + status.toLowerCase() + (changes ? ' status-changed' : '')}>
       <span className="status-dot" aria-hidden="true" />
       {t(language, statusKey(status))}
     </span>
@@ -278,7 +287,7 @@ function ProgressBar({
       aria-valuemax={100}
       aria-valuenow={Math.max(0, Math.min(100, Math.round(ratio * 100)))}
     >
-      <span style={{ width: Math.max(0, Math.min(100, ratio * 100)) + '%' }} />
+      <span style={{ clipPath: 'inset(0 ' + (100 - Math.max(0, Math.min(100, ratio * 100))) + '% 0 0 round 999px)' }} />
     </div>
   );
 }
@@ -389,7 +398,7 @@ function Onboarding({
             draft.status === 'Pupil') && (
             <fieldset className="toggle-field">
               <legend>{t(language, 'familyInsured')}</legend>
-              <div className="segmented">
+              <div className="segmented segmented-sliding" style={{ '--count': 2, '--index': draft.familyInsured ? 0 : 1 } as CSSProperties}>
                 <button
                   type="button"
                   aria-pressed={draft.familyInsured}
@@ -415,7 +424,7 @@ function Onboarding({
             draft.status === 'Pupil') && (
             <fieldset className="toggle-field">
               <legend>{t(language, 'bafoeg')}</legend>
-              <div className="segmented">
+              <div className="segmented segmented-sliding" style={{ '--count': 2, '--index': draft.bafoeg ? 0 : 1 } as CSSProperties}>
                 <button
                   type="button"
                   aria-pressed={draft.bafoeg}
@@ -463,7 +472,7 @@ function Onboarding({
           {draft.status === 'Employee' && (
             <fieldset className="toggle-field">
               <legend>{t(language, 'mainJob')}</legend>
-              <div className="segmented">
+              <div className="segmented segmented-sliding" style={{ '--count': 2, '--index': draft.hasMainJob !== false ? 0 : 1 } as CSSProperties}>
                 <button
                   type="button"
                   aria-pressed={draft.hasMainJob !== false}
@@ -770,7 +779,11 @@ function DashboardMetrics({
 
   return (
     <>
-      <div className="segmented dashboard-tabs" aria-label={t(language, 'currentMonth')}>
+      <div
+        className="segmented segmented-sliding dashboard-tabs"
+        aria-label={t(language, 'currentMonth')}
+        style={{ '--count': 3, '--index': ['month', 'year', 'season'].indexOf(period) } as CSSProperties}
+      >
         {(['month', 'year', 'season'] as const).map((tab) => (
           <button
             key={tab}
@@ -2082,6 +2095,19 @@ function ShiftCheckDialog({
   language: Language;
   onClose: () => void;
 }) {
+  // Schneller Austritt (180 ms), dann erst wirklich schließen. Escape schließt ebenfalls.
+  const [closing, setClosing] = useState(false);
+  const close = () => {
+    if (closing) return;
+    if (prefersReducedMotion()) { onClose(); return; }
+    setClosing(true);
+    window.setTimeout(onClose, 180);
+  };
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') close(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
   const [jobId, setJobId] = useState(data.jobs[0]?.id ?? '');
   const [hours, setHours] = useState('');
   const [date, setDate] = useState(localToday());
@@ -2146,11 +2172,11 @@ function ShiftCheckDialog({
   const unverifiedActiveLimits = activeLimits(data.profile, year).filter((limit) => !limit.verified);
 
   return (
-    <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className={'dialog-backdrop' + (closing ? ' is-closing' : '')} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
       <section className="dialog surface" role="dialog" aria-modal="true" aria-labelledby="shift-dialog-title">
         <div className="section-heading">
           <div><p className="eyebrow">{t(language, 'shiftCheck')}</p><h2 id="shift-dialog-title">{t(language, 'whatIfTitle')}</h2></div>
-          <button className="icon-button" type="button" aria-label={t(language, 'closeDialog')} onClick={onClose}>×</button>
+          <button className="icon-button" type="button" aria-label={t(language, 'closeDialog')} onClick={close}>×</button>
         </div>
         <div className="form-grid">
           <label className="field">
@@ -2225,7 +2251,7 @@ function ShiftCheckDialog({
             ))}
           </div>
         )}
-        <button className="button button-dark button-wide" type="button" onClick={onClose}>{t(language, 'closeDialog')}</button>
+        <button className="button button-dark button-wide" type="button" onClick={close}>{t(language, 'closeDialog')}</button>
       </section>
     </div>
   );
