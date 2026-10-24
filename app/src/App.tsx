@@ -1653,7 +1653,6 @@ function JobsPage({
                 <details className="osm-lookup">
                   <summary>{t(language, 'osmTitle')}</summary>
                   <p>{t(language, 'osmExplain')}</p>
-                  <p className="muted">{t(language, 'companyLookupTodo')}</p>
                   {data.profile.age < consentAgeRule.minimumAge ? (
                     <p className="notice notice-amber">{t(language, 'optInsBlocked')}</p>
                   ) : (
