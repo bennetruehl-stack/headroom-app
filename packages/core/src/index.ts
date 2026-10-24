@@ -1,10 +1,12 @@
 import { jobPresets } from '../data/jobPresets';
 import { limits, limitsForYear, miniJobCapFormula } from '../data/limits';
 import { consentAgeRule } from '../data/privacy';
+import { roleLayouts, roleTier } from '../data/roles';
 import type { Job, Limit, Profile, ProfileStatus, RiskStatus, Shift } from './types';
 
 export * from './types';
-export { consentAgeRule, jobPresets, limits, limitsForYear, miniJobCapFormula };
+export { consentAgeRule, jobPresets, limits, limitsForYear, miniJobCapFormula, roleLayouts, roleTier };
+export type { RoleItem, RoleLayout, RoleTier } from '../data/roles';
 
 export function limitValue(id: string, year = new Date().getFullYear()): number {
   return limitsForYear(year).find((limit) => limit.id === id)?.value ?? 0;

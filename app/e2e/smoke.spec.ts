@@ -14,7 +14,7 @@ async function finishOnboarding(page: import('@playwright/test').Page) {
 test('Onboarding zeigt den Demo-Spielraum von 116 Euro', async ({ page }) => {
   await finishOnboarding(page);
   await expect(page.getByText(/etwa 8 Stunden/)).toBeVisible();
-  await expect(page.getByText('Knapp')).toBeVisible();
+  await expect(page.locator('.hero-metric').getByText('Knapp')).toBeVisible();
 });
 
 test('eine neue Schicht aktualisiert den verbleibenden Betrag', async ({ page }) => {

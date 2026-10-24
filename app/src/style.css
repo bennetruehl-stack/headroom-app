@@ -943,6 +943,133 @@ input::placeholder {
   font-weight: 500;
 }
 
+.limit-row-value {
+  display: grid;
+  flex: 0 0 auto;
+  justify-items: end;
+  gap: 6px;
+  max-width: 55%;
+  text-align: right;
+}
+
+.limit-row-value .status-badge {
+  min-height: 24px;
+  padding: 2px 9px;
+  font-size: 11px;
+}
+
+.row-note {
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.row-note-amber {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--close-bg);
+  color: var(--ink);
+}
+
+.row-explain {
+  margin-top: 10px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.row-explain summary,
+.more-limits > summary,
+.info-details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.row-explain summary::-webkit-details-marker,
+.more-limits > summary::-webkit-details-marker,
+.info-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.row-explain summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.row-explain summary::after,
+.more-limits > summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 200ms var(--ease);
+}
+
+.row-explain[open] summary::after,
+.more-limits[open] > summary::after {
+  transform: translateY(1px) rotate(-135deg);
+}
+
+.row-explain p {
+  margin: 4px 0 0;
+  line-height: 1.55;
+}
+
+.more-limits {
+  margin: 0 0 18px;
+  padding: 4px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: var(--surface-shadow);
+}
+
+.more-limits > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  font-weight: 700;
+}
+
+.more-limits > summary > span:first-child {
+  flex: 1;
+}
+
+.more-limits[open] {
+  padding-bottom: 14px;
+}
+
+.more-limits > .muted {
+  margin: 0 0 10px;
+}
+
+.more-limits .limit-progress-list {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.info-details > summary {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 24px;
+}
+
+.info-details {
+  display: block;
+}
+
+.info-details > p {
+  margin: 8px 0 0 33px;
+}
+
 .pill-unverified,
 .pill-subtle,
 .badge-demo {

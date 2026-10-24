@@ -12,6 +12,8 @@ import {
   peerMedian,
   peerWagePosition,
   recommendationLevel,
+  roleLayouts,
+  roleTier,
   shiftCheck,
   shortDayStatus,
   shortDays,
@@ -152,5 +154,17 @@ describe('core calculations', () => {
       const shown = [limit.name, limit.name_en, limit.consequence, limit.consequence_en, limit.sourceName];
       for (const text of shown) expect(text ?? '').not.toMatch(/TODO/i);
     }
+  });
+
+  it('keeps one central role layout with disjoint primary and secondary items', () => {
+    for (const layout of Object.values(roleLayouts)) {
+      const overlap = layout.primary.filter((item) => layout.secondary.includes(item));
+      expect(overlap).toEqual([]);
+    }
+    expect(roleTier('Student', 'miniJobMonthly')).toBe('primary');
+    expect(roleTier('Working student', 'workingStudentHours')).toBe('primary');
+    expect(roleTier('Working student', 'familyInsurance')).toBe('secondary');
+    expect(roleTier('Employee', 'miniJobMonthly')).toBe('secondary');
+    expect(roleTier('Employee', 'minimumWage')).toBe('other');
   });
 });

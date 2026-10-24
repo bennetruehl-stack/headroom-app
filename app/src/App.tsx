@@ -24,6 +24,9 @@ import {
   earnings,
   limitsForYear,
   statusFor,
+  roleLayouts,
+  roleTier,
+  type RoleItem,
   type Job,
   type Limit,
   type Profile,
@@ -539,7 +542,8 @@ function Dashboard({
     const value = monthlyAmountForLimit(limit, data.profile, data.jobs, data.shifts, month, year);
     return { limit, value };
   });
-  const measured = monthlySummaries
+  const primaryMonthly = monthlySummaries.filter(({ limit }) => roleTier(data.profile.status, limit.id) === 'primary');
+  const measured = (primaryMonthly.some((item) => item.value !== null) ? primaryMonthly : monthlySummaries)
     .filter((item): item is { limit: Limit; value: { total: number; cap: number } } => item.value !== null)
     .map((item) => ({
       ...item,
@@ -752,39 +756,11 @@ function DashboardMetrics({
             </div>
           )}
 
-          <section className="content-section">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">{t(language, 'progress')}</p>
-                <h2>{t(language, 'monthlyLimits')}</h2>
-              </div>
-              <span className="small-count">{monthlySummaries.length.toString().padStart(2, '0')}</span>
-            </div>
-            {monthlySummaries.length === 0 && <p className="muted">{t(language, 'noLimits')}</p>}
-            <div className="limit-progress-list">
-              {monthlySummaries.map(({ limit, value }) => {
-                const ratio = value && value.cap ? value.total / value.cap : 0;
-                return (
-                  <article className="limit-progress-item" key={limit.id}>
-                    <div className="limit-row">
-                      <div>
-                        <strong>{limitName(limit, language)}</strong>
-                        <SourceStamp limit={limit} language={language} />
-                      </div>
-                      {limit.verified && value ? (
-                        <span className="limit-amount">{money(value.total, language)} <i>/ {money(value.cap, language)}</i></span>
-                      ) : (
-                        <span className="pill-unverified">{t(language, 'unverified')}</span>
-                      )}
-                    </div>
-                    {limit.verified && value && (
-                      <ProgressBar ratio={ratio} label={limitName(limit, language)} />
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          </section>
+          <RoleLimits
+            rows={roleRows(data, language, month, year, localToday(), daysUsed, annualRegular)}
+            status={data.profile.status}
+            language={language}
+          />
 
           <button className="button button-dark button-wide shift-check-cta" type="button" onClick={onShiftCheck}>
             <span>{t(language, 'shiftCheck')}</span><span aria-hidden="true">↗</span>
@@ -921,6 +897,156 @@ function DashboardMetrics({
   );
 }
 
+type RoleRowData = {
+  item: RoleItem;
+  title: string;
+  limit?: Limit;
+  /** Text rechts, z. B. „487 € / 603 €“. */
+  amount?: string;
+  /** Verhältnis für Balken und Status; nur bei geprüften Werten. */
+  ratio?: number;
+  status?: 'Safe' | 'Close' | 'Over';
+  note?: string;
+  tone?: 'neutral' | 'amber';
+};
+
+/** Baut die Zeilen für alle Rollen-Einträge, die für dieses Profil gelten. */
+function roleRows(
+  data: AppState,
+  language: Language,
+  month: string,
+  year: number,
+  today: string,
+  daysUsed: number,
+  annualRegular: number,
+): RoleRowData[] {
+  const active = activeLimits(data.profile, year);
+  const find = (id: string) => active.find((limit) => limit.id === id);
+  const items = [...roleLayouts[data.profile.status].primary, ...roleLayouts[data.profile.status].secondary];
+  const rows: RoleRowData[] = [];
+  for (const item of items) {
+    const limit = find(item);
+    if (item === 'taxClassInfo') {
+      rows.push({ item, title: t(language, 'taxClassTitle'), note: t(language, 'taxClassInfo') });
+      continue;
+    }
+    if (!limit) continue;
+    const title = limitName(limit, language);
+    const verified = limit.verified && limit.value !== null;
+    switch (item) {
+      case 'miniJobMonthly':
+      case 'familyInsurance':
+      case 'bafoegSideIncome': {
+        const value = monthlyAmountForLimit(limit, data.profile, data.jobs, data.shifts, month, year);
+        if (!value) { rows.push({ item, title, limit }); break; }
+        const ratio = value.cap > 0 ? value.total / value.cap : 0;
+        rows.push({ item, title, limit, ratio, status: statusFor(ratio), amount: money(value.total, language) + ' / ' + money(value.cap, language) });
+        break;
+      }
+      case 'shortTermEmployment': {
+        if (!verified || !limit.value) { rows.push({ item, title, limit }); break; }
+        const ratio = daysUsed / limit.value;
+        rows.push({ item, title, limit, ratio, status: statusFor(ratio), amount: t(language, 'daysOf', { used: daysUsed, limit: limit.value }) });
+        break;
+      }
+      case 'workingStudentHours': {
+        if (!verified || !limit.value) { rows.push({ item, title, limit }); break; }
+        if (!isInLecturePeriod(today, data.profile)) {
+          rows.push({ item, title, limit, note: t(language, 'outsideLecture') });
+          break;
+        }
+        const hours = Math.round(hoursInWeek(data.shifts, today) * 10) / 10;
+        const ratio = hours / limit.value;
+        rows.push({ item, title, limit, ratio, status: statusFor(ratio), amount: t(language, 'hoursThisWeek', { used: hours, limit: limit.value }) });
+        break;
+      }
+      case 'miniJobAlongsideMainJob': {
+        const count = data.jobs.filter((job) => job.type === 'mini-job' && job.startDate <= today && (!job.endDate || job.endDate >= today)).length;
+        const rule = employeeMiniJobStatus(count);
+        rows.push({
+          item, title, limit,
+          amount: t(language, 'miniJobsBesideMain', { count, limit: limit.value ?? 1 }),
+          status: verified ? (rule.over ? 'Over' : 'Safe') : undefined,
+        });
+        break;
+      }
+      case 'incomeTaxThreshold': {
+        // Ungeprüft: Wert nur als Orientierung zeigen, ohne Status und ohne Warnung.
+        rows.push({
+          item, title, limit,
+          amount: limit.value ? t(language, 'taxOrientationRow', { amount: money(annualRegular, language), limit: money(limit.value, language) }) : undefined,
+          ...(verified && limit.value ? { ratio: annualRegular / limit.value, status: statusFor(annualRegular / limit.value) } : {}),
+        });
+        break;
+      }
+      case 'youthWorkProtection':
+        rows.push({ item, title, limit, note: limitConsequence(limit, language), tone: 'amber' });
+        break;
+    }
+  }
+  return rows;
+}
+
+function RoleRow({ row, language }: { row: RoleRowData; language: Language }) {
+  const unverified = row.limit && !row.limit.verified;
+  return (
+    <article className="limit-progress-item">
+      <div className="limit-row">
+        <div>
+          <strong>{row.title}</strong>
+          {row.limit && <SourceStamp limit={row.limit} language={language} />}
+        </div>
+        <div className="limit-row-value">
+          {row.amount && <span className="limit-amount">{row.amount}</span>}
+          {row.status && !unverified && <StatusBadge status={row.status} language={language} />}
+          {unverified && <span className="pill-unverified">{t(language, 'unverified')}</span>}
+        </div>
+      </div>
+      {row.ratio !== undefined && row.status && !unverified && (
+        <ProgressBar ratio={row.ratio} label={row.title} />
+      )}
+      {row.note && <p className={'row-note' + (row.tone === 'amber' ? ' row-note-amber' : '')}>{row.note}</p>}
+      {row.limit && !row.note && (
+        <details className="row-explain">
+          <summary>{t(language, 'whatDoesItMean')}</summary>
+          <p>{limitConsequence(row.limit, language)}</p>
+        </details>
+      )}
+    </article>
+  );
+}
+
+function RoleLimits({ rows, status, language }: { rows: RoleRowData[]; status: ProfileStatus; language: Language }) {
+  const primary = rows.filter((row) => roleTier(status, row.item) === 'primary');
+  const secondary = rows.filter((row) => roleTier(status, row.item) !== 'primary');
+  return (
+    <>
+      <section className="content-section">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{t(language, 'forYouKicker')}</p>
+            <h2>{t(language, 'forYou')}</h2>
+          </div>
+          <span className="small-count">{primary.length.toString().padStart(2, '0')}</span>
+        </div>
+        {primary.length === 0
+          ? <p className="muted">{t(language, 'noLimits')}</p>
+          : <div className="limit-progress-list">{primary.map((row) => <RoleRow key={row.item} row={row} language={language} />)}</div>}
+      </section>
+      {secondary.length > 0 && (
+        <details className="more-limits">
+          <summary>
+            <span>{t(language, 'moreLimits')}</span>
+            <span className="small-count">{secondary.length.toString().padStart(2, '0')}</span>
+          </summary>
+          <p className="muted">{t(language, 'moreLimitsHint')}</p>
+          <div className="limit-progress-list">{secondary.map((row) => <RoleRow key={row.item} row={row} language={language} />)}</div>
+        </details>
+      )}
+    </>
+  );
+}
+
 function employmentLabel(type: Job['type'], language: Language): string {
   const entry = employmentTypes.find((item) => item.value === type);
   return entry ? t(language, entry.key) : type;
@@ -939,43 +1065,26 @@ function InformationCards({
   familyCap: number;
   familyMonthTotal: number;
 }) {
-  const regularJobCount = data.jobs.filter((job) => job.type === 'regular').length;
-  const showTaxInfo = regularJobCount > 1;
+  // Steuerklasse VI und Jugendarbeitsschutz stehen jetzt rollenbasiert unter „Für dich wichtig“.
   const showFamilyInfo =
     data.profile.familyInsured &&
     (familyAge !== null && data.profile.age >= familyAge ||
       familyCap > 0 && familyMonthTotal > familyCap);
-  const youthLimit = limitsForYear(Number(localToday().slice(0, 4))).find((limit) => limit.id === 'youthWorkProtection');
-  const youthAge = getAgeBoundary(youthLimit);
-  const showYouthInfo = data.profile.status === 'Pupil' && youthAge !== null && data.profile.age < youthAge;
   return (
     <section className="info-card-list">
-      {showTaxInfo && (
-        <article className="notice notice-neutral">
-          <span className="info-mark" aria-hidden="true">i</span>
-          <p>{t(language, 'taxClassInfo')} <a href="https://www.elster.de/" target="_blank" rel="noreferrer">ELSTER</a></p>
-        </article>
-      )}
       {showFamilyInfo && (
         <article className="notice notice-neutral">
           <span className="info-mark" aria-hidden="true">i</span>
           <p>{t(language, 'familyInfo')}</p>
         </article>
       )}
-      {showYouthInfo && youthLimit && (
-        <article className="notice notice-amber">
+      <details className="notice notice-neutral info-details">
+        <summary>
           <span className="info-mark" aria-hidden="true">i</span>
-          <div>
-            <strong>{language === 'de' ? youthLimit.name : youthLimit.name_en}</strong>
-            <p>{limitConsequence(youthLimit, language)}</p>
-            {!youthLimit.verified && <span className="pill-unverified">{t(language, 'unverified')}</span>}
-          </div>
-        </article>
-      )}
-      <article className="notice notice-neutral">
-        <span className="info-mark" aria-hidden="true">i</span>
-        <div><strong>{t(language, 'employmentInfoTitle')}</strong><p>{t(language, 'employmentInfo')}</p></div>
-      </article>
+          <strong>{t(language, 'employmentInfoTitle')}</strong>
+        </summary>
+        <p>{t(language, 'employmentInfo')}</p>
+      </details>
     </section>
   );
 }
@@ -1540,6 +1649,37 @@ function LimitsPage({ language, profile }: { language: Language; profile: Profil
   }, [list]);
   const yearOptions = [2026, 2027];
   const shown = all.length ? all : [];
+  const isPrimary = (limit: Limit) =>
+    active.some((item) => item.id === limit.id) && roleTier(profile.status, limit.id) === 'primary';
+  const primaryLimits = shown.filter(isPrimary);
+  const otherLimits = shown.filter((limit) => !isPrimary(limit));
+  const renderLimit = (limit: Limit) => (
+    <article className="surface limit-card" key={limit.id + limit.validFrom}>
+      <div className="limit-card-top">
+        <div>
+          <p className="eyebrow">{limit.unit} · {periodLabel(limit.period, language)}</p>
+          <h2>{limitName(limit, language)}</h2>
+        </div>
+        <div className="limit-value-stack">
+          <strong className="limit-card-value">{limit.value === null ? '–' : new Intl.NumberFormat(language === 'de' ? 'de-DE' : 'en-GB').format(limit.value)}</strong>
+          {!limit.verified && <span className="pill-unverified">{t(language, 'unverified')}</span>}
+        </div>
+      </div>
+      <p>{limitConsequence(limit, language)}</p>
+      {!active.some((item) => item.id === limit.id) && (
+        <p className="condition-note">{t(language, 'notApplicable')}</p>
+      )}
+      {limit.condition && <p className="condition-note">{t(language, 'conditionsApply')}</p>}
+      <div className="source-row">
+        <span>{limit.sourceName || t(language, 'source')}<small>{t(language, 'asOf', { date: dateText(limit.asOf, language) })}</small></span>
+        {limit.sourceUrl ? (
+          <a href={limit.sourceUrl} target="_blank" rel="noreferrer" aria-label={t(language, 'officialSource') + ': ' + limitSourceName(limit, language)}>↗</a>
+        ) : (
+          <span className="pill-unverified">{t(language, 'sourcePending')}</span>
+        )}
+      </div>
+    </article>
+  );
 
   return (
     <section className="page-enter">
@@ -1556,35 +1696,27 @@ function LimitsPage({ language, profile }: { language: Language; profile: Profil
         }
       />
       <p className="page-intro">{t(language, 'valuesSummary')}</p>
-      <div className="stack-list">
-        {shown.map((limit) => (
-          <article className="surface limit-card" key={limit.id + limit.validFrom}>
-            <div className="limit-card-top">
-              <div>
-                <p className="eyebrow">{limit.unit} · {periodLabel(limit.period, language)}</p>
-                <h2>{limitName(limit, language)}</h2>
-              </div>
-              <div className="limit-value-stack">
-                <strong className="limit-card-value">{limit.value === null ? '–' : new Intl.NumberFormat(language === 'de' ? 'de-DE' : 'en-GB').format(limit.value)}</strong>
-                {!limit.verified && <span className="pill-unverified">{t(language, 'unverified')}</span>}
-              </div>
+      {primaryLimits.length > 0 && (
+        <section className="content-section limits-group">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">{t(language, 'forYouKicker')}</p>
+              <h2>{t(language, 'forYou')}</h2>
             </div>
-            <p>{limitConsequence(limit, language)}</p>
-            {!active.some((item) => item.id === limit.id) && (
-              <p className="condition-note">{t(language, 'notApplicable')}</p>
-            )}
-            {limit.condition && <p className="condition-note">{t(language, 'conditionsApply')}</p>}
-            <div className="source-row">
-              <span>{limit.sourceName || t(language, 'source')}<small>{t(language, 'asOf', { date: dateText(limit.asOf, language) })}</small></span>
-              {limit.sourceUrl ? (
-                <a href={limit.sourceUrl} target="_blank" rel="noreferrer" aria-label={t(language, 'officialSource') + ': ' + limitSourceName(limit, language)}>↗</a>
-              ) : (
-                <span className="pill-unverified">{t(language, 'sourcePending')}</span>
-              )}
-            </div>
-          </article>
-        ))}
-      </div>
+            <span className="small-count">{primaryLimits.length.toString().padStart(2, '0')}</span>
+          </div>
+          <div className="stack-list">{primaryLimits.map(renderLimit)}</div>
+        </section>
+      )}
+      <section className="content-section limits-group">
+        <div className="section-heading">
+          <div>
+            <h2>{t(language, 'moreLimits')}</h2>
+          </div>
+          <span className="small-count">{otherLimits.length.toString().padStart(2, '0')}</span>
+        </div>
+        <div className="stack-list">{otherLimits.map(renderLimit)}</div>
+      </section>
       <section className="content-section">
         <p className="eyebrow">{t(language, 'references')}</p>
         <div className="reference-list">

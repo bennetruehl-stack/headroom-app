@@ -7,7 +7,8 @@
     "./data/limits": "./data/limits.ts",
     "./data/jobPresets": "./data/jobPresets.ts",
     "./data/references": "./data/references.ts",
-    "./data/privacy": "./data/privacy.ts"
+    "./data/privacy": "./data/privacy.ts",
+    "./data/roles": "./data/roles.ts"
   },
   "scripts": {
     "test": "vitest run"
