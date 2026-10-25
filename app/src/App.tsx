@@ -35,8 +35,10 @@ import {
 } from '@headroom/core';
 import { jobPresets } from '@headroom/core/data/jobPresets';
 import { references } from '@headroom/core/data/references';
-import { demoListings, demoPartners, demoPeerRows } from './mock/data';
-import { defaultFeatures, type FeatureName } from './config/features';
+import { demoJobPartners, demoListings, demoPartners, demoPeerRows, jobPartnerFor } from './mock/data';
+import { advancedDefaults, defaultFeatures, effectiveFeatures, sanitizeFeatures, type FeatureName } from './config/features';
+import { ImportPage } from './import/ImportPage';
+import { fetchCalendarFeed, syncDue, syncFromIcs, CalendarFeedError } from './lib/shiftImport';
 import { t, type Language, type MessageKey } from './i18n/translations';
 import {
   clearLocalState,
@@ -45,6 +47,7 @@ import {
   loadState,
   normalizeState,
   saveState,
+  stateForExport,
   type AppState,
   type ExampleProfile,
 } from './lib/storage';
@@ -63,7 +66,7 @@ type Screen =
   | 'JobBoard'
   | 'PeerStats'
   | 'Premium'
-  | 'Scan';
+  | 'Import';
 
 const profileChoices: { value: ProfileStatus; key: MessageKey }[] = [
   { value: 'Student', key: 'profileStudent' },
@@ -81,7 +84,6 @@ const employmentTypes: { value: Job['type']; key: MessageKey }[] = [
 ];
 
 const featureLabels: Record<FeatureName, MessageKey> = {
-  scheduleScan: 'featureSchedule',
   jobBoard: 'featureBoard',
   partnerRecommendations: 'featurePartners',
   premium: 'featurePremium',
@@ -175,9 +177,7 @@ function hoursFromTimes(start: string, end: string): number {
 function getFeatureFlags(): Record<FeatureName, boolean> {
   try {
     const stored = localStorage.getItem('headroom-features');
-    return stored
-      ? { ...defaultFeatures, ...JSON.parse(stored) }
-      : { ...defaultFeatures };
+    return stored ? sanitizeFeatures(JSON.parse(stored)) : { ...defaultFeatures };
   } catch {
     return { ...defaultFeatures };
   }
@@ -574,6 +574,8 @@ function Dashboard({
   onAddShift,
   onShiftCheck,
   features,
+  syncNotice,
+  onDismissSync,
 }: {
   data: AppState;
   language: Language;
@@ -581,6 +583,8 @@ function Dashboard({
   onAddShift: (shifts: Shift[]) => void;
   onShiftCheck: () => void;
   features: Record<FeatureName, boolean>;
+  syncNotice: string;
+  onDismissSync: () => void;
 }) {
   const today = localToday();
   const month = today.slice(0, 7);
@@ -663,6 +667,22 @@ function Dashboard({
         </div>
       </section>
 
+      {(syncNotice || data.pendingImports.length > 0) && (
+        <section className={'notice import-pending ' + (data.pendingImports.length ? 'notice-amber' : 'notice-lime')} role="status">
+          <p>
+            {syncNotice}
+            {syncNotice && data.pendingImports.length > 0 && ' '}
+            {data.pendingImports.length > 0 && t(language, 'importPending', { count: data.pendingImports.length })}
+          </p>
+          <div className="card-actions">
+            <button className="text-button" type="button" onClick={() => onNavigate(data.pendingImports.length ? 'Import' : 'Shifts')}>
+              {t(language, data.pendingImports.length ? 'importReviewNow' : 'importOpenShifts')}
+            </button>
+            {syncNotice && <button className="text-button" type="button" onClick={onDismissSync}>{t(language, 'dismiss')}</button>}
+          </div>
+        </section>
+      )}
+
       <DashboardMetrics
         data={data}
         language={language}
@@ -689,6 +709,14 @@ function Dashboard({
       />
     </div>
   );
+}
+
+function getAdvancedMode(): boolean {
+  try {
+    return localStorage.getItem('headroom-advanced') === 'true';
+  } catch {
+    return false;
+  }
 }
 
 function DashboardMetrics({
@@ -755,6 +783,9 @@ function DashboardMetrics({
           <span>{t(language, 'shiftCheck')}</span><span aria-hidden="true">↗</span>
         </button>
       </div>
+      <button className="text-button import-link" type="button" onClick={() => onNavigate('Import')}>
+        {t(language, 'importFromCalendarOrPhoto')} <span aria-hidden="true">↓</span>
+      </button>
       {showShiftForm && (
         <section className="surface form-surface">
           <div className="section-heading">
@@ -1280,16 +1311,22 @@ function ShiftsPage({
   data,
   language,
   onUpdate,
+  onImport,
 }: {
   data: AppState;
   language: Language;
   onUpdate: (shifts: Shift[]) => void;
+  onImport: () => void;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
   const ordered = [...data.shifts].sort((a, b) => b.date.localeCompare(a.date));
   return (
     <section className="page-enter">
-      <PageHeading kicker={t(language, 'logKicker')} title={t(language, 'shiftList')} />
+      <PageHeading
+        kicker={t(language, 'logKicker')}
+        title={t(language, 'shiftList')}
+        trailing={<button className="button button-quiet heading-action" type="button" onClick={onImport}>{t(language, 'importShort')} <span aria-hidden="true">↓</span></button>}
+      />
       {ordered.length === 0 && <div className="empty-panel">{t(language, 'emptyState')}</div>}
       <div className="stack-list">
         {ordered.map((shift) => {
@@ -1309,6 +1346,8 @@ function ShiftsPage({
                 <span>{shift.hours.toLocaleString(language === 'de' ? 'de-DE' : 'en-GB')} {t(language, 'hourShort')}</span>
                 {shift.startTime && shift.endTime && <span>{shift.startTime}–{shift.endTime}</span>}
                 {shift.planned && <span className="pill-subtle">{t(language, 'planned')}</span>}
+                {shift.source === 'calendar' && <span className="pill-subtle pill-source">{t(language, 'sourceCalendar')}</span>}
+                {shift.source === 'photo' && <span className="pill-subtle pill-source">{t(language, 'sourcePhoto')}</span>}
                 {(shift.days ?? 0) > 1 && <span>{shift.days} {t(language, 'workdayCount')}</span>}
               </div>
               {editing === shiftId ? (
@@ -1318,7 +1357,16 @@ function ShiftsPage({
                   initial={{ ...shift, id: shiftId }}
                   onCancel={() => setEditing(null)}
                   onSave={(values) => {
-                    onUpdate(data.shifts.map((item) => (item.id ?? item.jobId + item.date) === shiftId ? values[0] : item));
+                    // Herkunft und Kalender-Kennung bleiben erhalten; ein späterer Abgleich überschreibt die Änderung nicht.
+                    onUpdate(data.shifts.map((item) => (item.id ?? item.jobId + item.date) === shiftId
+                      ? {
+                        ...values[0],
+                        source: item.source,
+                        externalId: item.externalId,
+                        calendarId: item.calendarId,
+                        editedManually: item.source === 'calendar' || item.editedManually ? true : undefined,
+                      }
+                      : item));
                     setEditing(null);
                   }}
                 />
@@ -1387,6 +1435,7 @@ function JobForm({
   const [tipsEnabled, setTipsEnabled] = useState(Boolean(initial?.tipsEnabled));
   const [tips, setTips] = useState(String(initial?.tips ?? ''));
   const [expectedWage, setExpectedWage] = useState(String(initial?.expectedWage ?? ''));
+  const [keywords, setKeywords] = useState((initial?.calendarKeywords ?? []).join(', '));
   const [error, setError] = useState('');
   const [suggestion, setSuggestion] = useState('');
 
@@ -1438,6 +1487,7 @@ function JobForm({
       tipsEnabled,
       tips: tipsEnabled ? Math.max(0, Number(tips) || 0) : undefined,
       expectedWage: expectedWage ? Math.max(0, Number(expectedWage)) : undefined,
+      calendarKeywords: keywords.split(',').map((word) => word.trim()).filter(Boolean),
     });
   };
 
@@ -1551,6 +1601,11 @@ function JobForm({
         </label>
       </div>
       <p className="field-hint wide-hint">{t(language, 'tipsInfo')}</p>
+      <label className="field">
+        <span>{t(language, 'calendarKeywords')}</span>
+        <input value={keywords} onChange={(event) => setKeywords(event.target.value)} placeholder={t(language, 'calendarKeywordsPlaceholder')} />
+        <small>{t(language, 'calendarKeywordsHint')}</small>
+      </label>
       {error && <p role="alert" className="form-error">{error}</p>}
       <div className="form-actions">
         <button className="button button-primary" type="submit">{initial ? t(language, 'updateJob') : t(language, 'createJob')}</button>
@@ -1809,13 +1864,13 @@ function MorePage({
   onNavigate: (screen: Screen) => void;
 }) {
   const entries: { screen: Screen; title: MessageKey; description: MessageKey; visible?: boolean }[] = [
+    { screen: 'Import', title: 'importTitle', description: 'descImport' },
     { screen: 'Trends', title: 'trends', description: 'descTrends' },
     { screen: 'WageCheck', title: 'wageCheck', description: 'descWage' },
     { screen: 'Settings', title: 'settings', description: 'descSettings' },
     { screen: 'JobBoard', title: 'jobBoardTitle', description: 'descJobBoard', visible: features.jobBoard },
     { screen: 'PeerStats', title: 'peerTitle', description: 'descPeer', visible: features.peerStats },
     { screen: 'Premium', title: 'premiumTitle', description: 'descPremium', visible: features.premium },
-    { screen: 'Scan', title: 'scanTitle', description: 'descScan', visible: features.scheduleScan && features.premium },
   ];
   return (
     <section className="page-enter">
@@ -1836,6 +1891,8 @@ function SettingsPage({
   data,
   language,
   features,
+  advancedMode,
+  onAdvanced,
   onUpdate,
   onFeatureUpdate,
   onNavigate,
@@ -1845,6 +1902,8 @@ function SettingsPage({
   data: AppState;
   language: Language;
   features: Record<FeatureName, boolean>;
+  advancedMode: boolean;
+  onAdvanced: (value: boolean) => void;
   onUpdate: (values: Partial<AppState>) => void;
   onFeatureUpdate: (values: Record<FeatureName, boolean>) => void;
   onNavigate: (screen: Screen) => void;
@@ -1859,12 +1918,9 @@ function SettingsPage({
       if (!imported) throw new Error('Invalid backup');
       onUpdate({ ...imported, onboarded: true });
       if (parsed.featureFlags && typeof parsed.featureFlags === 'object') {
-        const flags = parsed.featureFlags as Partial<Record<FeatureName, unknown>>;
-        const validFlags = { ...defaultFeatures };
-        for (const key of Object.keys(validFlags) as FeatureName[]) {
-          if (typeof flags[key] === 'boolean') validFlags[key] = flags[key] as boolean;
-        }
-        onFeatureUpdate(validFlags);
+        onFeatureUpdate(sanitizeFeatures(parsed.featureFlags));
+        const advanced = (parsed.featureFlags as { advancedMode?: unknown }).advancedMode;
+        if (typeof advanced === 'boolean') onAdvanced(advanced);
       }
       window.alert(t(language, 'importSuccess'));
     } catch {
@@ -1873,7 +1929,7 @@ function SettingsPage({
   };
 
   const exportData = () => {
-    const blob = new Blob([JSON.stringify({ version: 1, state: data, featureFlags: features }, null, 2)], {
+    const blob = new Blob([JSON.stringify({ version: 1, state: stateForExport(data), featureFlags: { ...features, advancedMode } }, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
@@ -1929,6 +1985,13 @@ function SettingsPage({
           <input type="checkbox" checked={data.darkMode} onChange={(event) => onUpdate({ darkMode: event.target.checked })} />
           <span>{t(language, 'darkMode')}</span>
         </label>
+        <label className="flag-row advanced-row">
+          <span>
+            <strong>{t(language, 'advancedMode')} <span className="badge-demo">{t(language, 'demoBadge')}</span></strong>
+            <small>{t(language, 'advancedModeHint')}</small>
+          </span>
+          <input type="checkbox" checked={advancedMode} onChange={(event) => onAdvanced(event.target.checked)} />
+        </label>
         <div className="settings-actions">
           <button className="button button-quiet" type="button" onClick={exportData}>{t(language, 'export')}</button>
           <label className="button button-quiet file-button">
@@ -1936,11 +1999,13 @@ function SettingsPage({
             <input type="file" accept="application/json,.json" onChange={(event) => void importFile(event.target.files?.[0])} />
           </label>
           <button className="button button-quiet" type="button" onClick={() => onNavigate('Trends')}>{t(language, 'trends')}</button>
-          <details className="developer-disclosure">
-            <summary>{t(language, 'developer')}</summary>
-            <p className="muted">{t(language, 'developerIntro')}</p>
-            <button className="button button-quiet" type="button" onClick={() => onNavigate('Developer')}>{t(language, 'openDeveloper')}</button>
-          </details>
+          {advancedMode && (
+            <details className="developer-disclosure">
+              <summary>{t(language, 'developer')}</summary>
+              <p className="muted">{t(language, 'developerIntro')}</p>
+              <button className="button button-quiet" type="button" onClick={() => onNavigate('Developer')}>{t(language, 'openDeveloper')}</button>
+            </details>
+          )}
           <button className="button button-quiet" type="button" onClick={() => onReset()}>{t(language, 'resetDemo')}</button>
           <button className="button button-danger" type="button" onClick={() => {
             if (window.confirm(t(language, 'confirmDeleteAll'))) onDelete();
@@ -2290,12 +2355,37 @@ function JobBoardPage({
     return () => { cancelled = true; };
   }, [data.profile.age]);
   const today = localToday();
-  const listings: Listing[] = [...posted, ...(serverListings ?? demoListings)];
+  const [partnerFilter, setPartnerFilter] = useState('');
+  const allListings: Listing[] = [...posted, ...(serverListings ?? demoListings)];
+  const listings = partnerFilter ? allListings.filter((listing) => jobPartnerFor(listing)?.id === partnerFilter) : allListings;
   return (
     <section className="page-enter">
       <PageHeading kicker={t(language, 'demoKicker')} title={t(language, 'jobBoardTitle')} trailing={<span className="badge-demo">{t(language, 'demoBadge')}</span>} />
       <p className="page-intro">{t(language, 'jobBoardIntro')}</p>
       {serverError && <p className="field-hint">{t(language, 'jobBoardLocalFallback')}</p>}
+      <section className="surface job-partners">
+        <div className="partner-panel-head">
+          <div><p className="eyebrow">{t(language, 'jobPartnersKicker')}</p><h2>{t(language, 'jobPartnersTitle')}</h2></div>
+          <span className="badge-demo">{t(language, 'demoBadge')}</span>
+        </div>
+        <p className="field-hint">{t(language, 'jobPartnersIntro')}</p>
+        <div className="partner-chips" role="group" aria-label={t(language, 'jobPartnersTitle')}>
+          <button type="button" className={partnerFilter === '' ? 'chip is-selected' : 'chip'} aria-pressed={partnerFilter === ''} onClick={() => setPartnerFilter('')}>
+            {t(language, 'jobPartnersAll')}
+          </button>
+          {demoJobPartners.map((partner) => (
+            <button
+              type="button"
+              key={partner.id}
+              className={partnerFilter === partner.id ? 'chip is-selected' : 'chip'}
+              aria-pressed={partnerFilter === partner.id}
+              onClick={() => setPartnerFilter(partner.id)}
+            >
+              <strong>{partner.name}</strong> <small>{language === 'de' ? partner.focus : partner.focus_en}</small>
+            </button>
+          ))}
+        </div>
+      </section>
       {data.profile.age < consentAgeRule.minimumAge ? (
         <p className="notice notice-amber">{t(language, 'optInsBlocked')}</p>
       ) : (
@@ -2384,7 +2474,12 @@ function JobBoardPage({
                 <strong>{money(earnings, language)}</strong>
               </div>
               {!fits && <p className="field-hint">{t(language, needsReview ? reviewReason : secondMiniJob ? 'jobBoardSecondMiniJob' : annualExceeded ? 'jobBoardAnnualCap' : workingStudentOverHours ? 'jobBoardWeeklyHours' : 'jobBoardExceedsHeadroom')}</p>}
-              <span className="pill-subtle">{t(language, 'typeMini')}</span>
+              <span className="listing-tags">
+                <span className="pill-subtle">{t(language, 'typeMini')}</span>
+                {jobPartnerFor(listing) && (
+                  <span className="pill-subtle pill-partner">{t(language, 'jobPartnerVia', { name: jobPartnerFor(listing)!.name })} · {t(language, 'partnerBadge')}</span>
+                )}
+              </span>
               <p className="privacy-note">{t(language, 'applicationPrivacy')}</p>
               <a className="button button-quiet" href={'mailto:?subject=' + encodeURIComponent(t(language, 'applicationSubject', { title: listing.title }))}>{t(language, 'contact')} ↗</a>
               <span className="sr-only">{t(language, 'demoBadge')}</span>
@@ -2765,93 +2860,6 @@ function makeTextPdf(text: string): string {
   return pdf;
 }
 
-function ScanPage({
-  jobs,
-  language,
-  onAdd,
-}: {
-  jobs: Job[];
-  language: Language;
-  onAdd: (shifts: Shift[]) => void;
-}) {
-  const [jobId, setJobId] = useState(jobs[0]?.id ?? '');
-  const [image, setImage] = useState<File | null>(null);
-  const [running, setRunning] = useState(false);
-  const [error, setError] = useState('');
-  const [recognized, setRecognized] = useState<{ date: string; hours: number }[]>([]);
-  const [ocrText, setOcrText] = useState('');
-
-  const runOcr = async () => {
-    if (!image) return;
-    setRunning(true);
-    setError('');
-    try {
-      const module = await import('tesseract.js');
-      const result = await module.recognize(image, language === 'de' ? 'deu' : 'eng');
-      setOcrText(result.data.text);
-      const dates = Array.from(result.data.text.matchAll(/(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?/g));
-      const hours = Array.from(result.data.text.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:h|std|stunden)/gi));
-      const next = dates.map((match, index) => {
-        const day = Number(match[1]);
-        const month = Number(match[2]);
-        const year = Number(match[3] ? (match[3].length === 2 ? '20' + match[3] : match[3]) : new Date().getFullYear());
-        return {
-          date: year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0'),
-          hours: Number((hours[index]?.[1] ?? '0').replace(',', '.')),
-        };
-      }).filter((shift) => shift.hours > 0);
-      setRecognized(next);
-      if (!next.length) setError(t(language, 'scanError'));
-    } catch {
-      setError(t(language, 'scanError'));
-    } finally {
-      setRunning(false);
-    }
-  };
-
-  return (
-    <section className="page-enter">
-      <PageHeading kicker={t(language, 'premiumKicker')} title={t(language, 'scanTitle')} />
-      <p className="notice notice-neutral">{t(language, 'scanPrivacy')}</p>
-      <section className="surface form-surface form-grid">
-        <label className="field">
-          <span>{t(language, 'scanChoose')}</span>
-          <input type="file" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] ?? null)} />
-        </label>
-        <button className="button button-primary" type="button" onClick={() => void runOcr()} disabled={!image || running}>
-          {running ? t(language, 'scanRunning') : t(language, 'scanRun')}
-        </button>
-        {error && <p role="alert" className="form-error">{error}</p>}
-        {ocrText && (
-          <details><summary>{t(language, 'recognizedLocalText')}</summary><pre className="ocr-text">{ocrText}</pre></details>
-        )}
-      </section>
-      {recognized.length > 0 && (
-        <section className="surface form-surface">
-          <h2>{t(language, 'scanReview')}</h2>
-          <label className="field">
-            <span>{t(language, 'selectJob')}</span>
-            <select value={jobId} onChange={(event) => setJobId(event.target.value)} required>
-              {jobs.map((job) => <option value={job.id} key={job.id}>{job.title}</option>)}
-            </select>
-          </label>
-          {recognized.map((item, index) => (
-            <div className="form-grid two-columns" key={index}>
-              <label className="field"><span>{t(language, 'shiftDate')}</span><input type="date" value={item.date} onChange={(event) => setRecognized((items) => items.map((entry, row) => row === index ? { ...entry, date: event.target.value } : entry))} /></label>
-              <label className="field"><span>{t(language, 'hoursWorked')}</span><input type="number" min="0" step=".25" value={item.hours} onChange={(event) => setRecognized((items) => items.map((entry, row) => row === index ? { ...entry, hours: Number(event.target.value) } : entry))} /></label>
-            </div>
-          ))}
-          <button className="button button-dark" type="button" onClick={() => {
-            if (!jobId || !jobs.some((job) => job.id === jobId)) return;
-            onAdd(recognized.map((item) => ({ id: id(), jobId, date: item.date, hours: item.hours, planned: false })));
-            setRecognized([]);
-          }} disabled={!jobId || jobs.length === 0}>{t(language, 'scanSave')}</button>
-        </section>
-      )}
-    </section>
-  );
-}
-
 function Navigation({
   language,
   current,
@@ -2870,7 +2878,7 @@ function Navigation({
   ];
   const selected = current === 'Settings' || current === 'Trends' || current === 'WageCheck' ||
     current === 'Developer' || current === 'JobBoard' || current === 'PeerStats' ||
-    current === 'Premium' || current === 'Scan' ? 'More' : current;
+    current === 'Premium' ? 'More' : current === 'Import' ? 'Shifts' : current;
 
   return (
     <nav className="bottom-nav" aria-label={t(language, 'mainNavigation')}>
@@ -2894,8 +2902,12 @@ function App() {
   const [data, setData] = useState<AppState>(() => createDemoState());
   const [ready, setReady] = useState(false);
   const [page, setPage] = useState<Screen>('Onboarding');
-  const [features, setFeatures] = useState<Record<FeatureName, boolean>>({ ...defaultFeatures });
+  const [flags, setFeatures] = useState<Record<FeatureName, boolean>>({ ...defaultFeatures });
+  const [advancedMode, setAdvancedMode] = useState(false);
   const [featureReady, setFeatureReady] = useState(false);
+  const [syncNotice, setSyncNotice] = useState('');
+  // Komponenten sehen nur die wirksamen Flags: ohne Advanced-Modus ist jede Demo-Funktion aus.
+  const features = effectiveFeatures(advancedMode, flags);
   const [checkOpen, setCheckOpen] = useState(false);
   const language = data.language;
 
@@ -2908,6 +2920,7 @@ function App() {
       setReady(true);
     });
     setFeatures(getFeatureFlags());
+    setAdvancedMode(getAdvancedMode());
     setFeatureReady(true);
     return () => { cancelled = true; };
   }, []);
@@ -2923,11 +2936,55 @@ function App() {
   useEffect(() => {
     if (!featureReady) return;
     try {
-      localStorage.setItem('headroom-features', JSON.stringify(features));
+      localStorage.setItem('headroom-features', JSON.stringify(flags));
+      localStorage.setItem('headroom-advanced', String(advancedMode));
     } catch {
       // Feature-flag persistence is optional for demos.
     }
-  }, [features, featureReady]);
+  }, [flags, advancedMode, featureReady]);
+
+  // Kalender-Abos beim Start abgleichen (höchstens alle sechs Stunden). Ohne lokalen Server bleibt alles, wie es ist.
+  const syncStarted = useRef(false);
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  useEffect(() => {
+    if (!ready || syncStarted.current) return;
+    syncStarted.current = true;
+    const due = data.calendars.filter((calendar) => syncDue(calendar));
+    if (!due.length) return;
+    void (async () => {
+      let added = 0;
+      for (const calendar of due) {
+        try {
+          const text = await fetchCalendarFeed(calendar.url!);
+          // Zählen mit dem aktuellen Stand; übernommen wird im Updater, damit parallele Änderungen nicht verloren gehen.
+          added += syncFromIcs(text, calendar, dataRef.current).added;
+          setData((current) => {
+            const outcome = syncFromIcs(text, calendar, current);
+            return {
+              ...current,
+              shifts: outcome.shifts,
+              pendingImports: outcome.pending,
+              calendars: current.calendars.map((item) => item.id === calendar.id ? { ...item, lastSync: new Date().toISOString(), lastError: undefined } : item),
+            };
+          });
+        } catch (error) {
+          const code = error instanceof CalendarFeedError ? error.code : 'unknown';
+          setData((current) => ({
+            ...current,
+            calendars: current.calendars.map((item) => item.id === calendar.id ? { ...item, lastError: code } : item),
+          }));
+        }
+      }
+      if (added > 0) setSyncNotice(t(language, 'calendarAutoAdded', { count: added }));
+    })();
+  }, [ready]);
+
+  const changeAdvanced = (value: boolean) => {
+    setAdvancedMode(value);
+    // Beim ersten Einschalten die Partner-Demo aktivieren, damit sofort etwas zu sehen ist.
+    if (value && Object.values(flags).every((flag) => !flag)) setFeatures({ ...advancedDefaults });
+  };
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
@@ -2983,10 +3040,14 @@ function App() {
             onAddShift={addOrReplaceShifts}
             onShiftCheck={() => setCheckOpen(true)}
             features={features}
+            syncNotice={syncNotice}
+            onDismissSync={() => setSyncNotice('')}
           />
         );
       case 'Shifts':
-        return <ShiftsPage data={data} language={language} onUpdate={(shifts) => update({ shifts })} />;
+        return <ShiftsPage data={data} language={language} onUpdate={(shifts) => update({ shifts })} onImport={() => setPage('Import')} />;
+      case 'Import':
+        return <ImportPage data={data} language={language} onUpdate={update} onDone={() => setPage('Shifts')} />;
       case 'Jobs':
         return <JobsPage data={data} language={language} features={features} onUpdate={(jobs) => update({ jobs, shifts: data.shifts.filter((shift) => jobs.some((job) => job.id === shift.jobId)) })} />;
       case 'Limits':
@@ -2998,7 +3059,9 @@ function App() {
           <SettingsPage
             data={data}
             language={language}
-            features={features}
+            features={flags}
+            advancedMode={advancedMode}
+            onAdvanced={changeAdvanced}
             onUpdate={update}
             onFeatureUpdate={setFeatures}
             onNavigate={setPage}
@@ -3026,8 +3089,10 @@ function App() {
                 }
               }
               setFeatures({ ...defaultFeatures });
+              setAdvancedMode(false);
               try {
                 localStorage.removeItem('headroom-features');
+                localStorage.removeItem('headroom-advanced');
               } catch {
                 // Optional demo flags must not block local data deletion.
               }
@@ -3042,7 +3107,9 @@ function App() {
       case 'WageCheck':
         return <WageCheckPage data={data} language={language} />;
       case 'Developer':
-        return <DeveloperPage language={language} features={features} onChange={setFeatures} />;
+        return advancedMode
+          ? <DeveloperPage language={language} features={flags} onChange={setFeatures} />
+          : <MorePage language={language} features={features} onNavigate={setPage} />;
       case 'JobBoard':
         return features.jobBoard
           ? <JobBoardPage data={data} language={language} />
@@ -3054,10 +3121,6 @@ function App() {
       case 'Premium':
         return features.premium
           ? <PremiumPage data={data} language={language} onUpdate={update} />
-          : <MorePage language={language} features={features} onNavigate={setPage} />;
-      case 'Scan':
-        return features.scheduleScan && features.premium && data.isPremium
-          ? <ScanPage jobs={data.jobs} language={language} onAdd={addOrReplaceShifts} />
           : <MorePage language={language} features={features} onNavigate={setPage} />;
     }
   })();

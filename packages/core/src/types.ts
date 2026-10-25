@@ -69,7 +69,11 @@ export type Job = {
   surcharges?: number;
   tipsEnabled?: boolean;
   tips?: number;
+  /** Stichwörter, an denen Kalendertermine oder Dienstplanzeilen diesem Job zugeordnet werden. */
+  calendarKeywords?: string[];
 };
+
+export type ShiftSource = 'manual' | 'calendar' | 'photo';
 
 export type Shift = {
   id?: string;
@@ -83,6 +87,13 @@ export type Shift = {
   recurring?: 'weekly';
   surchargeAmount?: number;
   tips?: number;
+  /** Herkunft der Schicht. Fehlt bei älteren Einträgen und bedeutet dann „manuell“. */
+  source?: ShiftSource;
+  /** Stabile Kennung aus dem Kalender (UID, bei Serien plus ursprünglicher Startzeit). */
+  externalId?: string;
+  calendarId?: string;
+  /** Nach dem Import von Hand bearbeitet: spätere Kalender-Syncs überschreiben die Zeiten nicht. */
+  editedManually?: boolean;
 };
 
 export type CalculationSummary = {

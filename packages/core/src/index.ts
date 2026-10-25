@@ -5,6 +5,7 @@ import { roleLayouts, roleTier } from '../data/roles';
 import type { Job, Limit, Profile, ProfileStatus, RiskStatus, Shift } from './types';
 
 export * from './types';
+export * from './shiftImport';
 export { consentAgeRule, jobPresets, limits, limitsForYear, miniJobCapFormula, roleLayouts, roleTier };
 export type { RoleItem, RoleLayout, RoleTier } from '../data/roles';
 

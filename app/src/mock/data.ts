@@ -42,3 +42,23 @@ export const demoPartners = [
   { name: 'SafeCover', category: 'Haftpflichtversicherung', url: '#', fictional: true },
   { name: 'Advisor Map', category: 'Steuerberaterverzeichnis', url: '#', fictional: true },
 ];
+
+// Fiktive Partner-Jobbörsen für den Advanced-Modus. Keine echten Unternehmen, keine echten Stellen.
+export const demoJobPartners = [
+  { id: 'schichtfuchs', name: 'Schichtfuchs', focus: 'Gastro & Events', focus_en: 'Hospitality & events', fictional: true },
+  { id: 'jobwolke', name: 'Jobwolke', focus: 'Lager & Logistik', focus_en: 'Warehouse & logistics', fictional: true },
+  { id: 'campuskorb', name: 'Campuskorb', focus: 'Handel & Studijobs', focus_en: 'Retail & student jobs', fictional: true },
+];
+
+const partnerByTitle: Record<string, string> = {
+  Eventaufbau: 'schichtfuchs',
+  'Café-Service': 'schichtfuchs',
+  'Lager / Kommissionierung': 'jobwolke',
+  Einzelhandel: 'campuskorb',
+};
+
+/** Demoinserate stammen in der Vorschau von einer Partnerbörse; selbst erstellte Inserate nicht. */
+export function jobPartnerFor(listing: { id: string; title: string; demo?: boolean | number }) {
+  if (!listing.id.startsWith('demo-')) return undefined;
+  return demoJobPartners.find((partner) => partner.id === partnerByTitle[listing.title]);
+}

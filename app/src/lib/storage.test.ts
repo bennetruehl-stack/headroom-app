@@ -27,3 +27,24 @@ describe('demo state', () => {
     expect(projected).toBeLessThan(7_236);
   });
 });
+
+describe('state migration', () => {
+  it('adds empty calendar fields to older saved states and drops invalid entries', async () => {
+    const { normalizeState, stateForExport } = await import('./storage');
+    const old = createDemoState() as Partial<ReturnType<typeof createDemoState>>;
+    delete old.calendars;
+    delete old.pendingImports;
+    const migrated = normalizeState(old);
+    expect(migrated?.calendars).toEqual([]);
+    expect(migrated?.pendingImports).toEqual([]);
+
+    const withCalendar = normalizeState({
+      ...createDemoState(),
+      calendars: [{ id: 'c', name: 'Arbeit', kind: 'url', url: 'https://calendar.google.com/secret.ics' }, { id: 1 }],
+      pendingImports: [{ date: '2026-10-20', hours: 4, source: 'calendar' }, { date: 'x', hours: 1, source: 'calendar' }],
+    });
+    expect(withCalendar?.calendars).toHaveLength(1);
+    expect(withCalendar?.pendingImports).toHaveLength(1);
+    expect(stateForExport(withCalendar!).calendars[0]).toEqual({ id: 'c', name: 'Arbeit', kind: 'url' });
+  });
+});

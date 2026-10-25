@@ -220,6 +220,93 @@ app.delete('/api/peer-opt-in/:deviceToken', (request, response) => {
   response.json({ deleted: true, count: result.changes });
 });
 
+// Kalender-Abo: Google und iCloud senden keine CORS-Header, deshalb holt der lokale Server die .ics-Datei.
+// Der private Link kommt im Body (nicht in der URL) und wird nie geloggt. Nur bekannte Kalender-Hosts sind erlaubt.
+const CALENDAR_HOSTS = [/^calendar\.google\.com$/i, /^([a-z0-9-]+\.)*icloud\.com$/i];
+const CALENDAR_MAX_BYTES = 2 * 1024 * 1024;
+const CALENDAR_TIMEOUT_MS = 10_000;
+
+function calendarUrl(value: unknown): URL | null {
+  if (typeof value !== 'string' || value.length > 2048) return null;
+  try {
+    const url = new URL(value.trim().replace(/^webcals?:\/\//i, 'https://'));
+    if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) return null;
+    return CALENDAR_HOSTS.some((host) => host.test(url.hostname)) ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readLimited(body: ReadableStream<Uint8Array>): Promise<string | null> {
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > CALENDAR_MAX_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+app.post('/api/calendar-feed', async (request, response) => {
+  if (!isPlainObject(request.body) || !hasExactKeys(request.body, ['url'])) {
+    response.status(400).json({ error: 'invalid' });
+    return;
+  }
+  let url = calendarUrl(request.body.url);
+  if (!url) {
+    response.status(400).json({ error: 'host' });
+    return;
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CALENDAR_TIMEOUT_MS);
+  try {
+    // Weiterleitungen selbst verfolgen, damit auch das Ziel auf der Allowlist liegen muss.
+    for (let hop = 0; hop < 4; hop += 1) {
+      const upstream = await fetch(url, {
+        redirect: 'manual',
+        signal: controller.signal,
+        headers: { Accept: 'text/calendar, text/plain;q=0.8', 'User-Agent': 'Headroom-Local-Demo/1.0' },
+      });
+      if (upstream.status >= 300 && upstream.status < 400) {
+        const next = calendarUrl(new URL(upstream.headers.get('location') ?? '', url).toString());
+        if (!next) {
+          response.status(502).json({ error: 'redirect' });
+          return;
+        }
+        url = next;
+        continue;
+      }
+      if (!upstream.ok || !upstream.body) {
+        response.status(502).json({ error: upstream.status === 404 || upstream.status === 403 ? 'notFound' : 'upstream' });
+        return;
+      }
+      const text = await readLimited(upstream.body);
+      if (text === null) {
+        response.status(413).json({ error: 'tooLarge' });
+        return;
+      }
+      if (!text.includes('BEGIN:VCALENDAR')) {
+        response.status(502).json({ error: 'notCalendar' });
+        return;
+      }
+      response.type('text/calendar').set('Cache-Control', 'no-store').send(text);
+      return;
+    }
+    response.status(502).json({ error: 'redirect' });
+  } catch {
+    response.status(504).json({ error: 'timeout' });
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
 app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
   console.error(error);
   if (error instanceof SyntaxError) {

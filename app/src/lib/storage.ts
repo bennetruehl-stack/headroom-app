@@ -1,4 +1,4 @@
-import type { Job, Profile, ProfileStatus, Shift } from '@headroom/core';
+import type { Job, Profile, ProfileStatus, Shift, ShiftCandidate } from '@headroom/core';
 import { limitValue } from '@headroom/core';
 import type { Language } from '../i18n/translations';
 
@@ -15,6 +15,20 @@ export type AppState = {
   peerToken?: string;
   /** Gesetzt, wenn Beispieldaten geladen sind. Die App kennzeichnet das sichtbar. */
   example?: ExampleProfile;
+  /** Verbundene Kalender (privater iCal-Link oder einmal importierte Datei). */
+  calendars: CalendarSource[];
+  /** Beim automatischen Abgleich gefundene Termine, die noch geprüft werden müssen. */
+  pendingImports: ShiftCandidate[];
+};
+
+export type CalendarSource = {
+  id: string;
+  name: string;
+  kind: 'url' | 'file';
+  /** Privater iCal-Link. Wird nie exportiert. */
+  url?: string;
+  lastSync?: string;
+  lastError?: string;
 };
 
 export type ExampleProfile = 'standard' | 'lena';
@@ -132,6 +146,8 @@ export function createDemoState(): AppState {
     dismissedRecommendations: [],
     peerOptIn: false,
     example: 'standard',
+    calendars: [],
+    pendingImports: [],
   };
 }
 
@@ -215,6 +231,8 @@ export function createLenaState(): AppState {
     dismissedRecommendations: [],
     peerOptIn: false,
     example: 'lena',
+    calendars: [],
+    pendingImports: [],
   };
 }
 
@@ -311,7 +329,20 @@ export function normalizeState(value: unknown): AppState | null {
     peerOptIn: Boolean(candidate.peerOptIn),
     peerToken: typeof candidate.peerToken === 'string' ? candidate.peerToken : undefined,
     example: candidate.example === 'standard' || candidate.example === 'lena' ? candidate.example : undefined,
+    calendars: Array.isArray(candidate.calendars)
+      ? candidate.calendars.filter((item): item is CalendarSource =>
+        Boolean(item) && typeof item.id === 'string' && typeof item.name === 'string' && (item.kind === 'url' || item.kind === 'file'))
+      : [],
+    pendingImports: Array.isArray(candidate.pendingImports)
+      ? candidate.pendingImports.filter((item): item is ShiftCandidate =>
+        Boolean(item) && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && Number.isFinite(item.hours) && (item.source === 'calendar' || item.source === 'photo'))
+      : [],
   };
+}
+
+/** Für den JSON-Export: private Kalender-Links entfernen, sie sind wie ein Passwort. */
+export function stateForExport(state: AppState): AppState {
+  return { ...state, calendars: state.calendars.map(({ url: _url, ...calendar }) => calendar) };
 }
 
 export async function loadState(): Promise<AppState> {

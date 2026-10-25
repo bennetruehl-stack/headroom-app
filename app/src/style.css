@@ -2491,3 +2491,272 @@ input::placeholder {
     transition-property: opacity, content-visibility;
   }
 }
+
+/* Schicht-Import (Kalender und Foto) */
+.import-tabs {
+  margin: 4px 0 16px;
+}
+
+.import-pending {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.import-pending .card-actions {
+  margin: 0;
+}
+
+.import-link {
+  justify-self: start;
+  margin: -4px 0 8px;
+  font-size: 14px;
+}
+
+.heading-action {
+  min-height: 40px;
+  padding-inline: 14px;
+  font-size: 14px;
+}
+
+.calendar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.calendar-row > span:first-child {
+  display: grid;
+  min-width: 0;
+}
+
+.calendar-row small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.calendar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 12px;
+}
+
+.import-steps {
+  margin: 8px 0 4px;
+  padding-left: 20px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.import-steps li + li {
+  margin-top: 4px;
+}
+
+.import-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.import-divider::before,
+.import-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.import-preview {
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card-soft);
+}
+
+.import-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.import-summary span {
+  display: grid;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: var(--surface-shadow);
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.import-summary strong {
+  color: var(--ink);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.import-row {
+  display: grid;
+  gap: 12px;
+  transition: opacity 180ms ease;
+}
+
+.import-row.is-off {
+  opacity: 0.6;
+}
+
+.import-row-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.import-row-head .check-row span {
+  display: grid;
+}
+
+.import-row-head small {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.import-status-importStatusNew {
+  background: var(--safe-bg);
+  color: var(--safe);
+}
+
+.import-status-importStatusUpdate {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.import-status-importStatusNoJob {
+  background: var(--close-bg);
+  color: var(--close);
+}
+
+.three-columns {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.import-other {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.import-other > .text-button {
+  justify-self: start;
+}
+
+.import-actions {
+  position: sticky;
+  bottom: 84px;
+  z-index: 2;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.pill-source {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Advanced-Modus und Partner-Jobbörsen */
+.advanced-row strong {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.job-partners {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.job-partners h2 {
+  margin: 0;
+}
+
+.partner-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, transform var(--press) var(--ease-out);
+}
+
+.chip small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.chip.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.chip:active {
+  transform: scale(0.97);
+}
+
+.listing-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pill-partner {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+@media (max-width: 420px) {
+  .three-columns {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .three-columns > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip:active {
+    transform: none;
+  }
+}

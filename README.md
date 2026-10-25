@@ -27,13 +27,16 @@ npm run build
 
 ```text
 app/                         React, TypeScript, Vite, PWA und deutsch/englische UI
-  src/config/features.ts     optionale Funktionen; standardmäßig alle deaktiviert
+  src/config/features.ts     Advanced-Modus und optionale Demo-Funktionen; standardmäßig aus
+  src/import/ImportPage.tsx  Schichten aus Kalender (.ics/iCal-Link) und Foto übernehmen
+  src/lib/shiftImport.ts     Import anwenden, Kalender abgleichen
   src/lib/storage.ts         IndexedDB, localStorage-Fallback und Datenmigration
   src/mock/data.ts           sichtbar gekennzeichnete Beispieldaten
        │
        ├── verwendet
        ▼
 packages/core/               reine TypeScript-Typen und Berechnungen
+  src/shiftImport.ts         iCalendar-Parser, Dienstplan-Textparser, Jobzuordnung, Dublettenprüfung
   data/limits.ts             datierte Grenzwerte mit Quelle und Prüfstatus
   data/jobPresets.ts         durchsuchbare Job-Presets
   data/references.ts         externe Informationsquellen
@@ -41,17 +44,18 @@ packages/core/               reine TypeScript-Typen und Berechnungen
        └── verwendet
        ▼
 server/                      optionaler lokaler Express-Demo-Server
-  src/index.ts               SQLite für Demoinserate und freiwillige Lohndaten
+  src/index.ts               SQLite für Demoinserate und freiwillige Lohndaten; Kalender-Abruf (Google/iCloud)
 ```
 
 ## Enthaltene Funktionen
 
 - Onboarding für Studierende, Werkstudierende, Minijobber:innen, Beschäftigte mit Nebenjob und Schüler:innen; Profilangaben lassen sich später ändern.
+- **Schicht-Tracker:** Schichten aus Google- oder Apple-Kalender (privater iCal-Link oder .ics-Datei) und aus Fotos oder Screenshots von Dienstplänen übernehmen. Termine werden über Stichwörter, Jobtitel oder Firma einem Job zugeordnet; vor dem Speichern gibt es immer eine Prüfung. Verbundene Kalender werden beim Öffnen höchstens alle sechs Stunden abgeglichen. Dieselbe Schicht wird nur einmal erfasst, auch wenn sie per Foto und per Kalender ankommt (gleiche Kalender-Kennung oder gleicher Job, gleicher Tag und mindestens 50 % Zeitüberlappung). Von Hand bearbeitete importierte Schichten überschreibt ein späterer Abgleich nicht.
 - Jobs und Schichten erfassen, bearbeiten, löschen und wiederholen; Demo-Profil mit 487 € Monatsverdienst, 116 € verbleibendem Spielraum und 15 kurzfristigen Arbeitstagen.
 - Dashboard für Monat, Jahr und Saison, Grenzwertkarten mit Quelle und Stand, Schichtprüfung, Lohnorientierung und persönliche Trends.
 - Deutsch und Englisch, dunkles Farbschema, JSON-Export und -Import, lokale Löschfunktion sowie installierbare PWA mit Offline-Grundgerüst.
-- Sechs separat schaltbare Vorschaufunktionen: Schichtplan-OCR, Jobbörse, Partnerhinweise, Demo-Premium, anonyme Lohnstatistik und OpenStreetMap-Firmensuche.
-- 32 Job-Presets, 40 klar markierte Beispielinserate, mindestens 3.200 synthetische Vergleichsdatensätze und fünf Partnerkarten. Alle Partnernamen außer ELSTER sind fiktiv.
+- **Advanced-Modus (Demo)** in den Einstellungen, standardmäßig aus. Erst damit werden die Vorschaufunktionen sichtbar: Jobbörse mit drei fiktiven Partner-Jobbörsen, Partnerhinweise, Demo-Premium, anonyme Lohnstatistik und OpenStreetMap-Firmensuche (einzeln schaltbar im Entwicklerbereich). Ohne Advanced-Modus sind alle aus, egal wie die Einzel-Flags stehen. Eine Statistik-Demo nach Branche, Alter und Steuerstatus ist bewusst noch nicht umgesetzt.
+- 32 Job-Presets, 40 klar markierte Beispielinserate, mindestens 3.200 synthetische Vergleichsdatensätze, fünf Partnerkarten und drei Partner-Jobbörsen. Alle Partnernamen außer ELSTER sind fiktiv.
 
 ## Datenschutz und Datenfluss
 
@@ -62,7 +66,9 @@ Wenn optionale Funktionen manuell eingeschaltet und verwendet werden, gelten die
 - **Lohnstatistik:** Erst nach gesonderter Einwilligung sendet die App ein zufälliges Geräte-Token, Job-Preset, Stadt, tatsächlichen und erwarteten Stundenlohn sowie Monat an den Demo-Server. Die Firmenbezeichnung wird nicht übertragen. Gruppenwerte werden erst ab 20 Datensätzen ausgegeben. Die Einwilligung ist widerrufbar; die App fordert die Löschung der zum Token gehörenden Datensätze an.
 - **Jobbörse:** Die Vorschau lädt Demoinserate vom lokalen Server. Ein selbst erstelltes Inserat sendet Titel, Stadt, Datum, Dauer und Stundenlohn an dessen SQLite-Datenbank. Bewerbungen öffnen nur die Kontaktmöglichkeit; Headroom übermittelt dabei keine Profildaten.
 - **Firmensuche:** Nur nach Aktivierung der Funktion und Klick auf „Prüfen“ werden Firmenname und Stadt an OpenStreetMap Nominatim gesendet. Vor öffentlichem Einsatz müssen App-Kennung, Anfragefrequenz, Caching und Anbieterauswahl gegen die [Nominatim-Nutzungsrichtlinie](https://operations.osmfoundation.org/policies/nominatim/) geprüft und passend konfiguriert werden.
-- **Schichtplan-OCR:** Die Erkennung läuft lokal im Browser. Partnerkarten öffnen eine externe Seite erst nach einem Klick.
+- **Kalender (Kernfunktion):** Ein eingefügter iCal-Link wird nur auf dem Gerät gespeichert und nie exportiert. Zum Abrufen sendet die App ihn per POST (nicht in der URL) an den lokalen Server, der ihn ausschließlich an `calendar.google.com` oder `*.icloud.com` weiterreicht (auch bei Weiterleitungen geprüft, 10 s Timeout, max. 2 MB) und nicht protokolliert. Ohne Server funktioniert der Import einer .ics-Datei vollständig lokal.
+- **Foto/Screenshot (Kernfunktion):** Die Texterkennung (tesseract.js, Deutsch und Englisch) läuft im Browser; das Bild verlässt das Gerät nicht. Beim ersten Lauf lädt tesseract.js seine Sprachdaten nach.
+- Partnerkarten öffnen eine externe Seite erst nach einem Klick.
 
 Der Server ist ausschließlich als lokaler Demo-Server ausgelegt. Für einen öffentlichen Betrieb fehlen unter anderem ein geprüftes Hosting- und Löschkonzept, Datenschutzinformationen, Missbrauchsschutz und eine Sicherheitsprüfung. Es gibt keine Nutzerkonten. Individuelle Nutzerdaten werden nicht verkauft.
 
