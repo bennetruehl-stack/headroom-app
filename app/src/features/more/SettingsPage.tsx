@@ -1,0 +1,136 @@
+import type { ProfileStatus } from '@headroom/core';
+import { profileChoices } from '../../app/constants';
+import type { Screen } from '../../app/types';
+import { PageHeading } from '../../components/PageHeading';
+import { sanitizeFeatures, type FeatureName } from '../../config/features';
+import { t, type Language } from '../../i18n/translations';
+import { normalizeState, stateForExport, type AppState } from '../../lib/storage';
+
+export function SettingsPage({
+  data,
+  language,
+  features,
+  advancedMode,
+  onAdvanced,
+  onUpdate,
+  onFeatureUpdate,
+  onNavigate,
+  onReset,
+  onDelete,
+}: {
+  data: AppState;
+  language: Language;
+  features: Record<FeatureName, boolean>;
+  advancedMode: boolean;
+  onAdvanced: (value: boolean) => void;
+  onUpdate: (values: Partial<AppState>) => void;
+  onFeatureUpdate: (values: Record<FeatureName, boolean>) => void;
+  onNavigate: (screen: Screen) => void;
+  onReset: () => void;
+  onDelete: () => void;
+}) {
+  const importFile = async (file?: File) => {
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text()) as { state?: unknown; featureFlags?: unknown };
+      const imported = normalizeState(parsed?.state ?? parsed);
+      if (!imported) throw new Error('Invalid backup');
+      onUpdate({ ...imported, onboarded: true });
+      if (parsed.featureFlags && typeof parsed.featureFlags === 'object') {
+        onFeatureUpdate(sanitizeFeatures(parsed.featureFlags));
+        const advanced = (parsed.featureFlags as { advancedMode?: unknown }).advancedMode;
+        if (typeof advanced === 'boolean') onAdvanced(advanced);
+      }
+      window.alert(t(language, 'importSuccess'));
+    } catch {
+      window.alert(t(language, 'importError'));
+    }
+  };
+
+  const exportData = () => {
+    const blob = new Blob([JSON.stringify({ version: 1, state: stateForExport(data), featureFlags: { ...features, advancedMode } }, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'headroom-backup.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <section className="page-enter">
+      <PageHeading kicker={t(language, 'controlKicker')} title={t(language, 'settingsTitle')} />
+      <div className="surface settings-card">
+        <p className="muted">{t(language, 'localData')}</p>
+        <label className="field">
+          <span>{t(language, 'profileStatus')}</span>
+          <select
+            value={data.profile.status}
+            onChange={(event) => {
+              const status = event.target.value as ProfileStatus;
+              onUpdate({
+                profile: {
+                  ...data.profile,
+                  status,
+                  hasMainJob: status === 'Employee' ? data.profile.hasMainJob ?? true : data.profile.hasMainJob,
+                },
+              });
+            }}
+          >
+            {profileChoices.map((choice) => <option value={choice.value} key={choice.value}>{t(language, choice.key)}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span>{t(language, 'age')}</span>
+          <input type="number" min="0" max="120" value={data.profile.age} onChange={(event) => onUpdate({ profile: { ...data.profile, age: Number(event.target.value) } })} />
+        </label>
+        <label className="check-row">
+          <input type="checkbox" checked={data.profile.familyInsured} onChange={(event) => onUpdate({ profile: { ...data.profile, familyInsured: event.target.checked } })} />
+          <span>{t(language, 'familyInsured')}</span>
+        </label>
+        <label className="check-row">
+          <input type="checkbox" checked={data.profile.bafoeg} onChange={(event) => onUpdate({ profile: { ...data.profile, bafoeg: event.target.checked } })} />
+          <span>{t(language, 'bafoeg')}</span>
+        </label>
+        {data.profile.status === 'Working student' && (
+          <div className="form-grid two-columns">
+            <label className="field"><span>{t(language, 'lectureStart')}</span><input type="date" value={data.profile.semesterPeriods?.[0]?.start ?? ''} onChange={(event) => onUpdate({ profile: { ...data.profile, semesterPeriods: [{ start: event.target.value, end: data.profile.semesterPeriods?.[0]?.end ?? '' }] } })} /></label>
+            <label className="field"><span>{t(language, 'lectureEnd')}</span><input type="date" value={data.profile.semesterPeriods?.[0]?.end ?? ''} onChange={(event) => onUpdate({ profile: { ...data.profile, semesterPeriods: [{ start: data.profile.semesterPeriods?.[0]?.start ?? '', end: event.target.value }] } })} /></label>
+          </div>
+        )}
+        <label className="check-row">
+          <input type="checkbox" checked={data.darkMode} onChange={(event) => onUpdate({ darkMode: event.target.checked })} />
+          <span>{t(language, 'darkMode')}</span>
+        </label>
+        <label className="flag-row advanced-row">
+          <span>
+            <strong>{t(language, 'advancedMode')} <span className="badge-demo">{t(language, 'demoBadge')}</span></strong>
+            <small>{t(language, 'advancedModeHint')}</small>
+          </span>
+          <input type="checkbox" checked={advancedMode} onChange={(event) => onAdvanced(event.target.checked)} />
+        </label>
+        <div className="settings-actions">
+          <button className="button button-quiet" type="button" onClick={exportData}>{t(language, 'export')}</button>
+          <label className="button button-quiet file-button">
+            {t(language, 'import')}
+            <input type="file" accept="application/json,.json" onChange={(event) => void importFile(event.target.files?.[0])} />
+          </label>
+          <button className="button button-quiet" type="button" onClick={() => onNavigate('Trends')}>{t(language, 'trends')}</button>
+          {advancedMode && (
+            <details className="developer-disclosure">
+              <summary>{t(language, 'developer')}</summary>
+              <p className="muted">{t(language, 'developerIntro')}</p>
+              <button className="button button-quiet" type="button" onClick={() => onNavigate('Developer')}>{t(language, 'openDeveloper')}</button>
+            </details>
+          )}
+          <button className="button button-quiet" type="button" onClick={() => onReset()}>{t(language, 'resetDemo')}</button>
+          <button className="button button-danger" type="button" onClick={() => {
+            if (window.confirm(t(language, 'confirmDeleteAll'))) onDelete();
+          }}>{t(language, 'deleteAll')}</button>
+        </div>
+      </div>
+    </section>
+  );
+}

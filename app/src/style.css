@@ -2760,3 +2760,526 @@ input::placeholder {
     transform: none;
   }
 }
+
+/* ==========================================================================
+   Apple-Feinschliff
+   Baut auf dem bisherigen Design auf: gleiche Struktur, gleiche Markenfarbe,
+   aber Systemschrift, iOS-Grautöne, gruppierte Listen, Glas-Leisten und
+   ruhigere Flächen ohne Glow.
+   ========================================================================== */
+
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Plus Jakarta Sans Variable', system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Plus Jakarta Sans Variable', system-ui, sans-serif;
+  --font-rounded: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans Variable', system-ui, sans-serif;
+
+  --bg: #f2f2f7;
+  --paper: #f2f2f7;
+  --card: #ffffff;
+  --card-soft: #e9e9ee;
+  --ink: #1d1d1f;
+  --ink-soft: #48484a;
+  --muted: #6e6e73;
+  --line: #e5e5ea;
+  --line-strong: #d1d1d6;
+
+  --accent: #2456f5;
+  --accent-strong: #1b45d6;
+  --accent-soft: #e9efff;
+  --on-accent: #ffffff;
+
+  --safe: #1d8a3a;
+  --safe-bg: #e3f5e7;
+  --close: #b04e00;
+  --close-bg: #fff1df;
+  --over: #d70015;
+  --over-bg: #ffe8e6;
+
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --surface-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --hairline: rgba(60, 60, 67, 0.18);
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  letter-spacing: -0.006em;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body:has(.theme-dark) {
+  background: #000000;
+}
+
+/* ---- Typografie: Large Title, Title 2, Section Header ---- */
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+h1 {
+  font-size: clamp(1.95rem, 8.4vw, 2.125rem);
+  line-height: 1.1;
+  letter-spacing: -0.026em;
+}
+
+.dashboard-heading h1 {
+  font-size: clamp(1.95rem, 8.4vw, 2.125rem);
+}
+
+h2 {
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+}
+
+.eyebrow {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.003em;
+}
+
+.page-intro,
+.metric-caption {
+  color: var(--ink-soft);
+}
+
+/* ---- Leisten aus Glas ---- */
+
+.app-header {
+  min-height: 56px;
+  padding-block: 8px;
+  border-bottom: 1px solid transparent;
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  backdrop-filter: saturate(1.8) blur(20px);
+  -webkit-backdrop-filter: saturate(1.8) blur(20px);
+}
+
+.brand-symbol {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-family: var(--font-rounded);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.brand-word {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.language-select select {
+  min-height: 34px;
+  padding: 6px 28px 6px 12px;
+  border: 0;
+  background-color: var(--card-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bottom-nav {
+  gap: 0;
+  min-height: 0;
+  padding: 6px 4px calc(4px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+  backdrop-filter: saturate(1.8) blur(24px);
+  -webkit-backdrop-filter: saturate(1.8) blur(24px);
+}
+
+.nav-item {
+  gap: 2px;
+  min-height: 50px;
+  padding: 2px 0;
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.nav-item.is-current {
+  font-weight: 600;
+}
+
+.nav-icon {
+  display: block;
+  flex: 0 0 auto;
+}
+
+/* ---- Flächen: weiß auf Systemgrau, ohne Rahmen ---- */
+
+.surface {
+  border-color: transparent;
+  box-shadow: var(--surface-shadow);
+}
+
+.limit-progress-list,
+.more-list,
+.reference-list {
+  border-color: transparent;
+}
+
+.date-stamp {
+  box-shadow: none;
+  background: var(--card);
+}
+
+/* ---- Das Monats-Widget ---- */
+
+.hero-metric {
+  padding: 22px 22px 20px;
+  border-radius: 24px;
+  background: linear-gradient(165deg, #3d72ff 0%, #2456f5 52%, #1c48dc 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 14px 32px -18px rgba(36, 86, 245, 0.7);
+}
+
+.hero-metric::before,
+.hero-metric::after {
+  display: none;
+}
+
+.metric-number {
+  margin-top: 18px;
+  font-family: var(--font-rounded);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.hero-metric .metric-label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.hero-metric .status-badge {
+  min-height: 26px;
+  padding: 3px 10px;
+  background: #ffffff;
+}
+
+.hero-metric .progress-track {
+  height: 6px;
+}
+
+.progress-track {
+  height: 6px;
+}
+
+/* ---- Status-Pillen ohne Punkt ---- */
+
+.status-dot {
+  display: none;
+}
+
+.status-badge {
+  min-height: 24px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ---- Segment-Steuerung wie in iOS ---- */
+
+.segmented {
+  gap: 0;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--card-soft);
+}
+
+.segmented button {
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.segmented button.selected {
+  font-weight: 600;
+}
+
+.segmented-sliding::before {
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px) / var(--count));
+  border-radius: 8px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+  transform: translateX(calc(var(--index) * 100%));
+  transition: transform 280ms var(--ease-ios);
+}
+
+/* ---- Buttons: zentriert, ohne Pfeile, flach ---- */
+
+.button {
+  justify-content: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-align: center;
+}
+
+.button > span[aria-hidden='true'] {
+  display: none;
+}
+
+.button-primary {
+  box-shadow: none;
+}
+
+.button-quiet {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button-quiet:hover {
+    background: color-mix(in srgb, var(--accent-soft) 80%, var(--accent) 8%);
+  }
+}
+
+.button-danger {
+  border-color: transparent;
+}
+
+.text-button {
+  font-weight: 600;
+}
+
+.icon-button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  border: 0;
+  background: var(--card-soft);
+  color: var(--muted);
+  font-size: 18px;
+}
+
+/* ---- Onboarding als gruppierte Liste ---- */
+
+.onboarding-panel.surface {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.onboarding-panel > h2 {
+  margin: 0 0 8px 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.003em;
+}
+
+.choice-grid {
+  gap: 0;
+  overflow: hidden;
+  margin: 0 0 24px;
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: var(--surface-shadow);
+}
+
+.radio-choice {
+  min-height: 48px;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-weight: 500;
+}
+
+.radio-choice + .radio-choice {
+  box-shadow: inset 16px 1px 0 var(--card), inset 0 1px 0 var(--line);
+}
+
+.radio-choice.is-selected {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.radio-choice + .radio-choice.is-selected {
+  box-shadow: inset 16px 1px 0 var(--card), inset 0 1px 0 var(--line);
+}
+
+.radio-choice:active {
+  transform: none;
+  background: var(--card-soft);
+}
+
+/* Häkchen rechts statt Kreis links */
+.radio-indicator {
+  order: 2;
+  width: 7px;
+  height: 13px;
+  margin: 0 4px 3px auto;
+  border: 0;
+  border-radius: 1px;
+  background: transparent;
+  transform: rotate(45deg);
+}
+
+.is-selected .radio-indicator {
+  border: solid var(--accent);
+  border-width: 0 2.5px 2.5px 0;
+  background: transparent;
+}
+
+.onboarding-fields .field > span:first-child,
+.onboarding-fields legend {
+  margin-left: 4px;
+  color: var(--muted);
+}
+
+/* ---- Eingaben ---- */
+
+.field input,
+.field select,
+input[type='text'],
+input[type='number'],
+input[type='date'],
+input[type='time'],
+input[type='file'],
+select {
+  min-height: 46px;
+  border-color: transparent;
+  border-radius: 12px;
+  background-color: var(--card);
+  box-shadow: var(--surface-shadow);
+}
+
+.surface .field input,
+.surface .field select,
+.surface select {
+  border-color: transparent;
+  background-color: var(--card-soft);
+  box-shadow: none;
+}
+
+.field input:focus,
+.field select:focus,
+input:focus,
+select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+/* ---- Hinweise ---- */
+
+.notice {
+  border-radius: var(--radius-md);
+}
+
+.info-mark {
+  width: 20px;
+  height: 20px;
+  border-width: 1.5px;
+  font-size: 11px;
+}
+
+/* ---- Schicht-Check als iOS-Sheet ---- */
+
+.dialog-backdrop {
+  padding: 0;
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.dialog {
+  width: min(100%, 480px);
+  max-height: 92dvh;
+  padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.12);
+  transition: transform 380ms var(--ease-ios);
+}
+
+.dialog::before {
+  display: block;
+  width: 36px;
+  height: 5px;
+  margin: 0 auto 14px;
+  border-radius: 3px;
+  background: var(--line-strong);
+  content: '';
+}
+
+/* ---- Dunkelmodus nach iOS ---- */
+
+.theme-dark {
+  --bg: #000000;
+  --paper: #000000;
+  --card: #1c1c1e;
+  --card-soft: #2c2c2e;
+  --ink: #f5f5f7;
+  --ink-soft: #d1d1d6;
+  --muted: #98989f;
+  --line: #38383a;
+  --line-strong: #48484a;
+
+  --accent: #4d7dff;
+  --accent-strong: #6c94ff;
+  --accent-soft: #15234a;
+  --on-accent: #ffffff;
+
+  --safe: #30d158;
+  --safe-bg: #0f2a17;
+  --close: #ff9f0a;
+  --close-bg: #33230b;
+  --over: #ff453a;
+  --over-bg: #3a1513;
+
+  --surface-shadow: none;
+  --hairline: rgba(84, 84, 88, 0.6);
+}
+
+.theme-dark .hero-metric {
+  background: linear-gradient(165deg, #3366f0 0%, #2149d0 55%, #1a3aa8 100%);
+  box-shadow: none;
+}
+
+.theme-dark .hero-metric .status-badge {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.theme-dark .segmented-sliding::before {
+  background: #636366;
+}
+
+.theme-dark .dialog {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segmented-sliding::before,
+  .dialog {
+    transition: none;
+  }
+}
+
+/* Das Onboarding liegt direkt auf dem Systemgrau: Felder weiß wie Listenzeilen. */
+.onboarding-panel.surface .field input,
+.onboarding-panel.surface .field select {
+  background-color: var(--card);
+  box-shadow: var(--surface-shadow);
+}
+
+.onboarding-panel > .button-primary {
+  margin-top: 16px;
+}

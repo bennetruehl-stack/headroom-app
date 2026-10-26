@@ -1,4 +1,4 @@
-const CACHE_NAME = 'headroom-static-v2';
+const CACHE_NAME = 'headroom-static-v3';
 const STATIC_FILES = ['/', '/manifest.webmanifest', '/headroom.svg'];
 
 self.addEventListener('install', (event) => {
