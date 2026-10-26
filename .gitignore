@@ -10,3 +10,5 @@ server/data/*.sqlite
 server/data/*.sqlite-*
 .DS_Store
 .claude/
+# Erzeugte Brag-Videos (Einzelbilder, MP4, Tonspuren)
+brag-output*/
