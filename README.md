@@ -69,8 +69,10 @@ Wenn optionale Funktionen manuell eingeschaltet und verwendet werden, gelten die
 - **Jobbörse:** Die Vorschau lädt Demoinserate vom lokalen Server. Ein selbst erstelltes Inserat sendet Titel, Stadt, Datum, Dauer und Stundenlohn an dessen SQLite-Datenbank. Bewerbungen öffnen nur die Kontaktmöglichkeit; Headroom übermittelt dabei keine Profildaten.
 - **Firmensuche:** Nur nach Aktivierung der Funktion und Klick auf „Prüfen“ werden Firmenname und Stadt an OpenStreetMap Nominatim gesendet. Vor öffentlichem Einsatz müssen App-Kennung, Anfragefrequenz, Caching und Anbieterauswahl gegen die [Nominatim-Nutzungsrichtlinie](https://operations.osmfoundation.org/policies/nominatim/) geprüft und passend konfiguriert werden.
 - **Kalender (Kernfunktion):** Ein eingefügter iCal-Link wird nur auf dem Gerät gespeichert und nie exportiert. Zum Abrufen sendet die App ihn per POST (nicht in der URL) an den lokalen Server, der ihn ausschließlich an `calendar.google.com` oder `*.icloud.com` weiterreicht (auch bei Weiterleitungen geprüft, 10 s Timeout, max. 2 MB) und nicht protokolliert. Ohne Server funktioniert der Import einer .ics-Datei vollständig lokal.
-- **Foto/Screenshot (Kernfunktion):** Die Texterkennung (tesseract.js, Deutsch und Englisch) läuft im Browser; das Bild verlässt das Gerät nicht. Beim ersten Lauf lädt tesseract.js seine Sprachdaten nach.
+- **Foto/Screenshot (Kernfunktion):** Die Texterkennung (tesseract.js, Deutsch und Englisch) läuft im Browser; das Bild verlässt das Gerät nicht. Beim ersten Lauf lädt tesseract.js Programmteile und Sprachdaten von cdn.jsdelivr.net nach; dabei geht die IP-Adresse an jsDelivr.
 - Partnerkarten öffnen eine externe Seite erst nach einem Klick.
+
+Datenschutzerklärung und Impressum stehen als In-App-Seiten unter `app/src/features/legal/` (erreichbar über „Mehr“ und die Fußzeile). Persönliche Angaben sind dort als `[PLATZHALTER]` markiert und müssen vor einer Veröffentlichung ausgefüllt und rechtlich geprüft werden.
 
 Der Server ist ausschließlich als lokaler Demo-Server ausgelegt. Für einen öffentlichen Betrieb fehlen unter anderem ein geprüftes Hosting- und Löschkonzept, Datenschutzinformationen, Missbrauchsschutz und eine Sicherheitsprüfung. Es gibt keine Nutzerkonten. Individuelle Nutzerdaten werden nicht verkauft.
 
@@ -78,33 +80,42 @@ Der Server ist ausschließlich als lokaler Demo-Server ausgelegt. Für einen öf
 
 Alle fachlichen Grenzwerte liegen zentral in `packages/core/data/limits.ts` und enthalten Quelle, Gültigkeitszeitraum, Prüfdatum und `verified`. Die App zeigt Quelle und Prüfdatum an. Ein `verified: false`-Wert wird sichtbar als ungeprüft markiert und erzeugt keine automatische Grenzwarnung. Die 2027-Minijobgrenze wird aus dem Mindestlohn mit `ceil(Mindestlohn × 130 / 3)` abgeleitet; sie ist nicht als Konstante dupliziert.
 
-Die Datensätze und Rechenwege bleiben vor Veröffentlichung fachlich zu prüfen. Interne Prüfnotizen stehen im Feld `reviewNote` und werden nie angezeigt. Folgende fünf Datensätze sind derzeit `verified: false` (Stand 24.10.2026):
+Die Datensätze und Rechenwege bleiben vor Veröffentlichung fachlich zu prüfen. Interne Prüfnotizen stehen im Feld `reviewNote` und werden nie angezeigt. Fehlt für ein Jahr ein Wert, liefert der Core `null` („nicht verfügbar“): Die App zeigt dann keinen Restbetrag und keine Warnung. Die Jahresauswahl der Grenzwertseite ergibt sich aus den Datensätzen (`availableLimitYears`).
 
-| Datensatz | Zeitraum | Eingetragener Wert | Offen |
-| --- | --- | ---: | --- |
-| Familienversicherung | 2027 | kein Wert | Regel nach § 10 SGB V bekannt (1/7 der monatlichen Bezugsgröße); die Sozialversicherungs-Rechengrößenverordnung 2027 ist noch nicht veröffentlicht |
-| BAföG-Hinzuverdienst | 2026 | 603 €/Monat | § 23 BAföG verweist für 2026 auf eine Bekanntmachung, die nicht abrufbar war; bafoeg.de war nicht erreichbar |
-| BAföG-Hinzuverdienst | 2027 | kein Wert | Geltenden Freibetrag und Anrechnung offiziell verifizieren |
-| Steuerlicher Orientierungswert für regulären Arbeitslohn | 2026 | 13.614 €/Jahr | Bestandteile im EStG bestätigt; die vereinfachte Methode (Brutto statt zu versteuerndes Einkommen, ohne Vorsorgepauschale) fachlich prüfen |
-| Steuerlicher Orientierungswert für regulären Arbeitslohn | 2027 | 13.614 €/Jahr | Wie 2026; aus geprüften Bestandteilen abgeleitet |
-
-Am 24.10.2026 gegen amtliche Quellen bestätigt und auf `verified: true` gesetzt:
+Am 27.10.2026 geprüft und geändert:
 
 | Datensatz | Zeitraum | Wert | Quelle |
 | --- | --- | ---: | --- |
-| Einkommensteuer-Grundfreibetrag | 2027 | 12.348 €/Jahr | [§ 32a EStG](https://www.gesetze-im-internet.de/estg/__32a.html) („ab dem Veranlagungszeitraum 2026“) |
+| BAföG-Freibetrag für eigenes Einkommen | 2026 | 389 €/Monat (nach Abzügen); Brutto-Äquivalent ca. 603 € | [Bekanntmachung vom 18.11.2025, BGBl. 2025 I Nr. 279](https://www.recht.bund.de/bgbl/1/2025/279/VO.html); Brutto-Äquivalent nach § 23 Abs. 6 mit § 21 Abs. 2 Nr. 1 BAföG (22,3 %) und § 9a EStG nachgerechnet |
+| Gesamteinkommensgrenze Familienversicherung | 2026 | 565 €/Monat (nur Minijob: 603 €) | [§ 10 SGB V](https://www.gesetze-im-internet.de/sgb_5/__10.html), [SVBezGrV 2026 § 1](https://www.gesetze-im-internet.de/svbezgrv_2026/__1.html); die App vergleicht vorsichtig mit Brutto und kennzeichnet das als Brutto-Orientierung |
+| Werkstudent: Wochen über 20 Stunden | 2026–2027 | 26 Wochen im Zeitjahr | [DRV – Werkstudentenprivileg](https://www.deutsche-rentenversicherung.de/DRV/DE/Experten/Arbeitgeber-und-Steuerberater/summa-summarum/Lexikon/W/werkstudentenprivileg); Berechnung des Zeitjahres nur über Krankenkassen-Veröffentlichungen belegt |
+
+Weiterhin ohne Wert oder `verified: false`:
+
+| Datensatz | Zeitraum | Eingetragener Wert | Offen |
+| --- | --- | ---: | --- |
+| Familienversicherung | 2027 | kein Wert | SVBezGrV 2027 noch nicht verkündet (Kabinettsentwurf: 4.130 €/Monat → 590 €) |
+| BAföG-Freibetrag | 2027 | kein Wert | Bekanntmachung nach § 23 Abs. 6 BAföG für 2027 noch nicht veröffentlicht |
+| Steuerlicher Orientierungswert für regulären Arbeitslohn | 2026 und 2027 | 13.614 €/Jahr | Bestandteile im EStG bestätigt; die vereinfachte Methode fachlich prüfen |
+
+Einmalzahlungen (Bonus, Urlaubs-, Weihnachtsgeld) werden getrennt erfasst. Wie sie je Grenze zählen, steht in `oneTimePaymentRules` im Core: bei Minijob, Familienversicherung, BAföG und Steuer voll im Auszahlungsmonat (vorsichtiger als die amtliche Jahresbetrachtung), bei Stunden- und Tagesgrenzen gar nicht.
+
+Am 24.10.2026 gegen amtliche Quellen bestätigt:
+
+| Datensatz | Zeitraum | Wert | Quelle |
+| --- | --- | ---: | --- |
+| Einkommensteuer-Grundfreibetrag | 2026 und 2027 | 12.348 €/Jahr | [§ 32a EStG](https://www.gesetze-im-internet.de/estg/__32a.html) („ab dem Veranlagungszeitraum 2026“) |
 | Arbeitnehmer-Pauschbetrag | 2026 und 2027 | 1.230 €/Jahr | [§ 9a EStG](https://www.gesetze-im-internet.de/estg/__9a.html) |
 | Sonderausgaben-Pauschbetrag | 2026 und 2027 | 36 €/Jahr | [§ 10c EStG](https://www.gesetze-im-internet.de/estg/__10c.html) |
 | Jugendarbeitsschutz (nur Information) | 2026–2027 | 8 h/Tag, 40 h/Woche, 6–20 Uhr, Pausen | [§§ 8, 11, 14 JArbSchG](https://www.gesetze-im-internet.de/jarbschg/) |
-| Familienversicherung (erneut geprüft) | 2026 | 565 €/Monat | [§ 10 SGB V](https://www.gesetze-im-internet.de/sgb_5/__10.html) und [SVBezGrV 2026 § 1](https://www.gesetze-im-internet.de/svbezgrv_2026/__1.html) (3.955 € / 7) |
 
 Die 2027-Werte im EStG gelten nach heutigem Gesetzesstand; vor dem Jahreswechsel auf Änderungen prüfen.
 
 Weitere bewusst offene Prüfpunkte und Produktgrenzen:
 
-- 2027-Familienversicherungs- und BAföG-Werte erst mit gültiger amtlicher beziehungsweise verlässlicher offizieller Quelle ergänzen.
+- 2027-Familienversicherungs- und BAföG-Werte erst nach Verkündung beziehungsweise Bekanntmachung ergänzen.
 - Steuerliche Aussagen, Pauschbeträge und die Abgrenzung pauschal versteuerter Minijobs fachlich prüfen; keine persönliche Steuerfreigrenze suggerieren.
-- Werkstudentenprivileg ist eine Orientierung: 26-Wochen-Regel, Lage der Arbeitszeit und Einzelfallausnahmen sind nicht implementiert.
+- Werkstudentenprivileg ist eine Orientierung: Die 26-Wochen-Regel wird gezählt; Lage der Arbeitszeit (abends, nachts, Wochenende), Jobs außerhalb von Headroom und Einzelfallausnahmen prüft die App nicht und sagt das am Ergebnis.
 - Kurzfristige Beschäftigung bildet die landwirtschaftlichen Sonderregeln nicht ab. Die allgemeine 70-Tage-/Drei-Monats-Regel ersetzt keine Einzelfallprüfung.
 - Trinkgeldbehandlung und Jugendarbeitsschutz vor einer Berechnung oder Warnung mit amtlichen Quellen klären.
 - Job-Preset-Wirtschaftszweige von WZ 2008 auf WZ 2025 (Destatis) übertragen; typische Anforderungsniveaus anhand KldB 2010 (Bundesagentur für Arbeit) validieren.
