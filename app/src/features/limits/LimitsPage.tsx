@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react';
-import { activeLimits, limitsForYear, roleTier, type Limit, type Profile } from '@headroom/core';
+import { activeLimits, availableLimitYears, limitsForYear, roleTier, type Limit, type Profile } from '@headroom/core';
 import { references } from '@headroom/core/data/references';
 import { PageHeading } from '../../components/PageHeading';
 import { t, type Language } from '../../i18n/translations';
 import { dateText } from '../../lib/format';
-import { limitConsequence, limitName, limitSourceName, periodLabel } from '../../lib/limitText';
+import { grossEquivalentNote, limitConsequence, limitName, limitSourceName, periodLabel } from '../../lib/limitText';
 
 export function LimitsPage({ language, profile }: { language: Language; profile: Profile }) {
-  const [year, setYear] = useState(new Date().getFullYear());
+  // Jahresauswahl aus den hinterlegten Daten; fehlt das aktuelle Jahr, zeigt die Seite das nächstliegende.
+  const yearOptions = availableLimitYears();
+  const currentYear = new Date().getFullYear();
+  const fallbackYear = yearOptions.reduce((best, value) => (Math.abs(value - currentYear) < Math.abs(best - currentYear) ? value : best), yearOptions[0] ?? currentYear);
+  const [year, setYear] = useState(yearOptions.includes(currentYear) ? currentYear : fallbackYear);
   const active = activeLimits(profile, year);
   const list = limitsForYear(year);
   const all = useMemo(() => {
@@ -19,7 +23,6 @@ export function LimitsPage({ language, profile }: { language: Language; profile:
       return true;
     });
   }, [list]);
-  const yearOptions = [2026, 2027];
   const shown = all.length ? all : [];
   const isPrimary = (limit: Limit) =>
     active.some((item) => item.id === limit.id) && roleTier(profile.status, limit.id) === 'primary';
@@ -34,10 +37,18 @@ export function LimitsPage({ language, profile }: { language: Language; profile:
         </div>
         <div className="limit-value-stack">
           <strong className="limit-card-value">{limit.value === null ? '–' : new Intl.NumberFormat(language === 'de' ? 'de-DE' : 'en-GB').format(limit.value)}</strong>
-          {!limit.verified && <span className="pill-unverified">{t(language, 'unverified')}</span>}
+          {limit.value === null
+            ? <span className="pill-subtle">{t(language, 'statusUnknown')}</span>
+            : !limit.verified && <span className="pill-unverified">{t(language, 'unverified')}</span>}
         </div>
       </div>
-      <p>{limitConsequence(limit, language)}</p>
+      {limit.basis === 'net-allowance' && limit.value !== null && (
+        <p className="condition-note">{t(language, 'legalAllowance')}{limit.grossEquivalent ? ' · ' + t(language, 'grossEquivalent') + ': ' + new Intl.NumberFormat(language === 'de' ? 'de-DE' : 'en-GB').format(limit.grossEquivalent.value) + ' ' + limit.unit : ''}</p>
+      )}
+      <p>{limit.value === null ? t(language, 'limitUnavailable', { year }) : limitConsequence(limit, language)}</p>
+      {limit.value !== null && grossEquivalentNote(limit, language) && (
+        <p className="condition-note">{grossEquivalentNote(limit, language)}</p>
+      )}
       {!active.some((item) => item.id === limit.id) && (
         <p className="condition-note">{t(language, 'notApplicable')}</p>
       )}
@@ -68,6 +79,9 @@ export function LimitsPage({ language, profile }: { language: Language; profile:
         }
       />
       <p className="page-intro">{t(language, 'valuesSummary')}</p>
+      {!yearOptions.includes(currentYear) && (
+        <p className="notice notice-amber" role="status">{t(language, 'limitYearNotice', { year: currentYear, shown: year })}</p>
+      )}
       {primaryLimits.length > 0 && (
         <section className="content-section limits-group">
           <div className="section-heading">

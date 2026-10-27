@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { annualProjectionBreakdown, limitValue, limitsForYear, monthlyIncomeForLimit, monthlySummary, multipleMiniJobsOverCap, type Limit, type Shift } from '@headroom/core';
+import { annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, multipleMiniJobsOverCap, usableLimitValue, type Limit, type MonthlyLimitCheck, type Shift } from '@headroom/core';
 import type { DashboardPeriod, Screen } from '../../app/types';
 import { AnimatedMoney } from '../../components/AnimatedMoney';
 import { ProgressBar } from '../../components/ProgressBar';
@@ -32,8 +32,7 @@ export function DashboardMetrics({
   onAddShift,
   onNavigate,
   familyAge,
-  familyCap,
-  familyMonthTotal,
+  familyOver,
   period,
   onPeriod,
 }: {
@@ -41,28 +40,29 @@ export function DashboardMetrics({
   language: Language;
   month: string;
   year: number;
-  strictest: { limit: Limit; value: { total: number; cap: number }; ratio: number } | null;
+  strictest: { limit: Limit; value: MonthlyLimitCheck; ratio: number } | null;
   monthSummary: ReturnType<typeof monthlySummary>;
-  monthlySummaries: { limit: Limit; value: { total: number; cap: number } | null }[];
+  monthlySummaries: { limit: Limit; value: MonthlyLimitCheck | null }[];
   annualMini: number;
   annualMiniBreakdown: ReturnType<typeof annualProjectionBreakdown>;
-  yearlyMiniCap: number;
+  yearlyMiniCap: number | null;
   annualRegular: number;
-  taxLimit: number;
+  taxLimit: number | null;
   daysUsed: number;
   features: Record<FeatureName, boolean>;
   onShiftCheck: () => void;
   onAddShift: (shifts: Shift[]) => void;
   onNavigate: (screen: Screen) => void;
   familyAge: number | null;
-  familyCap: number;
-  familyMonthTotal: number;
+  familyOver: boolean;
   period: DashboardPeriod;
   onPeriod: (period: DashboardPeriod) => void;
 }) {
   const [showShiftForm, setShowShiftForm] = useState(false);
   const monthLimitText = strictest ? limitName(strictest.limit, language) : t(language, 'miniJobCap');
-  const miniMonthCap = limitValue('miniJobMonthly', year);
+  const miniMonthCap = usableLimitValue('miniJobMonthly', year);
+  const shortTermCap = usableLimitValue('shortTermEmployment', year);
+  const noLimitsForYear = limitsForYear(year).length === 0;
   const annualMiniRecord = limitsForYear(year).find((limit) => limit.id === 'miniJobYearly');
   const taxLimitRecord = limitsForYear(year).find((limit) => limit.id === 'incomeTaxThreshold');
   const shortTermRecord = limitsForYear(year).find((limit) => limit.id === 'shortTermEmployment');
@@ -99,6 +99,7 @@ export function DashboardMetrics({
   );
   const monthOverYearSafe =
     !multipleOver &&
+    miniMonthCap !== null && yearlyMiniCap !== null &&
     miniMonthCap > 0 &&
     monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', month) > miniMonthCap &&
     annualMini <= yearlyMiniCap;
@@ -123,6 +124,10 @@ export function DashboardMetrics({
         ))}
       </div>
 
+      {noLimitsForYear && (
+        <p className="notice notice-amber" role="status">{t(language, 'noLimitsForYear', { year })}</p>
+      )}
+
       {period === 'month' && (
         <>
           <section className="surface hero-metric">
@@ -133,15 +138,29 @@ export function DashboardMetrics({
               </div>
               <StatusBadge status={monthSummary.status} language={language} />
             </div>
-            <div className="metric-number"><AnimatedMoney value={monthSummary.remaining} language={language} /></div>
-            <div className="metric-caption">
-              {monthSummary.over > 0
-                ? t(language, 'overBy', { amount: money(monthSummary.over, language) })
-                : t(language, 'hoursApprox', { hours: Math.round(monthSummary.hours) })}
-            </div>
-            <ProgressBar ratio={monthSummary.ratio} label={t(language, 'progress')} />
+            {monthSummary.available ? (
+              <>
+                <div className="metric-number"><AnimatedMoney value={monthSummary.remaining} language={language} /></div>
+                <div className="metric-caption">
+                  {monthSummary.over > 0
+                    ? t(language, 'overBy', { amount: money(monthSummary.over, language) })
+                    : monthSummary.hours !== null ? t(language, 'hoursApprox', { hours: Math.round(monthSummary.hours) }) : null}
+                </div>
+                {strictest?.value.comparison === 'gross-orientation' && (
+                  <p className="metric-caption"><span className="pill-subtle">{t(language, 'grossOrientation')}</span></p>
+                )}
+                <ProgressBar ratio={monthSummary.ratio} label={t(language, 'progress')} />
+              </>
+            ) : (
+              <>
+                <div className="metric-number">–</div>
+                <p className="metric-caption">{t(language, 'monthUnavailable')}</p>
+              </>
+            )}
             <div className="metric-foot">
-              <span>{t(language, 'usedOf', { used: money(monthSummary.total, language), limit: money(strictest?.value.cap ?? miniMonthCap, language) })}</span>
+              <span>{monthSummary.available
+                ? t(language, 'usedOf', { used: money(monthSummary.total, language), limit: money(strictest?.value.cap ?? miniMonthCap ?? 0, language) })
+                : money(monthSummary.total, language)}</span>
               {strictest
                 ? <SourceStamp limit={strictest.limit} language={language} />
                 : (() => {
@@ -154,13 +173,13 @@ export function DashboardMetrics({
           {multipleOver && (
             <div className="notice notice-over" role="status">
               <span className="info-mark" aria-hidden="true">!</span>
-              <p>{t(language, 'multipleMiniJobsOver', { cap: miniMonthCap })}</p>
+              <p>{t(language, 'multipleMiniJobsOver', { cap: miniMonthCap ?? '' })}</p>
             </div>
           )}
 
           {monthOverYearSafe && (
             <div className="notice notice-lime">
-              {t(language, 'monthOverYearSafe', { cap: miniMonthCap })}
+              {t(language, 'monthOverYearSafe', { cap: miniMonthCap ?? '' })}
             </div>
           )}
 
@@ -181,19 +200,18 @@ export function DashboardMetrics({
               <p className="eyebrow">{year}</p>
               <h2>{t(language, 'annualMiniJobs')}</h2>
             </div>
-            <StatusBadge
-              status={yearlyMiniCap > 0 ? monthlySummary(annualMini, yearlyMiniCap).status : 'Safe'}
-              language={language}
-            />
+            <StatusBadge status={monthlySummary(annualMini, yearlyMiniCap).status} language={language} />
           </div>
           <div className="metric-number">{money(annualMini, language)}</div>
-          <p className="metric-caption">{t(language, 'projection')} · {t(language, 'annualLimit')}: {money(yearlyMiniCap, language)}</p>
+          <p className="metric-caption">{t(language, 'projection')} · {t(language, 'annualLimit')}: {yearlyMiniCap === null ? t(language, 'statusUnknown') : money(yearlyMiniCap, language)}</p>
           {annualMiniRecord && <SourceStamp limit={annualMiniRecord} language={language} />}
-          <ProgressBar ratio={yearlyMiniCap > 0 ? annualMini / yearlyMiniCap : 0} label={t(language, 'annualMiniJobs')} />
+          {yearlyMiniCap !== null
+            ? <ProgressBar ratio={yearlyMiniCap > 0 ? annualMini / yearlyMiniCap : 0} label={t(language, 'annualMiniJobs')} />
+            : <p className="row-note">{t(language, 'limitUnavailable', { year })}</p>}
           {multipleOver && (
             <div className="notice notice-over">
               <span className="info-mark" aria-hidden="true">!</span>
-              <p>{t(language, 'multipleMiniJobsOver', { cap: miniMonthCap })}</p>
+              <p>{t(language, 'multipleMiniJobsOver', { cap: miniMonthCap ?? '' })}</p>
             </div>
           )}
           <details className="method-details">
@@ -204,7 +222,7 @@ export function DashboardMetrics({
             <div className="tax-reference-head">
               <strong>{t(language, 'approximateTaxThreshold')}</strong>
               <span className="tax-reference-value">
-                {taxLimitRecord?.value === null || !taxLimitRecord ? '–' : money(taxLimit, language)}
+                {taxLimit === null ? '–' : money(taxLimit, language)}
                 {taxLimitRecord && !taxLimitRecord.verified && <span className="pill-unverified">{t(language, 'unverified')}</span>}
               </span>
             </div>
@@ -230,17 +248,23 @@ export function DashboardMetrics({
           <p className="eyebrow">{year}</p>
           <h2>{t(language, 'seasonDays')}</h2>
           <div className="metric-number season-number">
-            {daysUsed}<span> / {limitValue('shortTermEmployment', year)}</span>
+            {daysUsed}<span> / {shortTermCap ?? '–'}</span>
           </div>
-          <p className="metric-caption">
-            {t(language, 'daysOf', { used: daysUsed, limit: limitValue('shortTermEmployment', year) })}
-          </p>
-          <ProgressBar
-            ratio={daysUsed / Math.max(1, limitValue('shortTermEmployment', year))}
-            label={t(language, 'seasonDays')}
-          />
+          {shortTermCap !== null ? (
+            <>
+              <p className="metric-caption">
+                {t(language, 'daysOf', { used: daysUsed, limit: shortTermCap })}
+              </p>
+              <ProgressBar
+                ratio={daysUsed / Math.max(1, shortTermCap)}
+                label={t(language, 'seasonDays')}
+              />
+            </>
+          ) : (
+            <p className="row-note">{t(language, 'limitUnavailable', { year })}</p>
+          )}
           {shortTermRecord && <SourceStamp limit={shortTermRecord} language={language} />}
-          {daysUsed > limitValue('shortTermEmployment', year) && (
+          {shortTermCap !== null && daysUsed > shortTermCap && (
             <StatusBadge status="Over" language={language} />
           )}
         </section>
@@ -277,8 +301,7 @@ export function DashboardMetrics({
         data={data}
         language={language}
         familyAge={familyAge}
-        familyCap={familyCap}
-        familyMonthTotal={familyMonthTotal}
+        familyOver={familyOver}
       />
     </>
   );

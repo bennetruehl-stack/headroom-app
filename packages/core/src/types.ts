@@ -17,7 +17,24 @@ export type EmploymentType =
   | 'regular';
 
 export type Period = 'month' | 'year' | 'week' | 'day' | 'season' | 'hour';
-export type RiskStatus = 'Safe' | 'Close' | 'Over';
+
+/**
+ * Worauf sich der Grenzwert bezieht.
+ * - gross: Bruttoverdienst (direkt mit den erfassten Schichten vergleichbar)
+ * - net-allowance: Freibetrag nach gesetzlichen Abzügen (nicht direkt mit Brutto vergleichbar)
+ * - total-income: Gesamteinkommen im Sinne von § 16 SGB IV (Einkünfte nach Steuerrecht)
+ * - other: Stunden, Tage, Anzahl oder reine Information
+ */
+export type LimitBasis = 'gross' | 'net-allowance' | 'total-income' | 'other';
+
+/** Rechnerisch abgeleiteter Bruttobetrag zu einem Freibetrag oder Einkommensbegriff. */
+export type GrossEquivalent = {
+  value: number;
+  /** Rechenweg und Annahmen, sichtbar für Nutzer:innen. */
+  note: string;
+  note_en: string;
+};
+export type RiskStatus = 'Safe' | 'Close' | 'Over' | 'Unknown';
 
 export type Limit = {
   id: string;
@@ -36,6 +53,8 @@ export type Limit = {
   validFrom: string;
   validTo: string;
   verified: boolean;
+  basis?: LimitBasis;
+  grossEquivalent?: GrossEquivalent;
   /** Interne Prüfnotiz. Wird nie in der Oberfläche angezeigt. */
   reviewNote?: string;
 };

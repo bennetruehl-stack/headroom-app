@@ -12,6 +12,7 @@ export type RoleItem =
   | 'shortTermEmployment'
   | 'incomeTaxThreshold'
   | 'workingStudentHours'
+  | 'workingStudent26Weeks'
   | 'miniJobAlongsideMainJob'
   | 'taxClassInfo'
   | 'youthWorkProtection';
@@ -24,7 +25,7 @@ export const roleLayouts: Record<ProfileStatus, RoleLayout> = {
     secondary: ['incomeTaxThreshold', 'workingStudentHours'],
   },
   'Working student': {
-    primary: ['workingStudentHours', 'miniJobMonthly', 'incomeTaxThreshold'],
+    primary: ['workingStudentHours', 'workingStudent26Weeks', 'miniJobMonthly', 'incomeTaxThreshold'],
     secondary: ['familyInsurance', 'bafoegSideIncome'],
   },
   'Mini-jobber': {

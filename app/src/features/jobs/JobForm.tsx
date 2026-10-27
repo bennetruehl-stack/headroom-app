@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { companyPlausibility, limitValue, limitsForYear, miniJobRoomBesideOthers, type Job, type Shift } from '@headroom/core';
+import { companyPlausibility, latestKnownLimitValue, limitsForYear, miniJobRoomBesideOthers, type Job, type Shift } from '@headroom/core';
 import { jobPresets } from '@headroom/core/data/jobPresets';
 import { employmentTypes } from '../../app/constants';
 import { t, type Language } from '../../i18n/translations';
@@ -27,7 +27,7 @@ export function JobForm({
   const preset = jobPresets.find((item) => item.id === presetId);
   const [title, setTitle] = useState(initial?.title ?? (language === 'de' ? preset?.title_de ?? '' : preset?.title_en ?? ''));
   const [type, setType] = useState<Job['type']>(initial?.type ?? 'mini-job');
-  const [wage, setWage] = useState(String(initial?.wage ?? limitValue('minimumWage')));
+  const [wage, setWage] = useState(String(initial?.wage ?? latestKnownLimitValue('minimumWage') ?? ''));
   const [startDate, setStartDate] = useState(initial?.startDate ?? localToday());
   const [endDate, setEndDate] = useState(initial?.endDate ?? '');
   const [company, setCompany] = useState(initial?.company ?? '');

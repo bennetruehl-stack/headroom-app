@@ -17,7 +17,7 @@ describe('app calculation surface', () => {
   it('shows 116 EUR of demo headroom and a close status', () => {
     const result = monthlySummary(487, 603, 13.9);
     expect(result.remaining).toBe(116);
-    expect(Math.round(result.hours)).toBe(8);
+    expect(Math.round(result.hours ?? Number.NaN)).toBe(8);
     expect(result.status).toBe('Close');
   });
 

@@ -835,6 +835,12 @@ input::placeholder {
   color: var(--over);
 }
 
+/* Kein Grenzwert für das Jahr: neutral, ohne Ampelfarbe. */
+.status-unknown {
+  background: var(--card-soft);
+  color: var(--muted);
+}
+
 .progress-track {
   position: relative;
   width: 100%;

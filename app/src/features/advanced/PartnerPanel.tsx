@@ -1,4 +1,4 @@
-import { annualIncomeProjection, annualMiniProjection, limitValue, limitsForYear, recommendationLevel } from '@headroom/core';
+import { annualIncomeProjection, annualMiniProjection, limitsForYear, monthlyLimitCheck, recommendationLevel, usableLimitValue } from '@headroom/core';
 import { t, type Language, type MessageKey } from '../../i18n/translations';
 import { localToday } from '../../lib/format';
 import { getAgeBoundary } from '../../lib/limitText';
@@ -16,30 +16,22 @@ export function PartnerPanel({
 }) {
   const year = Number(localToday().slice(0, 4));
   const annual = annualMiniProjection(data.shifts, data.jobs, year, Number(localToday().slice(5, 7)));
-  const annualLimit = limitValue('miniJobYearly', year);
+  const annualLimit = usableLimitValue('miniJobYearly', year);
   const taxLimitRecord = limitsForYear(year).find((limit) => limit.id === 'incomeTaxThreshold');
   const taxLimit = taxLimitRecord?.value ?? 0;
   const month = localToday().slice(0, 7);
   const secondRegular = data.jobs.filter((job) => job.type === 'regular').length > 1;
   const familyLimit = limitsForYear(year).find((limit) => limit.id === 'familyInsurance');
   const familyThreshold = getAgeBoundary(familyLimit);
-  const familyIncome = data.shifts.reduce((sum, shift) => {
-    if (!shift.date.startsWith(month)) return sum;
-    const job = data.jobs.find((entry) => entry.id === shift.jobId);
-    return sum + (job ? shift.hours * job.wage : 0);
-  }, 0);
+  const familyCheck = familyLimit ? monthlyLimitCheck(familyLimit, data.shifts, data.jobs, month, year) : null;
   const currentFacts = {
     regularSecondJob: Boolean(taxLimitRecord?.verified) && secondRegular && annualIncomeProjection(data.shifts, data.jobs, year, ['regular']) <= taxLimit,
     underTaxThreshold: Boolean(taxLimitRecord?.verified) && annualIncomeProjection(data.shifts, data.jobs, year, ['regular', 'working student']) <= taxLimit,
     familyInsuranceEnds: data.profile.familyInsured && (
       (familyThreshold !== null && data.profile.age >= familyThreshold) ||
-      familyIncome > (
-        data.shifts.some((shift) => shift.date.startsWith(month) && data.jobs.find((job) => job.id === shift.jobId)?.type !== 'mini-job')
-          ? familyLimit?.value ?? Infinity
-          : limitValue('miniJobMonthly', year)
-      )
+      (familyCheck !== null && familyCheck.total > familyCheck.cap)
     ),
-    overMiniJobPermanently: annual > annualLimit,
+    overMiniJobPermanently: annualLimit !== null && annual > annualLimit,
     unclassified: secondRegular && (!taxLimitRecord?.verified || annualIncomeProjection(data.shifts, data.jobs, year, ['regular']) > taxLimit),
   };
   const level = recommendationLevel(currentFacts);

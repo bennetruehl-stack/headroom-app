@@ -68,7 +68,7 @@ export function TrendsPage({
       </section>
       <section className="surface chart-card">
         <h2>{t(language, 'shortDaysUsed')}</h2>
-        <div className="data-row"><span>{year}</span><strong>{shortTerm} / {limitValue('shortTermEmployment', Number(year))}</strong></div>
+        <div className="data-row"><span>{year}</span><strong>{shortTerm} / {limitValue('shortTermEmployment', Number(year)) ?? '–'}</strong></div>
       </section>
     </section>
   );

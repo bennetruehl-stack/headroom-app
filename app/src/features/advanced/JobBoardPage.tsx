@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { activeLimits, annualMiniProjection, consentAgeRule, hoursInWeek, isInLecturePeriod, limitValue, limitsForYear, monthlyIncomeForLimit, workingHoursCheck, type Job, type Shift } from '@headroom/core';
+import { activeLimits, annualMiniProjection, consentAgeRule, hoursInWeek, isInLecturePeriod, latestKnownLimitValue, limitsForYear, monthlyIncomeForLimit, usableLimitValue, workingHoursCheck, type Job, type MonthlyLimitCheck, type Shift } from '@headroom/core';
 import { PageHeading } from '../../components/PageHeading';
 import { t, type Language } from '../../i18n/translations';
 import { dateText, id, localToday, money, preciseMoney } from '../../lib/format';
@@ -20,7 +20,7 @@ export function JobBoardPage({
   const [city, setCity] = useState('Frankfurt');
   const [date, setDate] = useState(localToday());
   const [hours, setHours] = useState('4');
-  const [wage, setWage] = useState(String(limitValue('minimumWage')));
+  const [wage, setWage] = useState(String(latestKnownLimitValue('minimumWage') ?? ''));
   const [posted, setPosted] = useState<Listing[]>([]);
   const [serverListings, setServerListings] = useState<Listing[] | null>(null);
   const [serverError, setServerError] = useState(false);
@@ -116,11 +116,14 @@ export function JobBoardPage({
           const yearLimitRecord = limitsForYear(listingYear).find((limit) => limit.id === 'miniJobYearly');
           const applicableMonthlyLimits = activeProfileLimits
             .filter((limit) => limit.period === 'month' && limit.verified)
-            .map((limit) => monthlyAmountForLimit(limit, data.profile, data.jobs, data.shifts, listingMonth, listingYear))
-            .filter((value): value is { total: number; cap: number } => value !== null);
+            .map((limit) => monthlyAmountForLimit(limit, data.jobs, data.shifts, listingMonth, listingYear))
+            .filter((value): value is MonthlyLimitCheck => value !== null);
+          const listingMiniCap = usableLimitValue('miniJobMonthly', listingYear);
           const headroom = applicableMonthlyLimits.length
             ? Math.max(0, Math.min(...applicableMonthlyLimits.map((limit) => limit.cap - limit.total)))
-            : Math.max(0, limitValue('miniJobMonthly', listingYear) - monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', listingMonth));
+            : listingMiniCap === null
+              ? null
+              : Math.max(0, listingMiniCap - monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', listingMonth));
           const listingJob: Job = { id: 'listing-' + listing.id, title: listing.title, type: 'mini-job', wage: listing.hourlyWage, startDate: listing.date };
           const listingShift: Shift = { jobId: listingJob.id, date: listing.date, hours: listing.hours, planned: true };
           const currentMonthNumber = listingYear === Number(today.slice(0, 4)) ? Number(today.slice(5, 7)) : 1;
@@ -133,10 +136,10 @@ export function JobBoardPage({
           const workingStudentOverHours = data.profile.status === 'Working student' && hasLectureDates &&
             isInLecturePeriod(listing.date, data.profile) &&
             workingHoursCheck(hoursInWeek(data.shifts, listing.date) + listing.hours, true).over;
-          const monthlyExceeded = Boolean(monthLimitRecord?.verified) && earnings > headroom;
-          const unknownCoreLimit = !monthLimitRecord?.verified || !yearLimitRecord?.verified;
+          const monthlyExceeded = headroom !== null && Boolean(monthLimitRecord?.verified) && earnings > headroom;
+          const unknownCoreLimit = headroom === null || !monthLimitRecord?.verified || !yearLimitRecord?.verified;
           const unverifiedProfileLimit = activeProfileLimits.some((limit) =>
-            !limit.verified && ['familyInsurance', 'bafoegSideIncome'].includes(limit.id),
+            (!limit.verified || limit.value === null) && ['familyInsurance', 'bafoegSideIncome'].includes(limit.id),
           );
           const tooLong = monthlyExceeded || annualExceeded || secondMiniJob || workingStudentOverHours;
           const needsReview = !tooLong && (unknownCoreLimit || unverifiedProfileLimit || workingStudentNeedsDates);

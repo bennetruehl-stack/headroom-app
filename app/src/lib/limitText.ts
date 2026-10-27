@@ -1,12 +1,23 @@
-import { annualIncomeProjection, limitValue, monthlyIncomeForLimit, type Job, type Limit, type Profile, type Shift } from '@headroom/core';
+import { annualIncomeProjection, monthlyLimitCheck, type Job, type Limit, type MonthlyLimitCheck, type RiskStatus, type Shift } from '@headroom/core';
 import { employmentTypes } from '../app/constants';
 import { t, type Language, type MessageKey } from '../i18n/translations';
 import { localToday } from './format';
 
-export function statusKey(value: 'Safe' | 'Close' | 'Over'): MessageKey {
+export function statusKey(value: RiskStatus): MessageKey {
   if (value === 'Safe') return 'safe';
   if (value === 'Close') return 'close';
+  if (value === 'Unknown') return 'statusUnknown';
   return 'over';
+}
+
+/** Ein Grenzwert ohne Wert für das Jahr ist „nicht verfügbar“ (nicht dasselbe wie ungeprüft). */
+export function limitUnavailable(limit: Limit | undefined): boolean {
+  return !limit || limit.value === null;
+}
+
+export function grossEquivalentNote(limit: Limit, language: Language): string | undefined {
+  if (!limit.grossEquivalent) return undefined;
+  return language === 'en' ? limit.grossEquivalent.note_en : limit.grossEquivalent.note;
 }
 
 export function limitName(limit: Limit, language: Language): string {
@@ -63,33 +74,13 @@ export function calculateAnnualProjection(
   return annualIncomeProjection(shifts, jobs, year, types, month);
 }
 
+/** Monatsprüfung aus dem Core; `null`, wenn der Wert fehlt oder ungeprüft ist. */
 export function monthlyAmountForLimit(
   limit: Limit,
-  profile: Profile,
   jobs: Job[],
   shifts: Shift[],
   month: string,
   year: number,
-): { total: number; cap: number } | null {
-  if (!limit.value || !limit.verified) return null;
-  let total = monthlyIncomeForLimit(shifts, jobs, limit.id, month);
-  let cap = limit.value;
-  if (limit.id === 'familyInsurance') {
-    const hasNonMiniIncome = shifts.some((shift) => {
-      if (!shift.date.startsWith(month)) return false;
-      const job = jobs.find((entry) => entry.id === shift.jobId);
-      return job && job.type !== 'mini-job' && shift.hours > 0;
-    });
-    const onlyMiniJobs = !hasNonMiniIncome;
-    if (onlyMiniJobs) cap = limitValue('miniJobMonthly', year);
-    else {
-      total = shifts.reduce((sum, shift) => {
-        if (!shift.date.startsWith(month)) return sum;
-        const job = jobs.find((entry) => entry.id === shift.jobId);
-        if (!job) return sum;
-        return sum + Math.max(0, shift.hours) * job.wage + Math.max(0, shift.surchargeAmount ?? 0);
-      }, 0);
-    }
-  }
-  return { total, cap };
+): MonthlyLimitCheck | null {
+  return monthlyLimitCheck(limit, shifts, jobs, month, year);
 }

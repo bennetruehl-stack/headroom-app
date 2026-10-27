@@ -1,9 +1,9 @@
 // Alle Inhalte sind fiktive Demo-Daten. Sie dürfen nie als echte Stellen, Löhne oder Partnerangebote erscheinen.
-import { limitValue } from '@headroom/core';
+import { latestKnownLimitValue } from '@headroom/core';
 
 const cities = ['Frankfurt', 'Berlin', 'Hamburg', 'München'];
 const titles = ['Eventaufbau', 'Café-Service', 'Lager / Kommissionierung', 'Einzelhandel'];
-const minimumWage = limitValue('minimumWage');
+const minimumWage: number = latestKnownLimitValue('minimumWage') ?? 0;
 const dateAfter = (days: number) => {
   const date = new Date();
   date.setHours(12, 0, 0, 0);

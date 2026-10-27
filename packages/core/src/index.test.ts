@@ -30,9 +30,9 @@ describe('core calculations', () => {
   it('calculates the demo headroom, hours, and close status', () => {
     const summary = monthlySummary(487, 603, 13.9);
     expect(summary.remaining).toBe(116);
-    expect(Math.round(summary.hours)).toBe(8);
+    expect(Math.round(summary.hours ?? Number.NaN)).toBe(8);
     expect(summary.status).toBe('Close');
-    expect(Math.round(summary.ratio * 100)).toBe(81);
+    expect(Math.round((summary.ratio ?? Number.NaN) * 100)).toBe(81);
   });
 
   it('keeps Lena over the monthly cap but safe against the annual cap', () => {
@@ -71,13 +71,13 @@ describe('core calculations', () => {
     ];
 
     // Vorab-Warnung: neben der Kneipe passen höchstens 263 EUR.
-    expect(miniJobRoomBesideOthers(lenaShifts, lenaJobs, '2026-10', 'cafe', 603).room).toBe(263);
+    expect(miniJobRoomBesideOthers(lenaShifts, lenaJobs, "2026-10", "cafe", 603)?.room).toBe(263);
     // Zusammen 620 EUR: über der Grenze, obwohl das Jahr sicher ist.
     expect(multipleMiniJobsOverCap(lenaShifts, lenaJobs, '2026-10', 603)).toBe(true);
     // Ein Minijob allein ist kein „mehrere Minijobs“-Fall.
     expect(multipleMiniJobsOverCap(lenaShifts, lenaJobs, '2026-09', 603)).toBe(false);
     // Der kurzfristige Festival-Job zählt nicht zur Minijob-Summe.
-    expect(miniJobRoomBesideOthers(lenaShifts, lenaJobs, '2026-07', undefined, 603).used).toBe(0);
+    expect(miniJobRoomBesideOthers(lenaShifts, lenaJobs, "2026-07", undefined, 603)?.used).toBe(0);
   });
 
   it('counts 15 short-term workdays and flags the 71st day', () => {

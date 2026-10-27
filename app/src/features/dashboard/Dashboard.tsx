@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { activeLimits, annualProjectionBreakdown, limitValue, limitsForYear, monthlyIncomeForLimit, monthlySummary, roleTier, shortDays, type Limit, type Shift } from '@headroom/core';
+import { activeLimits, annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, roleTier, shortDays, usableLimitValue, type Limit, type MonthlyLimitCheck, type Shift } from '@headroom/core';
 import type { DashboardPeriod, Screen } from '../../app/types';
 import type { FeatureName } from '../../config/features';
 import { t, type Language, type MessageKey } from '../../i18n/translations';
@@ -33,16 +33,13 @@ export function Dashboard({
   const yearLimits = activeLimits(data.profile, year);
   const monthlyLimits = yearLimits.filter((limit) => limit.period === 'month');
   const monthlySummaries = monthlyLimits.map((limit) => {
-    const value = monthlyAmountForLimit(limit, data.profile, data.jobs, data.shifts, month, year);
+    const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year);
     return { limit, value };
   });
   const primaryMonthly = monthlySummaries.filter(({ limit }) => roleTier(data.profile.status, limit.id) === 'primary');
   const measured = (primaryMonthly.some((item) => item.value !== null) ? primaryMonthly : monthlySummaries)
-    .filter((item): item is { limit: Limit; value: { total: number; cap: number } } => item.value !== null)
-    .map((item) => ({
-      ...item,
-      ratio: item.value.cap > 0 ? item.value.total / item.value.cap : 0,
-    }));
+    .filter((item): item is { limit: Limit; value: MonthlyLimitCheck } => item.value !== null)
+    .map((item) => ({ ...item, ratio: item.value.ratio }));
   const strictest = measured.reduce<(typeof measured)[number] | null>(
     (chosen, item) => (!chosen || item.ratio > chosen.ratio ? item : chosen),
     null,
@@ -50,8 +47,8 @@ export function Dashboard({
 
   const miniMonthly = monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', month);
   const monthSummary = strictest
-    ? monthlySummary(strictest.value.total, strictest.value.cap, limitValue('minimumWage', year))
-    : monthlySummary(miniMonthly, limitValue('miniJobMonthly', year), limitValue('minimumWage', year));
+    ? monthlySummary(strictest.value.total, strictest.value.cap, usableLimitValue('minimumWage', year))
+    : monthlySummary(miniMonthly, usableLimitValue('miniJobMonthly', year), usableLimitValue('minimumWage', year));
   const annualMiniBreakdown = annualProjectionBreakdown(
     data.shifts,
     data.jobs,
@@ -60,36 +57,26 @@ export function Dashboard({
     Number(today.slice(5, 7)),
   );
   const annualMini = annualMiniBreakdown.projected;
-  const yearlyMiniCap = limitValue('miniJobYearly', year);
+  const yearlyMiniCap = usableLimitValue('miniJobYearly', year);
   const annualRegular = calculateAnnualProjection(data.shifts, data.jobs, year, [
     'regular',
     'working student',
   ]);
-  const taxLimit = limitValue('incomeTaxThreshold', year);
+  const taxLimit = limitsForYear(year).find((limit) => limit.id === 'incomeTaxThreshold')?.value ?? null;
   const shortTermShifts = data.shifts.filter(
     (shift) => data.jobs.find((job) => job.id === shift.jobId)?.type === 'short-term',
   );
   const daysUsed = shortDays(shortTermShifts, year);
   const familyLimit = limitsForYear(year).find((limit) => limit.id === 'familyInsurance');
   const familyAge = getAgeBoundary(familyLimit);
-  const hasNonMiniIncome = data.shifts.some((shift) => {
-    if (!shift.date.startsWith(month)) return false;
-    const job = data.jobs.find((entry) => entry.id === shift.jobId);
-    return Boolean(job && job.type !== 'mini-job' && shift.hours > 0);
-  });
-  const pureMiniJobs = !hasNonMiniIncome;
-  const familyCap = pureMiniJobs ? limitValue('miniJobMonthly', year) : familyLimit?.value ?? 0;
+  // Gleiche Rechnung wie in der Grenzwert-Zeile (Core), damit Hinweis und Zeile übereinstimmen.
+  const familyCheck = familyLimit ? monthlyAmountForLimit(familyLimit, data.jobs, data.shifts, month, year) : null;
   const [period, setPeriod] = useState<DashboardPeriod>('month');
   const kickerKey: Record<DashboardPeriod, MessageKey> = {
     month: 'welcomeKicker',
     year: 'welcomeKickerYear',
     season: 'welcomeKickerSeason',
   };
-  const familyMonthTotal = data.shifts.reduce((sum, shift) => {
-    if (!shift.date.startsWith(month)) return sum;
-    const job = data.jobs.find((entry) => entry.id === shift.jobId);
-    return sum + (job ? Math.max(0, shift.hours) * job.wage : 0);
-  }, 0);
 
   return (
     <div className="page-enter">
@@ -143,8 +130,7 @@ export function Dashboard({
         onAddShift={onAddShift}
         onNavigate={onNavigate}
         familyAge={familyAge}
-        familyCap={familyCap}
-        familyMonthTotal={familyMonthTotal}
+        familyOver={familyCheck !== null && familyCheck.total > familyCheck.cap}
         period={period}
         onPeriod={setPeriod}
       />

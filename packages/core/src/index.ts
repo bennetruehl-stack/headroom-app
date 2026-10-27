@@ -1,19 +1,47 @@
 import { jobPresets } from '../data/jobPresets';
-import { limits, limitsForYear, miniJobCapFormula } from '../data/limits';
+import { availableLimitYears, limits, limitsForYear, miniJobCapFormula } from '../data/limits';
 import { consentAgeRule } from '../data/privacy';
 import { roleLayouts, roleTier } from '../data/roles';
 import type { Job, Limit, Profile, ProfileStatus, RiskStatus, Shift } from './types';
 
 export * from './types';
 export * from './shiftImport';
-export { consentAgeRule, jobPresets, limits, limitsForYear, miniJobCapFormula, roleLayouts, roleTier };
+export { availableLimitYears, consentAgeRule, jobPresets, limits, limitsForYear, miniJobCapFormula, roleLayouts, roleTier };
 export type { RoleItem, RoleLayout, RoleTier } from '../data/roles';
 
-export function limitValue(id: string, year = new Date().getFullYear()): number {
-  return limitsForYear(year).find((limit) => limit.id === id)?.value ?? 0;
+export function limitRecord(id: string, year = new Date().getFullYear()): Limit | undefined {
+  return limitsForYear(year).find((limit) => limit.id === id);
+}
+
+/**
+ * Grenzwert für ein Jahr. `null` heißt „nicht verfügbar“: Für dieses Jahr ist kein
+ * Wert hinterlegt. Aufrufer dürfen daraus keine Warnung und keinen Restbetrag ableiten.
+ */
+export function limitValue(id: string, year = new Date().getFullYear()): number | null {
+  return limitRecord(id, year)?.value ?? null;
+}
+
+/**
+ * Letzter bekannter Wert (aktuelles Jahr, sonst das jüngste Jahr mit Wert). Nur für
+ * Voreinstellungen wie den Stundenlohn im Formular, nie für Warnungen.
+ */
+export function latestKnownLimitValue(id: string, year = new Date().getFullYear()): number | null {
+  const current = limitValue(id, year);
+  if (current !== null) return current;
+  const candidates = limits
+    .filter((limit) => limit.id === id && limit.value !== null && limit.validFrom <= String(year) + '-12-31')
+    .sort((a, b) => b.validFrom.localeCompare(a.validFrom));
+  return candidates[0]?.value ?? null;
+}
+
+/** Grenzwert, der für Warnungen benutzt werden darf: vorhanden und geprüft. */
+export function usableLimitValue(id: string, year = new Date().getFullYear()): number | null {
+  const limit = limitRecord(id, year);
+  return limit && limit.verified && limit.value !== null ? limit.value : null;
 }
 
 export function statusFor(ratio: number): RiskStatus {
+  if (Number.isNaN(ratio)) return 'Unknown';
   if (ratio < 0.8) return 'Safe';
   if (ratio <= 1) return 'Close';
   return 'Over';
@@ -30,6 +58,8 @@ export function activeLimits(profile: Profile, year = new Date().getFullYear()):
         return profile.hasMainJob !== false;
       case 'bafoegSideIncome':
         return profile.bafoeg;
+      case 'workingStudent26Weeks':
+        return true;
       case 'youthWorkProtection':
         return ageBoundary !== undefined && profile.age < Number(ageBoundary);
       default:
@@ -62,16 +92,20 @@ export function monthTotal(
 
 export function monthlySummary(
   total: number,
-  cap = limitValue('miniJobMonthly'),
-  wage = limitValue('minimumWage'),
+  cap: number | null = usableLimitValue('miniJobMonthly'),
+  wage: number | null = usableLimitValue('minimumWage'),
 ) {
+  if (cap === null || !Number.isFinite(cap)) {
+    return { total, available: false as const, remaining: null, over: null, hours: null, ratio: null, status: 'Unknown' as RiskStatus };
+  }
   const safeCap = Math.max(cap, 0);
   const ratio = safeCap === 0 ? (total > 0 ? Infinity : 0) : total / safeCap;
   return {
     total,
+    available: true as const,
     remaining: Math.max(0, safeCap - total),
     over: Math.max(0, total - safeCap),
-    hours: wage > 0 ? Math.max(0, safeCap - total) / wage : 0,
+    hours: wage && wage > 0 ? Math.max(0, safeCap - total) / wage : null,
     ratio,
     status: statusFor(ratio),
   };
@@ -153,6 +187,81 @@ export function monthlyIncomeForLimit(
   return monthTotal(shifts, jobs, month);
 }
 
+export type MonthlyLimitCheck = {
+  limitId: string;
+  /** Bruttoverdienst, der für diese Grenze zählt. */
+  total: number;
+  /** Bruttowert, mit dem verglichen wird. */
+  cap: number;
+  /**
+   * gross: Grenze ist selbst ein Bruttowert.
+   * gross-orientation: Grenze ist ein Netto- oder Gesamteinkommensbegriff; der Vergleich
+   * mit Brutto ist nur eine (vorsichtige) Orientierung und muss so beschriftet werden.
+   */
+  comparison: 'gross' | 'gross-orientation';
+  /** Woher der Vergleichswert stammt. */
+  capSource: 'limit' | 'miniJobCap' | 'grossEquivalent';
+  ratio: number;
+  status: RiskStatus;
+};
+
+function hasNonMiniIncome(shifts: Shift[], jobs: Job[], month: string): boolean {
+  return shifts.some((shift) => {
+    if (!shift.date.startsWith(month)) return false;
+    const job = jobForShift(shift, jobs);
+    return Boolean(job && job.type !== 'mini-job' && shift.hours > 0);
+  });
+}
+
+/**
+ * Zentrale Monatsprüfung für Grenzen mit Euro-Betrag. Liefert `null`, wenn der Wert
+ * für das Jahr fehlt oder nicht geprüft ist – dann gibt es keine Warnung.
+ *
+ * - Minijob: Brutto aller Minijobs gegen die Verdienstgrenze.
+ * - Familienversicherung: Brutto aller Jobs gegen 1/7 der Bezugsgröße bzw. die
+ *   Minijob-Grenze, wenn im Monat ausschließlich Minijob-Verdienst vorliegt.
+ *   Das Gesetz meint das Gesamteinkommen (nach Werbungskosten); Brutto liegt meist
+ *   darüber, der Vergleich ist also vorsichtig und nur eine Orientierung.
+ * - BAföG: Brutto aller Jobs gegen das rechnerische Brutto-Äquivalent des Freibetrags.
+ */
+export function monthlyLimitCheck(
+  limit: Limit,
+  shifts: Shift[],
+  jobs: Job[],
+  month: string,
+  year = Number(month.slice(0, 4)),
+): MonthlyLimitCheck | null {
+  if (!limit.verified || limit.value === null) return null;
+  const build = (
+    total: number,
+    cap: number,
+    comparison: MonthlyLimitCheck['comparison'],
+    capSource: MonthlyLimitCheck['capSource'],
+  ): MonthlyLimitCheck => {
+    const ratio = cap > 0 ? total / cap : total > 0 ? Infinity : 0;
+    return { limitId: limit.id, total, cap, comparison, capSource, ratio, status: statusFor(ratio) };
+  };
+  switch (limit.id) {
+    case 'miniJobMonthly':
+      return build(monthTotal(shifts, jobs, month, ['mini-job']), limit.value, 'gross', 'limit');
+    case 'familyInsurance': {
+      const total = monthTotal(shifts, jobs, month);
+      if (!hasNonMiniIncome(shifts, jobs, month)) {
+        const miniCap = usableLimitValue('miniJobMonthly', year);
+        if (miniCap === null) return null;
+        return build(total, miniCap, 'gross-orientation', 'miniJobCap');
+      }
+      return build(total, limit.value, 'gross-orientation', 'limit');
+    }
+    case 'bafoegSideIncome': {
+      if (!limit.grossEquivalent) return null;
+      return build(monthTotal(shifts, jobs, month), limit.grossEquivalent.value, 'gross-orientation', 'grossEquivalent');
+    }
+    default:
+      return build(monthTotal(shifts, jobs, month), limit.value, limit.basis === 'gross' || !limit.basis ? 'gross' : 'gross-orientation', 'limit');
+  }
+}
+
 /**
  * Wie viel ein Minijob im Monat noch verdienen darf, ohne dass alle Minijobs
  * zusammen über der Monatsgrenze liegen. Der Job mit `excludeJobId` (z. B. der
@@ -163,8 +272,9 @@ export function miniJobRoomBesideOthers(
   jobs: Job[],
   month: string,
   excludeJobId?: string,
-  cap = limitValue('miniJobMonthly'),
+  cap: number | null = usableLimitValue('miniJobMonthly', Number(month.slice(0, 4))),
 ) {
+  if (cap === null) return null;
   const others = jobs.filter((job) => job.type === 'mini-job' && job.id !== excludeJobId);
   const used = monthTotal(shifts, others, month, ['mini-job']);
   const otherJobsWithIncome = others.filter((job) =>
@@ -181,8 +291,9 @@ export function multipleMiniJobsOverCap(
   shifts: Shift[],
   jobs: Job[],
   month: string,
-  cap = limitValue('miniJobMonthly'),
+  cap: number | null = usableLimitValue('miniJobMonthly', Number(month.slice(0, 4))),
 ): boolean {
+  if (cap === null) return false;
   const miniJobsWithIncome = jobs.filter((job) =>
     job.type === 'mini-job' && shifts.some((shift) => shift.jobId === job.id && shift.date.startsWith(month)),
   ).length;
@@ -204,10 +315,14 @@ export function shortDays(shifts: Shift[], year?: number): number {
   return explicitDays + distinctSingleDates.size;
 }
 
-export function shiftCheck(total: number, added: number, cap = limitValue('miniJobMonthly')) {
+export function shiftCheck(total: number, added: number, cap: number | null = usableLimitValue('miniJobMonthly')) {
   const projected = total + added;
+  if (cap === null) {
+    return { projected, available: false as const, over: 0, remaining: null, status: 'Unknown' as RiskStatus };
+  }
   return {
     projected,
+    available: true as const,
     over: Math.max(0, projected - cap),
     remaining: Math.max(0, cap - projected),
     status: statusFor(cap > 0 ? projected / cap : projected > 0 ? Infinity : 0),
@@ -217,12 +332,81 @@ export function shiftCheck(total: number, added: number, cap = limitValue('miniJ
 export function workingHoursCheck(
   hours: number,
   inLecturePeriod: boolean,
-  limit = limitValue('workingStudentHours'),
+  limit: number | null = usableLimitValue('workingStudentHours'),
 ) {
   return {
     hours,
     limit: inLecturePeriod ? limit : null,
-    over: inLecturePeriod && hours > limit,
+    over: inLecturePeriod && limit !== null && hours > limit,
+  };
+}
+
+function dateKey(date: Date): string {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
+
+function mondayOf(date: string): string {
+  const day = new Date(date + 'T12:00:00');
+  day.setDate(day.getDate() - ((day.getDay() + 6) % 7));
+  return dateKey(day);
+}
+
+/**
+ * Bezugspunkt für das Zeitjahr der 26-Wochen-Regel: voraussichtliches Ende der
+ * Beschäftigung. Ohne Enddatum nimmt Headroom den spätesten Tag aus „heute“ und
+ * den bereits eingetragenen (auch geplanten) Schichten.
+ */
+export function workingStudentReferenceDate(jobs: Job[], shifts: Shift[], today: string): string {
+  const ends = jobs
+    .filter((job) => job.type === 'working student' && job.endDate && job.endDate >= today)
+    .map((job) => job.endDate as string);
+  if (ends.length) return ends.sort()[ends.length - 1];
+  const dates = shifts.map((shift) => shift.date).sort();
+  const latestShift = dates[dates.length - 1];
+  return latestShift && latestShift > today ? latestShift : today;
+}
+
+/**
+ * 26-Wochen-Regel für Werkstudent:innen (Jahresbetrachtung). Zählt im Zeitjahr
+ * (365 Tage rückwärts bis einschließlich `referenceDate`) alle Kalenderwochen
+ * (Mo–So), in denen über alle Jobs mehr als `weeklyLimit` Stunden liegen.
+ *
+ * Grenzen der Berechnung (müssen am Ergebnis sichtbar sein): ob die Mehrarbeit
+ * abends, nachts, am Wochenende oder in der vorlesungsfreien Zeit lag, und Jobs
+ * bei anderen Arbeitgebern, die nicht in Headroom erfasst sind, prüft die App nicht.
+ */
+export function workingStudent26Weeks(
+  shifts: Shift[],
+  referenceDate: string,
+  year = Number(referenceDate.slice(0, 4)),
+) {
+  const weekLimit = usableLimitValue('workingStudent26Weeks', year);
+  const weeklyLimit = usableLimitValue('workingStudentHours', year);
+  const end = new Date(referenceDate + 'T12:00:00');
+  const start = new Date(end);
+  start.setDate(start.getDate() - 364);
+  const windowStart = dateKey(start);
+  const windowEnd = referenceDate;
+  if (weekLimit === null || weeklyLimit === null) {
+    return { available: false as const, windowStart, windowEnd, weeksOver: 0, weekLimit: null, weeklyLimit: null, remaining: null, over: false, weeks: [] as string[] };
+  }
+  const perWeek = new Map<string, number>();
+  for (const shift of shifts) {
+    if (shift.date < windowStart || shift.date > windowEnd) continue;
+    const week = mondayOf(shift.date);
+    perWeek.set(week, (perWeek.get(week) ?? 0) + Math.max(0, shift.hours));
+  }
+  const weeks = [...perWeek.entries()].filter(([, hours]) => hours > weeklyLimit).map(([week]) => week).sort();
+  return {
+    available: true as const,
+    windowStart,
+    windowEnd,
+    weeksOver: weeks.length,
+    weekLimit,
+    weeklyLimit,
+    remaining: Math.max(0, weekLimit - weeks.length),
+    over: weeks.length > weekLimit,
+    weeks,
   };
 }
 
@@ -246,20 +430,21 @@ export function isInLecturePeriod(date: string, profile: Profile): boolean {
   );
 }
 
-export function shortDayStatus(days: number, limit = limitValue('shortTermEmployment')) {
-  return { days, remaining: Math.max(0, limit - days), over: days > limit };
+export function shortDayStatus(days: number, limit: number | null = usableLimitValue('shortTermEmployment')) {
+  if (limit === null) return { days, available: false as const, remaining: null, over: false };
+  return { days, available: true as const, remaining: Math.max(0, limit - days), over: days > limit };
 }
 
 export function employeeMiniJobStatus(count: number) {
   return { count, over: count > 1, extra: Math.max(0, count - 1) };
 }
 
-export function miniJobCap2027(wage = limitValue('minimumWage', 2027)): number {
+export function miniJobCap2027(wage = limitValue('minimumWage', 2027) ?? 0): number {
   return Math.ceil((wage * miniJobCapFormula.minimumWageMultiplier) / miniJobCapFormula.divisor);
 }
 
-export function wageBelowMinimum(wage: number, min = limitValue('minimumWage')): boolean {
-  return wage < min;
+export function wageBelowMinimum(wage: number, min: number | null = usableLimitValue('minimumWage')): boolean {
+  return min !== null && wage < min;
 }
 
 export function peerMedian(rows: { hourlyWage: number }[]): number | null {

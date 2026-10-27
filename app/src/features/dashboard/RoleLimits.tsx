@@ -1,10 +1,10 @@
-import { activeLimits, employeeMiniJobStatus, hoursInWeek, isInLecturePeriod, roleLayouts, roleTier, statusFor, type Limit, type ProfileStatus, type RoleItem } from '@headroom/core';
+import { activeLimits, employeeMiniJobStatus, hoursInWeek, isInLecturePeriod, roleLayouts, roleTier, statusFor, workingStudent26Weeks, workingStudentReferenceDate, type Limit, type ProfileStatus, type RiskStatus, type RoleItem } from '@headroom/core';
 import { ProgressBar } from '../../components/ProgressBar';
 import { SourceStamp } from '../../components/SourceStamp';
 import { StatusBadge } from '../../components/StatusBadge';
 import { t, type Language } from '../../i18n/translations';
-import { money } from '../../lib/format';
-import { limitConsequence, limitName, monthlyAmountForLimit } from '../../lib/limitText';
+import { dateText, money } from '../../lib/format';
+import { grossEquivalentNote, limitConsequence, limitName, limitUnavailable, monthlyAmountForLimit } from '../../lib/limitText';
 import type { AppState } from '../../lib/storage';
 
 export type RoleRowData = {
@@ -15,9 +15,15 @@ export type RoleRowData = {
   amount?: string;
   /** Verhältnis für Balken und Status; nur bei geprüften Werten. */
   ratio?: number;
-  status?: 'Safe' | 'Close' | 'Over';
+  status?: RiskStatus;
   note?: string;
   tone?: 'neutral' | 'amber';
+  /** Kurzer Zusatz wie „Brutto-Orientierung“ direkt am Ergebnis. */
+  qualifier?: string;
+  /** Erklärung zur Einschränkung, sichtbar unter der Zeile. */
+  caveat?: string;
+  /** Für dieses Jahr ist kein Wert hinterlegt. */
+  unavailable?: boolean;
 };
 
 /** Baut die Zeilen für alle Rollen-Einträge, die für dieses Profil gelten. */
@@ -42,15 +48,50 @@ export function roleRows(
     }
     if (!limit) continue;
     const title = limitName(limit, language);
+    if (limitUnavailable(limit)) {
+      rows.push({ item, title, limit, unavailable: true, status: 'Unknown', note: t(language, 'limitUnavailable', { year }) });
+      continue;
+    }
     const verified = limit.verified && limit.value !== null;
     switch (item) {
-      case 'miniJobMonthly':
-      case 'familyInsurance':
-      case 'bafoegSideIncome': {
-        const value = monthlyAmountForLimit(limit, data.profile, data.jobs, data.shifts, month, year);
+      case 'miniJobMonthly': {
+        const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year);
         if (!value) { rows.push({ item, title, limit }); break; }
-        const ratio = value.cap > 0 ? value.total / value.cap : 0;
-        rows.push({ item, title, limit, ratio, status: statusFor(ratio), amount: money(value.total, language) + ' / ' + money(value.cap, language) });
+        rows.push({ item, title, limit, ratio: value.ratio, status: value.status, amount: money(value.total, language) + ' / ' + money(value.cap, language) });
+        break;
+      }
+      case 'familyInsurance': {
+        const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year);
+        if (!value) { rows.push({ item, title, limit }); break; }
+        rows.push({
+          item, title, limit, ratio: value.ratio, status: value.status,
+          amount: money(value.total, language) + ' / ' + money(value.cap, language),
+          qualifier: t(language, 'grossOrientation'),
+          caveat: (value.capSource === 'miniJobCap' ? t(language, 'familyMiniCapNote') + ' ' : '') + t(language, 'familyGrossNote'),
+        });
+        break;
+      }
+      case 'bafoegSideIncome': {
+        const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year);
+        if (!value || limit.value === null) { rows.push({ item, title, limit }); break; }
+        rows.push({
+          item, title, limit, ratio: value.ratio, status: value.status,
+          amount: t(language, 'bafoegRow', { used: money(value.total, language), gross: money(value.cap, language) }),
+          qualifier: t(language, 'grossOrientation'),
+          caveat: t(language, 'bafoegAllowanceLine', { allowance: money(limit.value, language), gross: money(value.cap, language) }),
+        });
+        break;
+      }
+      case 'workingStudent26Weeks': {
+        const reference = workingStudentReferenceDate(data.jobs, data.shifts, today);
+        const result = workingStudent26Weeks(data.shifts, reference, year);
+        if (!result.available) { rows.push({ item, title, limit }); break; }
+        const ratio = result.weeksOver / result.weekLimit;
+        rows.push({
+          item, title, limit, ratio, status: statusFor(ratio),
+          amount: t(language, 'weeks26Row', { used: result.weeksOver, limit: result.weekLimit }),
+          caveat: t(language, 'weeks26Window', { from: dateText(result.windowStart, language), to: dateText(result.windowEnd, language) }) + ' ' + t(language, 'weeks26Limitation'),
+        });
         break;
       }
       case 'shortTermEmployment': {
@@ -98,7 +139,7 @@ export function roleRows(
 }
 
 export function RoleRow({ row, language }: { row: RoleRowData; language: Language }) {
-  const unverified = row.limit && !row.limit.verified;
+  const unverified = row.limit && !row.limit.verified && !row.unavailable;
   return (
     <article className="limit-progress-item">
       <div className="limit-row">
@@ -108,6 +149,7 @@ export function RoleRow({ row, language }: { row: RoleRowData; language: Languag
         </div>
         <div className="limit-row-value">
           {row.amount && <span className="limit-amount">{row.amount}</span>}
+          {row.qualifier && <span className="pill-subtle">{row.qualifier}</span>}
           {row.status && !unverified && <StatusBadge status={row.status} language={language} />}
           {unverified && <span className="pill-unverified">{t(language, 'unverified')}</span>}
         </div>
@@ -115,11 +157,13 @@ export function RoleRow({ row, language }: { row: RoleRowData; language: Languag
       {row.ratio !== undefined && row.status && !unverified && (
         <ProgressBar ratio={row.ratio} label={row.title} />
       )}
+      {row.caveat && <p className="row-note">{row.caveat}</p>}
       {row.note && <p className={'row-note' + (row.tone === 'amber' ? ' row-note-amber' : '')}>{row.note}</p>}
       {row.limit && !row.note && (
         <details className="row-explain">
           <summary>{t(language, 'whatDoesItMean')}</summary>
           <p>{limitConsequence(row.limit, language)}</p>
+          {grossEquivalentNote(row.limit, language) && <p>{grossEquivalentNote(row.limit, language)}</p>}
         </details>
       )}
     </article>

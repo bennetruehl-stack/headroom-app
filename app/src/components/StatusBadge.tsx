@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { RiskStatus } from '@headroom/core';
 import { t, type Language } from '../i18n/translations';
 import { statusKey } from '../lib/limitText';
 
@@ -6,7 +7,7 @@ export function StatusBadge({
   status,
   language,
 }: {
-  status: 'Safe' | 'Close' | 'Over';
+  status: RiskStatus;
   language: Language;
 }) {
   // Animation nur bei einem echten Wechsel, nicht bei jedem Seitenaufruf.

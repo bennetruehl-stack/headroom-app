@@ -1,5 +1,5 @@
 import type { Job, Profile, ProfileStatus, Shift, ShiftCandidate } from '@headroom/core';
-import { limitValue } from '@headroom/core';
+import { latestKnownLimitValue } from '@headroom/core';
 import type { Language } from '../i18n/translations';
 
 export type AppState = {
@@ -74,7 +74,7 @@ export function createDemoState(): AppState {
   const date = today();
   const year = date.slice(0, 4);
   const month = date.slice(5, 7);
-  const minimumWage = limitValue('minimumWage', Number(year));
+  const minimumWage = (latestKnownLimitValue('minimumWage', Number(year)) ?? 0);
   return {
     profile: {
       status: 'Student',
@@ -161,7 +161,7 @@ export function createLenaState(): AppState {
   const date = today();
   const year = date.slice(0, 4);
   const currentMonth = Number(date.slice(5, 7));
-  const minimumWage = limitValue('minimumWage', Number(year));
+  const minimumWage = (latestKnownLimitValue('minimumWage', Number(year)) ?? 0);
   const pub = 340;
   const cafe = 280;
   const shifts: Shift[] = [];

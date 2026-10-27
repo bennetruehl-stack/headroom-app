@@ -5,20 +5,19 @@ export function InformationCards({
   data,
   language,
   familyAge,
-  familyCap,
-  familyMonthTotal,
+  familyOver,
 }: {
   data: AppState;
   language: Language;
   familyAge: number | null;
-  familyCap: number;
-  familyMonthTotal: number;
+  /** Brutto-Orientierung liegt über dem Vergleichswert (nur mit geprüftem Wert). */
+  familyOver: boolean;
 }) {
   // Steuerklasse VI und Jugendarbeitsschutz stehen jetzt rollenbasiert unter „Für dich wichtig“.
   const showFamilyInfo =
     data.profile.familyInsured &&
     (familyAge !== null && data.profile.age >= familyAge ||
-      familyCap > 0 && familyMonthTotal > familyCap);
+      familyOver);
   return (
     <section className="info-card-list">
       {showFamilyInfo && (
