@@ -1,0 +1,40 @@
+{
+  "name": "@headroom/desktop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Headroom als Mac-App",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac dir --arm64"
+  },
+  "build": {
+    "appId": "de.headroom.app",
+    "productName": "Headroom",
+    "files": [
+      "main.cjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../app/dist",
+        "to": "app"
+      }
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "mac": {
+      "category": "public.app-category.finance",
+      "icon": "build/icon.png",
+      "identity": null
+    },
+    "electronVersion": "45.0.0"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "^26.18.0"
+  },
+  "author": "Bennet Ruhl"
+}

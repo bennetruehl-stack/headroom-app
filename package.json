@@ -5,7 +5,8 @@
   "workspaces": [
     "app",
     "packages/core",
-    "server"
+    "server",
+    "desktop"
   ],
   "scripts": {
     "dev": "npm --workspace app run dev",
@@ -13,9 +14,15 @@
     "test": "npm --workspace packages/core run test && npm --workspace app run test",
     "dev:all": "npm run dev:server & npm run dev",
     "dev:server": "npm --workspace server run dev",
-    "test:e2e": "npm --workspace app run test:e2e"
+    "test:e2e": "npm --workspace app run test:e2e",
+    "desktop": "npm run build && npm --workspace desktop run start",
+    "desktop:build": "npm run build && npm --workspace desktop run dist",
+    "desktop:install": "ditto desktop/dist/mac-arm64/Headroom.app ~/Applications/Headroom.app && echo Headroom liegt jetzt in ~/Applications"
   },
   "engines": {
     "node": ">=22.12"
+  },
+  "allowScripts": {
+    "electron@45.0.0": true
   }
 }

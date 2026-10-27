@@ -25,6 +25,18 @@ Fehlermeldung `Cannot find native binding` (Rolldown): Vite 8 und Vitest laden e
 
 `HEADROOM_DB_PATH=/anderer/pfad/headroom.sqlite npm run dev:server` legt die SQLite-Datenbank des lokalen Demo-Servers an einem alternativen Ort an. Im Standardfall liegt sie unter `server/data/headroom.sqlite` und wird nicht eingecheckt.
 
+## Als Mac-App
+
+Headroom lässt sich als eigenes Programm (Electron) bauen, das ohne Terminal, Server und Internet läuft:
+
+```sh
+npm run desktop             # Web-App bauen und im App-Fenster starten (zum Testen)
+npm run desktop:build       # Headroom.app bauen (desktop/dist/mac-arm64/)
+npm run desktop:install     # nach ~/Applications kopieren (Launchpad, Spotlight, Dock)
+```
+
+Nach Änderungen am Code `desktop:build` und `desktop:install` erneut ausführen. Die Mac-App speichert ihre Daten getrennt vom Browser; zum Umziehen in den Einstellungen exportieren und importieren. Jobbörse und Vergleichswerte brauchen den Demo-Server und sind in der Mac-App offline.
+
 ## Aufbau
 
 ```text

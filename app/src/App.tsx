@@ -119,7 +119,8 @@ function App() {
   };
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
+    // In der Mac-App (app://) gibt es keinen Service Worker.
+    if (!('serviceWorker' in navigator) || !location.protocol.startsWith('http')) return;
     navigator.serviceWorker.register('/sw.js').catch(() => undefined);
   }, []);
 
