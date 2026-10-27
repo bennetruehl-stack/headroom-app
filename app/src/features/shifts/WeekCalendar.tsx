@@ -4,6 +4,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { t, type Language } from '../../i18n/translations';
 import { localToday, money } from '../../lib/format';
 import type { AppState } from '../../lib/storage';
+import { kindKeys } from './PaymentsSection';
 import { ShiftForm } from './ShiftForm';
 
 function addDays(date: string, days: number): string {
@@ -40,7 +41,9 @@ export function WeekCalendar({
   const weekShifts = data.shifts.filter((shift) => shift.date >= monday && shift.date <= sunday);
   const jobById = new Map(data.jobs.map((job) => [job.id, job]));
   const totalHours = hoursInWeek(data.shifts, monday);
-  const totalPay = weekShifts.reduce((sum, shift) => {
+  const weekPayments = data.payments.filter((payment) => payment.date >= monday && payment.date <= sunday);
+  const paymentSum = weekPayments.reduce((sum, payment) => sum + payment.amount, 0);
+  const totalPay = paymentSum + weekShifts.reduce((sum, shift) => {
     const job = jobById.get(shift.jobId);
     return sum + (job ? earnings(shift, job) : 0);
   }, 0);
@@ -74,6 +77,12 @@ export function WeekCalendar({
         <div>
           <span className="eyebrow">{t(language, 'weekTotal')}</span>
           <strong>{hours(totalHours)} {t(language, 'hourShort')} · {money(totalPay, language)}</strong>
+          {paymentSum > 0 && (
+            <span className="week-payment-sum">
+              <span className="payment-dot" aria-hidden="true" />
+              {t(language, 'weekPayments', { amount: money(paymentSum, language) })}
+            </span>
+          )}
         </div>
         {showHourLimit && hourLimit !== null && (
           <div className="week-limit">
@@ -89,6 +98,7 @@ export function WeekCalendar({
             .filter((shift) => shift.date === day)
             .sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? ''));
           const editShift = dayShifts.find((shift) => shiftKey(shift) === editing);
+          const dayPayments = weekPayments.filter((payment) => payment.date === day);
           return (
             <li key={day} className={'week-day' + (day === today ? ' is-today' : '')} aria-current={day === today ? 'date' : undefined}>
               <div className="week-day-label">
@@ -96,7 +106,16 @@ export function WeekCalendar({
                 <strong>{asDate(day).getDate()}</strong>
               </div>
               <div className="week-day-shifts">
-                {dayShifts.length === 0 && <span className="week-day-empty">–</span>}
+                {dayShifts.length === 0 && dayPayments.length === 0 && <span className="week-day-empty">–</span>}
+                {dayPayments.map((payment) => (
+                  <div key={payment.id} className="week-payment">
+                    <span className="week-shift-title">
+                      <span className="payment-tag">{t(language, 'oneTimeTag')}</span>
+                      {jobById.get(payment.jobId)?.title ?? t(language, 'noJob')}
+                    </span>
+                    <span className="week-shift-meta">{t(language, kindKeys[payment.kind])} · {money(payment.amount, language)}</span>
+                  </div>
+                ))}
                 {dayShifts.map((shift) => {
                   const job = jobById.get(shift.jobId);
                   const id = shiftKey(shift);
@@ -137,7 +156,7 @@ export function WeekCalendar({
           );
         })}
       </ol>
-      {weekShifts.length === 0 && <p className="week-empty">{t(language, 'noShiftsThisWeek')}</p>}
+      {weekShifts.length === 0 && weekPayments.length === 0 && <p className="week-empty">{t(language, 'noShiftsThisWeek')}</p>}
     </section>
   );
 }

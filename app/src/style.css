@@ -2676,6 +2676,8 @@ input::placeholder {
   --close-bg: #fff1df;
   --over: #d70015;
   --over-bg: #ffe8e6;
+  --payment: #6b3fd4;
+  --payment-bg: #f1ebff;
 
   --radius-lg: 20px;
   --radius-md: 14px;
@@ -3126,6 +3128,8 @@ select:focus {
   --close-bg: #33230b;
   --over: #ff453a;
   --over-bg: #3a1513;
+  --payment: #c3a6ff;
+  --payment-bg: #2a1f45;
 
   --surface-shadow: none;
   --hairline: rgba(84, 84, 88, 0.6);
@@ -3360,4 +3364,148 @@ select:focus {
   .week-shift:active {
     transform: none;
   }
+}
+
+/* ---------- Einmalzahlungen: eigene Farbe, damit sie sich von Schichten abheben ---------- */
+
+.payment-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 22px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--payment-bg);
+  color: var(--payment);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.payment-tag::before {
+  content: '★';
+  font-size: 10px;
+}
+
+.payment-card {
+  border-left: 4px solid var(--payment);
+  background: linear-gradient(90deg, var(--payment-bg), var(--card) 55%);
+}
+
+.payment-card .shift-card-heading strong {
+  color: var(--payment);
+}
+
+.payment-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.hero-metric .payment-tag {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.week-payment {
+  display: grid;
+  gap: 3px;
+  padding: 7px 12px;
+  border-left: 3px solid var(--payment);
+  border-radius: var(--radius-sm);
+  background: var(--payment-bg);
+}
+
+.week-payment .week-shift-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.week-payment-sum {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  color: var(--payment);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.payment-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--payment);
+}
+
+/* ---------- Steuer-Check (Advanced, Partnerhinweis) ---------- */
+
+.tax-check {
+  margin: 14px 0;
+  padding: 18px;
+  border: 1.5px solid var(--accent);
+  background: linear-gradient(160deg, var(--accent-soft), var(--card) 70%);
+}
+
+.tax-check-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tax-check-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.tax-check-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tax-check-heading .eyebrow {
+  display: block;
+  margin: 0 0 2px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.tax-check-heading h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.tax-check-text {
+  margin: 12px 0 14px;
+  font-size: 15px;
+}
+
+.tax-check-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.tax-check-actions .button {
+  justify-content: center;
+  font-weight: 650;
+}
+
+.tax-check-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
 }

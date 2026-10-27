@@ -141,9 +141,7 @@ describe('core calculations', () => {
     expect(recommendationLevel({ familyInsuranceEnds: true })).toBe(2);
     expect(recommendationLevel({ overMiniJobPermanently: true })).toBe(3);
     expect(recommendationLevel({ unclassified: true })).toBe(4);
-    expect(recommendationLevel({ overMonthlyLimit: true })).toBe(5);
-    expect(recommendationLevel({ overMonthlyLimit: true, overMiniJobPermanently: true })).toBe(3);
-    expect(recommendationLevel({ overMonthlyLimit: true, familyInsuranceEnds: true }, [2])).toBe(5);
+    expect(recommendationLevel({ familyInsuranceEnds: true, overMiniJobPermanently: true }, [3])).toBe(2);
     expect(recommendationLevel({ familyInsuranceEnds: true }, [2])).toBe(0);
   });
 

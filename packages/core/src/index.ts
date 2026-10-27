@@ -551,16 +551,13 @@ export function recommendationLevel(facts: {
   familyInsuranceEnds?: boolean;
   overMiniJobPermanently?: boolean;
   unclassified?: boolean;
-  overMonthlyLimit?: boolean;
-}, dismissed: number[] = []): 0 | 1 | 2 | 3 | 4 | 5 {
+}, dismissed: number[] = []): 0 | 1 | 2 | 3 | 4 {
   // Reihenfolge = Priorität. Weggeklickte Stufen werden übersprungen, damit der nächste passende Hinweis erscheint.
-  // „Nur dieser Monat über der Minijob-Grenze“ (5) ist der schwächste Hinweis.
-  const candidates: [0 | 1 | 2 | 3 | 4 | 5, boolean | undefined][] = [
+  const candidates: [1 | 2 | 3 | 4, boolean | undefined][] = [
     [4, facts.unclassified],
     [3, facts.overMiniJobPermanently],
     [2, facts.familyInsuranceEnds],
     [1, facts.regularSecondJob && facts.underTaxThreshold],
-    [5, facts.overMonthlyLimit],
   ];
   return candidates.find(([level, applies]) => applies && !dismissed.includes(level))?.[0] ?? 0;
 }

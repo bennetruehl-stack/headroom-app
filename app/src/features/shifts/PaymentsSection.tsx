@@ -5,7 +5,7 @@ import { dateText, id, localToday, money } from '../../lib/format';
 import { dateError, numberError } from '../../lib/inputErrors';
 import type { AppState } from '../../lib/storage';
 
-const kindKeys: Record<OneTimePaymentKind, MessageKey> = {
+export const kindKeys: Record<OneTimePaymentKind, MessageKey> = {
   bonus: 'paymentKindBonus',
   holidayPay: 'paymentKindHoliday',
   christmasBonus: 'paymentKindChristmas',
@@ -88,7 +88,7 @@ export function PaymentsSection({
             {ordered.map((payment) => {
               const job = data.jobs.find((item) => item.id === payment.jobId);
               return (
-                <article className="surface shift-card" key={payment.id}>
+                <article className="surface shift-card payment-card" key={payment.id}>
                   <div className="shift-card-heading">
                     <div>
                       <p className="eyebrow">{dateText(payment.date, language)}</p>
@@ -97,6 +97,7 @@ export function PaymentsSection({
                     <strong>{money(payment.amount, language)}</strong>
                   </div>
                   <div className="shift-metadata">
+                    <span className="payment-tag">{t(language, 'oneTimeTag')}</span>
                     <span className="pill-subtle">{t(language, kindKeys[payment.kind])}</span>
                   </div>
                   <div className="card-actions">

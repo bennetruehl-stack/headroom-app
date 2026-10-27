@@ -13,6 +13,7 @@ import type { AppState } from '../../lib/storage';
 import { ShiftForm } from '../shifts/ShiftForm';
 import { InformationCards } from './InformationCards';
 import { RoleLimits, roleRows } from './RoleLimits';
+import { TaxAppCard } from '../advanced/TaxAppCard';
 
 export function DashboardMetrics({
   data,
@@ -28,6 +29,7 @@ export function DashboardMetrics({
   annualRegular,
   taxLimit,
   daysUsed,
+  features,
   onShiftCheck,
   onAddShift,
   onNavigate,
@@ -149,7 +151,10 @@ export function DashboardMetrics({
                     : monthSummary.hours !== null ? t(language, 'hoursApprox', { hours: Math.round(monthSummary.hours) }) : null}
                 </div>
                 {paymentsThisMonth > 0 && (
-                  <p className="metric-caption">{t(language, 'includesPayment', { amount: money(paymentsThisMonth, language) })}</p>
+                  <p className="metric-caption payment-note">
+                    <span className="payment-tag">{t(language, 'oneTimeTag')}</span>
+                    {t(language, 'includesPayment', { amount: money(paymentsThisMonth, language) })}
+                  </p>
                 )}
                 {strictest?.value.comparison === 'gross-orientation' && (
                   <p className="metric-caption"><span className="pill-subtle">{t(language, 'grossOrientation')}</span></p>
@@ -174,6 +179,8 @@ export function DashboardMetrics({
                   })()}
             </div>
           </section>
+
+          {features.partnerRecommendations && <TaxAppCard data={data} language={language} />}
 
           {multipleOver && (
             <div className="notice notice-over" role="status">
