@@ -66,24 +66,26 @@ if (listingCount === 0) {
   const cities = ['Frankfurt', 'Berlin', 'Hamburg', 'München'];
   const titles = ['Eventaufbau', 'Café-Service', 'Lager / Kommissionierung', 'Einzelhandel'];
   const minimumWage = limitValue('minimumWage');
-  const insert = database.prepare(`
-    INSERT INTO listings (id, title, city, shift_date, hours, hourly_wage, created_at, demo)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-  `);
-  const seed = database.transaction(() => {
-    for (let index = 0; index < 40; index += 1) {
-      insert.run(
-        `demo-${index + 1}`,
-        titles[index % titles.length],
-        cities[index % cities.length],
-        dateAfter((index % 14) + 1),
-        [3, 4, 6, 8][index % 4],
-        [minimumWage, minimumWage + 1.1, minimumWage + 2.1, minimumWage + 0.9][index % 4],
-        new Date().toISOString(),
-      );
-    }
-  });
-  seed();
+  if (minimumWage !== null) {
+    const insert = database.prepare(`
+      INSERT INTO listings (id, title, city, shift_date, hours, hourly_wage, created_at, demo)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+    `);
+    const seed = database.transaction(() => {
+      for (let index = 0; index < 40; index += 1) {
+        insert.run(
+          `demo-${index + 1}`,
+          titles[index % titles.length],
+          cities[index % cities.length],
+          dateAfter((index % 14) + 1),
+          [3, 4, 6, 8][index % 4],
+          [minimumWage, minimumWage + 1.1, minimumWage + 2.1, minimumWage + 0.9][index % 4],
+          new Date().toISOString(),
+        );
+      }
+    });
+    seed();
+  }
 }
 
 const app = express();
