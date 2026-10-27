@@ -26,6 +26,8 @@ const PremiumPage = lazy(() => import('./features/advanced/PremiumPage').then((m
 const DeveloperPage = lazy(() => import('./features/more/DeveloperPage').then((module) => ({ default: module.DeveloperPage })));
 const TrendsPage = lazy(() => import('./features/more/TrendsPage').then((module) => ({ default: module.TrendsPage })));
 const WageCheckPage = lazy(() => import('./features/more/WageCheckPage').then((module) => ({ default: module.WageCheckPage })));
+const PrivacyPage = lazy(() => import('./features/legal/LegalPages').then((module) => ({ default: module.PrivacyPage })));
+const ImprintPage = lazy(() => import('./features/legal/LegalPages').then((module) => ({ default: module.ImprintPage })));
 const ImportPage = lazy(() => import('./import/ImportPage').then((module) => ({ default: module.ImportPage })));
 
 function App() {
@@ -254,6 +256,10 @@ function App() {
         return features.peerStats
           ? <PeerStatsPage data={data} language={language} onUpdate={update} />
           : <MorePage language={language} features={features} onNavigate={setPage} />;
+      case 'Privacy':
+        return <PrivacyPage language={language} onNavigate={setPage} backTo={data.onboarded ? 'More' : 'Onboarding'} />;
+      case 'Imprint':
+        return <ImprintPage language={language} onNavigate={setPage} backTo={data.onboarded ? 'More' : 'Onboarding'} />;
       case 'Premium':
         return features.premium
           ? <PremiumPage data={data} language={language} onUpdate={update} />
@@ -283,7 +289,7 @@ function App() {
         {!ready && <span className="sr-only">{t(language, 'infoOnly')}</span>}
       </main>
       {ready && data.onboarded && <Navigation language={language} current={page} onNavigate={setPage} />}
-      <AppFooter language={language} />
+      <AppFooter language={language} onNavigate={setPage} />
       {checkOpen && <ShiftCheckDialog data={data} language={language} onClose={() => setCheckOpen(false)} />}
     </div>
   );

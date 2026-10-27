@@ -455,6 +455,13 @@ const de = {
   errEndBeforeStart: 'Das Ende liegt vor dem Beginn. Bitte prüfe beide Daten.',
   errShiftOutsideJob: 'Die Schicht liegt außerhalb der Laufzeit dieses Jobs.',
   includesPayment: 'Enthält Einmalzahlungen von {amount}. Headroom zählt sie vorsichtig voll im Auszahlungsmonat; amtlich werden sie meist aufs Jahr verteilt.',
+  privacyTitle: 'Datenschutz',
+  imprintTitle: 'Impressum',
+  legalKicker: 'Rechtliches',
+  descPrivacy: 'Welche Daten Headroom wo speichert und wann etwas das Gerät verlässt.',
+  descImprint: 'Anbieterkennzeichnung und Kontakt.',
+  back: 'Zurück',
+  legalDraftNotice: 'Entwurf: Die markierten Platzhalter müssen vor einer Veröffentlichung ausgefüllt und der Text rechtlich geprüft werden.',
 } as const;
 
 const en: Record<keyof typeof de, string> = {
@@ -912,6 +919,13 @@ const en: Record<keyof typeof de, string> = {
   errEndBeforeStart: 'The end is before the start. Please check both dates.',
   errShiftOutsideJob: 'The shift is outside this job\'s start and end dates.',
   includesPayment: 'Includes one-off payments of {amount}. Headroom counts them cautiously in full in the payment month; officially they are usually spread over the year.',
+  privacyTitle: 'Privacy',
+  imprintTitle: 'Legal notice',
+  legalKicker: 'Legal',
+  descPrivacy: 'Which data Headroom stores where, and when anything leaves your device.',
+  descImprint: 'Provider information and contact.',
+  back: 'Back',
+  legalDraftNotice: 'Draft: the marked placeholders must be filled in and the text legally reviewed before publication.',
 };
 
 export type MessageKey = keyof typeof de;

@@ -2161,6 +2161,21 @@ input::placeholder {
   opacity: 1;
 }
 
+.app-footer p {
+  margin: 0;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 6px;
+}
+
+.footer-links .text-button {
+  font-size: 12px;
+}
+
 .app-footer {
   width: min(100%, 480px);
   margin: auto auto 0;
@@ -2169,6 +2184,40 @@ input::placeholder {
   font-size: 12px;
   line-height: 1.5;
   text-align: center;
+}
+
+/* ---------- Rechtliches ---------- */
+
+.legal-section {
+  margin-bottom: 12px;
+}
+
+.legal-section h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.legal-section p,
+.legal-section li {
+  line-height: 1.55;
+}
+
+.legal-section ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.legal-section li + li {
+  margin-top: 8px;
+}
+
+/* Platzhalter für persönliche Angaben: bewusst auffällig, damit nichts unausgefüllt veröffentlicht wird. */
+.legal-placeholder {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--close-bg);
+  color: var(--close);
+  font-weight: 700;
 }
 
 /* ---------- Dialog ---------- */
@@ -2211,6 +2260,11 @@ input::placeholder {
 }
 
 /* Austritt schneller als Eintritt */
+/* Der Dialog selbst bekommt beim Öffnen den Fokus (für die Titelansage); kein Rahmen um die ganze Fläche. */
+.dialog:focus {
+  outline: none;
+}
+
 .is-closing .dialog {
   transform: translateY(100%);
   transition: transform 180ms var(--ease-out);

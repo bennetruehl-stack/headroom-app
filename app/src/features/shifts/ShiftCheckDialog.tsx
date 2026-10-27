@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { activeLimits, annualMiniProjection, inputRules, validateNumber, hoursInWeek, isInLecturePeriod, limitsForYear, monthlyIncomeForLimit, monthlyLimitCheck, shiftCheck, shortDays, usableLimitValue, workingHoursCheck, workingStudent26Weeks, workingStudentReferenceDate, type Shift } from '@headroom/core';
 import { SourceStamp } from '../../components/SourceStamp';
 import { t, type Language } from '../../i18n/translations';
 import { dateText, localToday, money, prefersReducedMotion } from '../../lib/format';
 import { limitName } from '../../lib/limitText';
 import { numberError } from '../../lib/inputErrors';
+import { useDialogFocus } from '../../lib/useDialogFocus';
 import type { AppState } from '../../lib/storage';
 
 export function ShiftCheckDialog({
@@ -18,6 +19,8 @@ export function ShiftCheckDialog({
 }) {
   // Schneller Austritt (180 ms), dann erst wirklich schließen. Escape schließt ebenfalls.
   const [closing, setClosing] = useState(false);
+  const dialogRef = useRef<HTMLElement>(null);
+  useDialogFocus(dialogRef);
   const close = () => {
     if (closing) return;
     if (prefersReducedMotion()) { onClose(); return; }
@@ -85,7 +88,7 @@ export function ShiftCheckDialog({
 
   return (
     <div className={'dialog-backdrop' + (closing ? ' is-closing' : '')} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
-      <section className="dialog surface" role="dialog" aria-modal="true" aria-labelledby="shift-dialog-title">
+      <section ref={dialogRef} tabIndex={-1} className="dialog surface" role="dialog" aria-modal="true" aria-labelledby="shift-dialog-title">
         <div className="section-heading">
           <div><p className="eyebrow">{t(language, 'shiftCheck')}</p><h2 id="shift-dialog-title">{t(language, 'whatIfTitle')}</h2></div>
           <button className="icon-button" type="button" aria-label={t(language, 'closeDialog')} onClick={close}>×</button>

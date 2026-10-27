@@ -20,6 +20,8 @@ export function MorePage({
     { screen: 'JobBoard', title: 'jobBoardTitle', description: 'descJobBoard', visible: features.jobBoard },
     { screen: 'PeerStats', title: 'peerTitle', description: 'descPeer', visible: features.peerStats },
     { screen: 'Premium', title: 'premiumTitle', description: 'descPremium', visible: features.premium },
+    { screen: 'Privacy', title: 'privacyTitle', description: 'descPrivacy' },
+    { screen: 'Imprint', title: 'imprintTitle', description: 'descImprint' },
   ];
   return (
     <section className="page-enter">

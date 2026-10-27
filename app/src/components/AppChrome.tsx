@@ -1,3 +1,4 @@
+import type { Screen } from '../app/types';
 import { t, type Language } from '../i18n/translations';
 
 export function AppHeader({
@@ -26,6 +27,15 @@ export function AppHeader({
   );
 }
 
-export function AppFooter({ language }: { language: Language }) {
-  return <footer className="app-footer">{t(language, 'infoOnly')}</footer>;
+export function AppFooter({ language, onNavigate }: { language: Language; onNavigate: (screen: Screen) => void }) {
+  // Datenschutz und Impressum sind von jeder Seite erreichbar, auch vor dem Onboarding.
+  return (
+    <footer className="app-footer">
+      <p>{t(language, 'infoOnly')}</p>
+      <nav className="footer-links" aria-label={t(language, 'legalKicker')}>
+        <button className="text-button" type="button" onClick={() => onNavigate('Privacy')}>{t(language, 'privacyTitle')}</button>
+        <button className="text-button" type="button" onClick={() => onNavigate('Imprint')}>{t(language, 'imprintTitle')}</button>
+      </nav>
+    </footer>
+  );
 }

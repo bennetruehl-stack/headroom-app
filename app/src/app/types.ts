@@ -13,6 +13,8 @@ export type Screen =
   | 'JobBoard'
   | 'PeerStats'
   | 'Premium'
-  | 'Import';
+  | 'Import'
+  | 'Privacy'
+  | 'Imprint';
 
 export type DashboardPeriod = 'month' | 'year' | 'season';
