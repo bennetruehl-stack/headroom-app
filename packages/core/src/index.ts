@@ -421,11 +421,11 @@ export function workingHoursCheck(
   };
 }
 
-function dateKey(date: Date): string {
+export function dateKey(date: Date): string {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 }
 
-function mondayOf(date: string): string {
+export function mondayOf(date: string): string {
   const day = new Date(date + 'T12:00:00');
   day.setDate(day.getDate() - ((day.getDay() + 6) % 7));
   return dateKey(day);
@@ -551,12 +551,18 @@ export function recommendationLevel(facts: {
   familyInsuranceEnds?: boolean;
   overMiniJobPermanently?: boolean;
   unclassified?: boolean;
-}): 0 | 1 | 2 | 3 | 4 {
-  if (facts.unclassified) return 4;
-  if (facts.overMiniJobPermanently) return 3;
-  if (facts.familyInsuranceEnds) return 2;
-  if (facts.regularSecondJob && facts.underTaxThreshold) return 1;
-  return 0;
+  overMonthlyLimit?: boolean;
+}, dismissed: number[] = []): 0 | 1 | 2 | 3 | 4 | 5 {
+  // Reihenfolge = Priorität. Weggeklickte Stufen werden übersprungen, damit der nächste passende Hinweis erscheint.
+  // „Nur dieser Monat über der Minijob-Grenze“ (5) ist der schwächste Hinweis.
+  const candidates: [0 | 1 | 2 | 3 | 4 | 5, boolean | undefined][] = [
+    [4, facts.unclassified],
+    [3, facts.overMiniJobPermanently],
+    [2, facts.familyInsuranceEnds],
+    [1, facts.regularSecondJob && facts.underTaxThreshold],
+    [5, facts.overMonthlyLimit],
+  ];
+  return candidates.find(([level, applies]) => applies && !dismissed.includes(level))?.[0] ?? 0;
 }
 
 export function companyPlausibility(value: string, existing: string[] = []) {

@@ -23,6 +23,8 @@ export function PartnerPanel({
   const secondRegular = data.jobs.filter((job) => job.type === 'regular').length > 1;
   const familyLimit = limitsForYear(year).find((limit) => limit.id === 'familyInsurance');
   const familyThreshold = getAgeBoundary(familyLimit);
+  const miniMonthlyLimit = limitsForYear(year).find((limit) => limit.id === 'miniJobMonthly');
+  const miniMonthlyCheck = miniMonthlyLimit ? monthlyLimitCheck(miniMonthlyLimit, data.shifts, data.jobs, month, year, data.payments) : null;
   const familyCheck = familyLimit ? monthlyLimitCheck(familyLimit, data.shifts, data.jobs, month, year, data.payments) : null;
   const currentFacts = {
     regularSecondJob: Boolean(taxLimitRecord?.verified) && secondRegular && annualIncomeProjection(data.shifts, data.jobs, year, ['regular'], 12, data.payments) <= taxLimit,
@@ -32,26 +34,27 @@ export function PartnerPanel({
       (familyCheck !== null && familyCheck.total > familyCheck.cap)
     ),
     overMiniJobPermanently: annualLimit !== null && annual > annualLimit,
+    overMonthlyLimit: miniMonthlyCheck !== null && miniMonthlyCheck.total > miniMonthlyCheck.cap,
     unclassified: secondRegular && (!taxLimitRecord?.verified || annualIncomeProjection(data.shifts, data.jobs, year, ['regular'], 12, data.payments) > taxLimit),
   };
-  const level = recommendationLevel(currentFacts);
-  const isOpen = level > 0 && !data.dismissedRecommendations.includes(level);
+  const level = recommendationLevel(currentFacts, data.dismissedRecommendations);
   const partnerIds: Record<number, string[]> = {
     1: ['ELSTER', 'TaxLeaf'],
     2: ['HealthCompare'],
-    3: ['SafeCover'],
+    3: ['TaxLeaf', 'ELSTER', 'Advisor Map'],
     4: ['Advisor Map'],
+    5: ['TaxLeaf', 'ELSTER'],
   };
   const titleKey: Record<number, MessageKey> = {
     1: 'partnerLevel1',
     2: 'partnerLevel2',
     3: 'partnerLevel3',
     4: 'partnerLevel4',
+    5: 'partnerLevel5',
   };
   const partners = demoPartners.filter((partner) => partnerIds[level]?.includes(partner.name));
 
   if (level === 0) return null;
-  if (!isOpen) return null;
 
   return (
     <section className="surface partner-panel">

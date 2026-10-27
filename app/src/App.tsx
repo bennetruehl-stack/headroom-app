@@ -187,7 +187,7 @@ function App() {
           />
         );
       case 'Shifts':
-        return <ShiftsPage data={data} language={language} onUpdate={(shifts) => update({ shifts })} onPayments={(payments) => update({ payments })} onImport={() => setPage('Import')} />;
+        return <ShiftsPage data={data} language={language} onUpdate={(shifts) => update({ shifts })} onPayments={(payments) => update({ payments })} onImport={() => setPage('Import')} showCalendar={features.weekCalendar} />;
       case 'Import':
         return <ImportPage data={data} language={language} onUpdate={update} onDone={() => setPage('Shifts')} />;
       case 'Jobs':

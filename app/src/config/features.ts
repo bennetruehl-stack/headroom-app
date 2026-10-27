@@ -1,7 +1,7 @@
 // Optionale Demo-Funktionen. Sie sind nur über den Advanced-Modus erreichbar und standardmäßig aus.
-export type FeatureName = 'jobBoard' | 'partnerRecommendations' | 'premium' | 'peerStats' | 'osmCompanyCheck';
+export type FeatureName = 'jobBoard' | 'partnerRecommendations' | 'premium' | 'peerStats' | 'osmCompanyCheck' | 'weekCalendar';
 
-export const featureNames: FeatureName[] = ['jobBoard', 'partnerRecommendations', 'premium', 'peerStats', 'osmCompanyCheck'];
+export const featureNames: FeatureName[] = ['jobBoard', 'partnerRecommendations', 'premium', 'peerStats', 'osmCompanyCheck', 'weekCalendar'];
 
 export const defaultFeatures: Record<FeatureName, boolean> = {
   jobBoard: false,
@@ -9,13 +9,15 @@ export const defaultFeatures: Record<FeatureName, boolean> = {
   premium: false,
   peerStats: false,
   osmCompanyCheck: false,
+  weekCalendar: false,
 };
 
-/** Was beim ersten Einschalten des Advanced-Modus aktiv wird: Jobbörse mit Partner-Jobbörsen und Partnerhinweise. */
+/** Was beim ersten Einschalten des Advanced-Modus aktiv wird: Jobbörse mit Partner-Jobbörsen, Partnerhinweise und Wochenkalender. */
 export const advancedDefaults: Record<FeatureName, boolean> = {
   ...defaultFeatures,
   jobBoard: true,
   partnerRecommendations: true,
+  weekCalendar: true,
 };
 
 /** Nur bekannte Schlüssel mit Wahrheitswerten übernehmen (alte Flags wie „scheduleScan“ fallen weg). */

@@ -335,7 +335,7 @@ export function normalizeState(value: unknown): AppState | null {
     darkMode: Boolean(candidate.darkMode),
     isPremium: Boolean(candidate.isPremium),
     dismissedRecommendations: Array.isArray(candidate.dismissedRecommendations)
-      ? candidate.dismissedRecommendations.filter((level): level is number => Number.isInteger(level) && level >= 1 && level <= 4)
+      ? candidate.dismissedRecommendations.filter((level): level is number => Number.isInteger(level) && level >= 1 && level <= 5)
       : [],
     peerOptIn: Boolean(candidate.peerOptIn),
     peerToken: typeof candidate.peerToken === 'string' ? candidate.peerToken : undefined,

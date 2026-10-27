@@ -11,6 +11,7 @@ import {
   monthlySummary,
   peerMedian,
   peerWagePosition,
+  mondayOf,
   recommendationLevel,
   roleLayouts,
   roleTier,
@@ -140,6 +141,16 @@ describe('core calculations', () => {
     expect(recommendationLevel({ familyInsuranceEnds: true })).toBe(2);
     expect(recommendationLevel({ overMiniJobPermanently: true })).toBe(3);
     expect(recommendationLevel({ unclassified: true })).toBe(4);
+    expect(recommendationLevel({ overMonthlyLimit: true })).toBe(5);
+    expect(recommendationLevel({ overMonthlyLimit: true, overMiniJobPermanently: true })).toBe(3);
+    expect(recommendationLevel({ overMonthlyLimit: true, familyInsuranceEnds: true }, [2])).toBe(5);
+    expect(recommendationLevel({ familyInsuranceEnds: true }, [2])).toBe(0);
+  });
+
+  it('finds the Monday of a week', () => {
+    expect(mondayOf('2026-10-27')).toBe('2026-10-26');
+    expect(mondayOf('2026-11-01')).toBe('2026-10-26');
+    expect(mondayOf('2026-10-26')).toBe('2026-10-26');
   });
 
   it('normalizes company names and suggests earlier entries without transmitting them', () => {

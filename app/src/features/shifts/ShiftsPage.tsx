@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import type { OneTimePayment, Shift } from '@headroom/core';
 import { PageHeading } from '../../components/PageHeading';
 import { t, type Language } from '../../i18n/translations';
@@ -6,6 +6,18 @@ import { dateText, money } from '../../lib/format';
 import type { AppState } from '../../lib/storage';
 import { PaymentsSection } from './PaymentsSection';
 import { ShiftForm } from './ShiftForm';
+import { WeekCalendar } from './WeekCalendar';
+
+type ShiftView = 'list' | 'week';
+const viewKey = 'headroom-shift-view';
+
+function storedView(): ShiftView {
+  try {
+    return localStorage.getItem(viewKey) === 'week' ? 'week' : 'list';
+  } catch {
+    return 'list';
+  }
+}
 
 export function ShiftsPage({
   data,
@@ -13,14 +25,38 @@ export function ShiftsPage({
   onUpdate,
   onPayments,
   onImport,
+  showCalendar = false,
 }: {
   data: AppState;
   language: Language;
   onUpdate: (shifts: Shift[]) => void;
   onPayments: (payments: OneTimePayment[]) => void;
   onImport: () => void;
+  showCalendar?: boolean;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
+  const [view, setView] = useState<ShiftView>(storedView);
+  const activeView: ShiftView = showCalendar ? view : 'list';
+  const changeView = (next: ShiftView) => {
+    setView(next);
+    try {
+      localStorage.setItem(viewKey, next);
+    } catch {
+      // Ohne Speicher bleibt die Auswahl nur bis zum Neuladen.
+    }
+  };
+  const saveEdit = (shiftId: string, values: Shift[]) => {
+    // Herkunft und Kalender-Kennung bleiben erhalten; ein späterer Abgleich überschreibt die Änderung nicht.
+    onUpdate(data.shifts.map((item) => (item.id ?? item.jobId + item.date) === shiftId
+      ? {
+        ...values[0],
+        source: item.source,
+        externalId: item.externalId,
+        calendarId: item.calendarId,
+        editedManually: item.source === 'calendar' || item.editedManually ? true : undefined,
+      }
+      : item));
+  };
   const ordered = [...data.shifts].sort((a, b) => b.date.localeCompare(a.date));
   return (
     <section className="page-enter">
@@ -29,6 +65,29 @@ export function ShiftsPage({
         title={t(language, 'shiftList')}
         trailing={<button className="button button-quiet heading-action" type="button" onClick={onImport}>{t(language, 'importShort')} <span aria-hidden="true">↓</span></button>}
       />
+      {showCalendar && (
+        <div
+          className="segmented segmented-sliding shift-view-tabs"
+          aria-label={t(language, 'shiftView')}
+          style={{ '--count': 2, '--index': activeView === 'list' ? 0 : 1 } as CSSProperties}
+        >
+          {(['list', 'week'] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={activeView === option ? 'selected' : ''}
+              aria-pressed={activeView === option}
+              onClick={() => changeView(option)}
+            >
+              {t(language, option === 'list' ? 'viewList' : 'viewWeek')}
+            </button>
+          ))}
+        </div>
+      )}
+      {activeView === 'week' ? (
+        <WeekCalendar data={data} language={language} onSaveEdit={saveEdit} />
+      ) : (
+      <>
       {ordered.length === 0 && <div className="empty-panel">{t(language, 'emptyState')}</div>}
       <div className="stack-list">
         {ordered.map((shift) => {
@@ -59,16 +118,7 @@ export function ShiftsPage({
                   initial={{ ...shift, id: shiftId }}
                   onCancel={() => setEditing(null)}
                   onSave={(values) => {
-                    // Herkunft und Kalender-Kennung bleiben erhalten; ein späterer Abgleich überschreibt die Änderung nicht.
-                    onUpdate(data.shifts.map((item) => (item.id ?? item.jobId + item.date) === shiftId
-                      ? {
-                        ...values[0],
-                        source: item.source,
-                        externalId: item.externalId,
-                        calendarId: item.calendarId,
-                        editedManually: item.source === 'calendar' || item.editedManually ? true : undefined,
-                      }
-                      : item));
+                    saveEdit(shiftId, values);
                     setEditing(null);
                   }}
                 />
@@ -92,6 +142,8 @@ export function ShiftsPage({
           );
         })}
       </div>
+      </>
+      )}
       <PaymentsSection data={data} language={language} onUpdate={onPayments} />
     </section>
   );
