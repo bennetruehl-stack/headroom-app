@@ -52,7 +52,7 @@ export function PrivacyPage({ language, onNavigate, backTo }: { language: Langua
           Profil, Jobs, Schichten und Einmalzahlungen speichert Headroom in deinem Browser (IndexedDB, falls nicht verfügbar
           localStorage). Es gibt keine Nutzerkonten, kein Tracking und keine Werbung. Die Schriftdateien sind in der App
           enthalten; es gibt keine automatischen Anfragen an einen externen Schriftanbieter. Individuelle Nutzerdaten werden
-          nicht verkauft.
+          nicht verkauft. Optionale Funktionen sind in einer frischen Installation ausgeschaltet.
         </p>
         <p>
           In den Einstellungen kannst du deine Daten als JSON-Datei exportieren und alle lokalen Daten löschen.
@@ -63,13 +63,16 @@ export function PrivacyPage({ language, onNavigate, backTo }: { language: Langua
         <ul>
           <li>
             <strong>Kalender:</strong> Ein eingefügter privater iCal-Link wird nur auf dem Gerät gespeichert und nie exportiert.
-            Zum Abrufen sendet die App ihn an den Headroom-Server, der ihn ausschließlich an calendar.google.com oder
-            *.icloud.com weiterreicht und nicht protokolliert. Der Import einer .ics-Datei läuft vollständig lokal.
+            Zum Abrufen sendet die App ihn per POST (nicht in der URL) an den lokalen Headroom-Demo-Server. Dieser leitet die
+            Anfrage nur an calendar.google.com oder *.icloud.com weiter, prüft diese Ziele auch nach Weiterleitungen, bricht
+            nach 10 Sekunden ab, akzeptiert höchstens 2 MB und protokolliert den Link nicht. Der Import einer .ics-Datei läuft
+            vollständig lokal.
           </li>
           <li>
             <strong>Foto oder Screenshot:</strong> Die Texterkennung (tesseract.js) läuft im Browser; das Bild verlässt das
-            Gerät nicht. Beim ersten Lauf lädt die App Programmteile und Sprachdaten vom Content-Delivery-Netzwerk jsDelivr
-            (cdn.jsdelivr.net). Dabei wird technisch bedingt deine IP-Adresse an diesen Anbieter übermittelt.
+            Gerät nicht. Deutsch und Englisch werden unterstützt. Beim ersten Lauf lädt die App Programmteile und Sprachdaten
+            vom Content-Delivery-Netzwerk jsDelivr (cdn.jsdelivr.net). Dabei wird technisch bedingt deine IP-Adresse an diesen
+            Anbieter übermittelt.
           </li>
         </ul>
       </LegalSection>
@@ -78,17 +81,20 @@ export function PrivacyPage({ language, onNavigate, backTo }: { language: Langua
         <ul>
           <li>
             <strong>Lohnstatistik:</strong> Nur nach gesonderter Einwilligung sendet die App ein zufälliges Geräte-Token,
-            Job-Art, Stadt, tatsächlichen und erwarteten Stundenlohn sowie den Monat an den Server. Firmennamen werden nicht
-            übertragen. Gruppenwerte erscheinen erst ab 20 Datensätzen. Die Einwilligung ist widerrufbar; die App fordert dann
-            die Löschung der zum Token gehörenden Datensätze an.
+            Job-Preset, Stadt, tatsächlichen und erwarteten Stundenlohn sowie den Monat an den lokalen Demo-Server. Firmennamen
+            werden nicht übertragen. Gruppenwerte erscheinen erst ab 20 Datensätzen. Die Einwilligung ist widerrufbar; die App
+            fordert dann die Löschung der zum Token gehörenden Datensätze an.
           </li>
           <li>
-            <strong>Jobbörse:</strong> Ein selbst erstelltes Inserat sendet Titel, Stadt, Datum, Dauer und Stundenlohn an den
-            Server. Bewerbungen öffnen nur die Kontaktmöglichkeit; Headroom übermittelt keine Profildaten.
+            <strong>Jobbörse:</strong> Die Vorschau lädt Demoinserate vom lokalen Server. Ein selbst erstelltes Inserat sendet
+            Titel, Stadt, Datum, Dauer und Stundenlohn an dessen SQLite-Datenbank. Bewerbungen öffnen nur die
+            Kontaktmöglichkeit; Headroom übermittelt keine Profildaten.
           </li>
           <li>
             <strong>Firmensuche:</strong> Erst nach Aktivierung und Klick auf „Prüfen“ werden Firmenname und Stadt an
-            OpenStreetMap Nominatim gesendet.
+            OpenStreetMap Nominatim gesendet. Vor einem öffentlichen Einsatz müssen App-Kennung, Anfragefrequenz, Caching und
+            Anbieterauswahl anhand der <a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noreferrer">Nominatim-Nutzungsrichtlinie</a>
+            geprüft und eingerichtet werden.
           </li>
           <li>Partnerkarten öffnen eine externe Seite erst nach einem Klick.</li>
         </ul>
@@ -96,9 +102,11 @@ export function PrivacyPage({ language, onNavigate, backTo }: { language: Langua
 
       <LegalSection title="5. Hosting und Server">
         <p>
-          Beim Aufruf der App verarbeitet der Hosting-Anbieter technisch notwendige Verbindungsdaten (zum Beispiel IP-Adresse und
-          Zeitpunkt). Anbieter: <Placeholder>[HOSTING-ANBIETER UND SITZ EINTRAGEN]</Placeholder>. Speicherdauer der
-          Server-Protokolle: <Placeholder>[SPEICHERDAUER EINTRAGEN]</Placeholder>. Rechtsgrundlage:
+          Der Headroom-Server ist ausschließlich für lokale Demos ausgelegt. Für einen öffentlichen Betrieb fehlen ein geprüftes
+          Hosting- und Löschkonzept, vollständige Datenschutzinformationen, Missbrauchsschutz und eine Sicherheitsprüfung.
+          Beim Aufruf einer veröffentlichten App verarbeitet der Hosting-Anbieter technisch notwendige Verbindungsdaten (zum
+          Beispiel IP-Adresse und Zeitpunkt). Anbieter: <Placeholder>[HOSTING-ANBIETER UND SITZ EINTRAGEN]</Placeholder>.
+          Speicherdauer der Server-Protokolle: <Placeholder>[SPEICHERDAUER EINTRAGEN]</Placeholder>. Rechtsgrundlage:
           <Placeholder> [RECHTSGRUNDLAGE PRÜFEN UND EINTRAGEN]</Placeholder>.
         </p>
       </LegalSection>
