@@ -1,11 +1,13 @@
-import type { Job, Profile, ProfileStatus, Shift, ShiftCandidate } from '@headroom/core';
-import { latestKnownLimitValue } from '@headroom/core';
+import type { Job, OneTimePayment, Profile, ProfileStatus, Shift, ShiftCandidate } from '@headroom/core';
+import { isValidIsoDate, latestKnownLimitValue, ONE_TIME_PAYMENT_KINDS } from '@headroom/core';
 import type { Language } from '../i18n/translations';
 
 export type AppState = {
   profile: Profile;
   jobs: Job[];
   shifts: Shift[];
+  /** Einmalzahlungen wie Bonus, Urlaubs- oder Weihnachtsgeld. Ältere Stände haben das Feld nicht. */
+  payments: OneTimePayment[];
   onboarded: boolean;
   language: Language;
   darkMode: boolean;
@@ -148,6 +150,7 @@ export function createDemoState(): AppState {
     example: 'standard',
     calendars: [],
     pendingImports: [],
+    payments: [],
   };
 }
 
@@ -233,6 +236,7 @@ export function createLenaState(): AppState {
     example: 'lena',
     calendars: [],
     pendingImports: [],
+    payments: [],
   };
 }
 
@@ -310,15 +314,22 @@ export function normalizeState(value: unknown): AppState | null {
   const jobs = candidate.jobs as Job[];
   if (!jobs.every((job) => job && typeof job.id === 'string' && typeof job.title === 'string' &&
     employmentTypeValues.includes(job.type) && Number.isFinite(job.wage) && job.wage >= 0 &&
-    /^\d{4}-\d{2}-\d{2}$/.test(job.startDate))) return null;
+    isValidIsoDate(job.startDate) && (!job.endDate || isValidIsoDate(job.endDate)))) return null;
   const jobIds = new Set(jobs.map((job) => job.id));
   const shifts = candidate.shifts as Shift[];
-  if (!shifts.every((shift) => shift && jobIds.has(shift.jobId) && /^\d{4}-\d{2}-\d{2}$/.test(shift.date) &&
-    Number.isFinite(shift.hours) && shift.hours >= 0)) return null;
+  if (!shifts.every((shift) => shift && jobIds.has(shift.jobId) && isValidIsoDate(shift.date) &&
+    Number.isFinite(shift.hours) && shift.hours >= 0 && shift.hours <= 24 * 366)) return null;
+  // Einmalzahlungen: ungültige Einträge werden verworfen statt den ganzen Stand abzulehnen.
+  const payments = Array.isArray(candidate.payments)
+    ? (candidate.payments as OneTimePayment[]).filter((payment) =>
+      Boolean(payment) && typeof payment.id === 'string' && jobIds.has(payment.jobId) && isValidIsoDate(payment.date) &&
+      Number.isFinite(payment.amount) && payment.amount > 0 && ONE_TIME_PAYMENT_KINDS.includes(payment.kind))
+    : [];
   return {
     profile: { ...profile, semesterPeriods: Array.isArray(profile.semesterPeriods) ? profile.semesterPeriods : [] },
     jobs,
     shifts,
+    payments,
     onboarded: Boolean(candidate.onboarded),
     language: candidate.language,
     darkMode: Boolean(candidate.darkMode),

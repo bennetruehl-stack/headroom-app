@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { dedupeCandidates, hoursBetween, parseIcs, parseScheduleText, type Job, type ShiftCandidate } from '@headroom/core';
+import { dedupeCandidates, hoursBetween, parseIcs, parseScheduleText, type Job, type ShiftCandidate, parseLocaleNumber } from '@headroom/core';
 import { t, type Language, type MessageKey } from '../i18n/translations';
 import type { AppState, CalendarSource } from '../lib/storage';
 import {
@@ -505,7 +505,10 @@ function ImportReview({
             {!(row.startTime && row.endTime) && (
               <label className="field">
                 <span>{t(language, 'hoursWorked')}</span>
-                <input type="number" min="0.25" max="16" step="0.25" value={row.hours} onChange={(event) => change(row.key, { hours: Number(event.target.value) })} />
+                <input type="number" min="0.25" max="16" step="0.25" value={row.hours} onChange={(event) => {
+                  const value = parseLocaleNumber(event.target.value);
+                  if (value !== null && value >= 0 && value <= 24) change(row.key, { hours: value });
+                }} />
               </label>
             )}
           </div>

@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { companyPlausibility, latestKnownLimitValue, limitsForYear, miniJobRoomBesideOthers, type Job, type Shift } from '@headroom/core';
+import { companyPlausibility, inputRules, latestKnownLimitValue, limitsForYear, miniJobRoomBesideOthers, validateDate, validateDateRange, validateNumber, type Job, type OneTimePayment, type Shift } from '@headroom/core';
 import { jobPresets } from '@headroom/core/data/jobPresets';
 import { employmentTypes } from '../../app/constants';
 import { t, type Language } from '../../i18n/translations';
 import { id, localToday, money } from '../../lib/format';
+import { dateError, numberError, numberInputValue } from '../../lib/inputErrors';
 import { companyErrorMessage } from '../../lib/limitText';
 
 export function JobForm({
@@ -11,6 +12,7 @@ export function JobForm({
   initial,
   jobs,
   shifts,
+  payments = [],
   onSave,
   onCancel,
 }: {
@@ -18,6 +20,7 @@ export function JobForm({
   initial?: Job;
   jobs: Job[];
   shifts: Shift[];
+  payments?: OneTimePayment[];
   onSave: (job: Job) => void;
   onCancel: () => void;
 }) {
@@ -27,17 +30,17 @@ export function JobForm({
   const preset = jobPresets.find((item) => item.id === presetId);
   const [title, setTitle] = useState(initial?.title ?? (language === 'de' ? preset?.title_de ?? '' : preset?.title_en ?? ''));
   const [type, setType] = useState<Job['type']>(initial?.type ?? 'mini-job');
-  const [wage, setWage] = useState(String(initial?.wage ?? latestKnownLimitValue('minimumWage') ?? ''));
+  const [wage, setWage] = useState(numberInputValue(initial?.wage ?? latestKnownLimitValue('minimumWage'), language));
   const [startDate, setStartDate] = useState(initial?.startDate ?? localToday());
   const [endDate, setEndDate] = useState(initial?.endDate ?? '');
   const [company, setCompany] = useState(initial?.company ?? '');
   const [city, setCity] = useState(initial?.city ?? '');
   const [industry, setIndustry] = useState(initial?.industry ?? preset?.industry.wzDivision ?? '');
   const [skillLevel, setSkillLevel] = useState<Job['skillLevel']>(initial?.skillLevel ?? preset?.skillLevel ?? 1);
-  const [surcharges, setSurcharges] = useState(String((initial?.surcharges ?? 0) * 100));
+  const [surcharges, setSurcharges] = useState(numberInputValue(Math.round((initial?.surcharges ?? 0) * 10_000) / 100, language));
   const [tipsEnabled, setTipsEnabled] = useState(Boolean(initial?.tipsEnabled));
-  const [tips, setTips] = useState(String(initial?.tips ?? ''));
-  const [expectedWage, setExpectedWage] = useState(String(initial?.expectedWage ?? ''));
+  const [tips, setTips] = useState(numberInputValue(initial?.tips, language));
+  const [expectedWage, setExpectedWage] = useState(numberInputValue(initial?.expectedWage, language));
   const [keywords, setKeywords] = useState((initial?.calendarKeywords ?? []).join(', '));
   const [error, setError] = useState('');
   const [suggestion, setSuggestion] = useState('');
@@ -54,7 +57,7 @@ export function JobForm({
   const miniJobCapRecord = limitsForYear(Number(thisMonth.slice(0, 4))).find((limit) => limit.id === 'miniJobMonthly');
   // Vorab-Hinweis nur mit geprüfter Grenze und nur, wenn schon andere Minijobs Verdienst haben.
   const miniRoom = type === 'mini-job' && miniJobCapRecord?.verified && miniJobCapRecord.value
-    ? miniJobRoomBesideOthers(shifts, jobs, thisMonth, initial?.id, miniJobCapRecord.value)
+    ? miniJobRoomBesideOthers(shifts, jobs, thisMonth, initial?.id, miniJobCapRecord.value, payments)
     : null;
 
   const matches = jobPresets.filter((item) => {
@@ -69,33 +72,53 @@ export function JobForm({
       setError(companyErrorMessage(checked.errorCode, language));
       return;
     }
-    if (!title.trim() || Number(wage) <= 0 || !startDate) {
+    if (!title.trim()) {
       setError(t(language, 'jobValidation'));
       return;
     }
+    // Zahlen zentral und lokalisiert prüfen (Dezimalkomma, Wertebereich), Daten als Zeitraum.
+    const wageResult = validateNumber(wage, inputRules.hourlyWage);
+    const expectedResult = validateNumber(expectedWage, inputRules.expectedWage);
+    const surchargeResult = validateNumber(surcharges, inputRules.surchargePercent);
+    const tipsResult = tipsEnabled ? validateNumber(tips, inputRules.tipsPerShift) : { ok: true as const, value: null };
+    const startCode = validateDate(startDate);
+    const endCode = startCode ? null : validateDate(endDate, true);
+    const rangeCode = startCode || endCode ? null : validateDateRange(startDate, endDate);
+    const message =
+      numberError(wageResult, t(language, 'hourlyWage'), language) ||
+      numberError(expectedResult, t(language, 'expectedWage'), language) ||
+      dateError(startCode, t(language, 'startDate'), language) ||
+      dateError(endCode ?? rangeCode, t(language, 'endDate'), language) ||
+      numberError(surchargeResult, t(language, 'surcharges'), language) ||
+      numberError(tipsResult, t(language, 'tips'), language);
+    if (message || !wageResult.ok || wageResult.value === null) {
+      setError(message);
+      return;
+    }
+    const valueOf = (result: ReturnType<typeof validateNumber>) => (result.ok ? result.value : null);
     setError('');
     setSuggestion(checked.suggestion ? t(language, 'companySuggestion', { name: checked.suggestion }) : '');
     onSave({
       id: initial?.id ?? id(),
       title: title.trim(),
       type,
-      wage: Number(wage),
+      wage: wageResult.value,
       startDate,
       endDate: endDate || undefined,
       industry: industry.trim() || undefined,
       skillLevel,
       company: checked.normalized || undefined,
       city: city.trim() || undefined,
-      surcharges: Math.max(0, Number(surcharges) || 0) / 100,
+      surcharges: (valueOf(surchargeResult) ?? 0) / 100,
       tipsEnabled,
-      tips: tipsEnabled ? Math.max(0, Number(tips) || 0) : undefined,
-      expectedWage: expectedWage ? Math.max(0, Number(expectedWage)) : undefined,
+      tips: tipsEnabled ? valueOf(tipsResult) ?? 0 : undefined,
+      expectedWage: valueOf(expectedResult) ?? undefined,
       calendarKeywords: keywords.split(',').map((word) => word.trim()).filter(Boolean),
     });
   };
 
   return (
-    <form className="form-grid" onSubmit={validate}>
+    <form className="form-grid" onSubmit={validate} noValidate>
       {!initial && (
         <label className="field">
           <span>{t(language, 'searchPreset')}</span>
@@ -137,11 +160,11 @@ export function JobForm({
       <div className="form-grid two-columns">
         <label className="field">
           <span>{t(language, 'hourlyWage')}</span>
-          <input type="number" min="0.01" step="0.01" value={wage} onChange={(event) => setWage(event.target.value)} required />
+          <input type="text" inputMode="decimal" autoComplete="off" value={wage} onChange={(event) => setWage(event.target.value)} required />
         </label>
         <label className="field">
           <span>{t(language, 'expectedWage')}</span>
-          <input type="number" min="0" step="0.01" value={expectedWage} onChange={(event) => setExpectedWage(event.target.value)} />
+          <input type="text" inputMode="decimal" autoComplete="off" value={expectedWage} onChange={(event) => setExpectedWage(event.target.value)} />
         </label>
       </div>
 
@@ -192,7 +215,7 @@ export function JobForm({
       <div className="form-grid two-columns">
         <label className="field">
           <span>{t(language, 'surcharges')}</span>
-          <input type="number" min="0" step="1" value={surcharges} onChange={(event) => setSurcharges(event.target.value)} />
+          <input type="text" inputMode="decimal" autoComplete="off" value={surcharges} onChange={(event) => setSurcharges(event.target.value)} />
         </label>
         <label className="field">
           <span>{t(language, 'tips')}</span>
@@ -200,7 +223,7 @@ export function JobForm({
             <input type="checkbox" checked={tipsEnabled} onChange={(event) => setTipsEnabled(event.target.checked)} />
             {t(language, 'yes')}
           </span>
-          {tipsEnabled && <input type="number" min="0" step="0.01" value={tips} onChange={(event) => setTips(event.target.value)} />}
+          {tipsEnabled && <input type="text" inputMode="decimal" autoComplete="off" aria-label={t(language, 'tips')} value={tips} onChange={(event) => setTips(event.target.value)} />}
         </label>
       </div>
       <p className="field-hint wide-hint">{t(language, 'tipsInfo')}</p>

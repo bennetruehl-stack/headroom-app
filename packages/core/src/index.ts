@@ -2,9 +2,10 @@ import { jobPresets } from '../data/jobPresets';
 import { availableLimitYears, limits, limitsForYear, miniJobCapFormula } from '../data/limits';
 import { consentAgeRule } from '../data/privacy';
 import { roleLayouts, roleTier } from '../data/roles';
-import type { Job, Limit, Profile, ProfileStatus, RiskStatus, Shift } from './types';
+import type { Job, Limit, OneTimePayment, Profile, ProfileStatus, RiskStatus, Shift } from './types';
 
 export * from './types';
+export * from './input';
 export * from './shiftImport';
 export { availableLimitYears, consentAgeRule, jobPresets, limits, limitsForYear, miniJobCapFormula, roleLayouts, roleTier };
 export type { RoleItem, RoleLayout, RoleTier } from '../data/roles';
@@ -76,18 +77,72 @@ export function jobForShift(shift: Shift, jobs: Job[]): Job | undefined {
   return jobs.find((job) => job.id === shift.jobId);
 }
 
+/**
+ * Wie Einmalzahlungen je Grenze zählen. Wo das Recht eine Verteilung aufs Jahr kennt
+ * (Minijob, Familienversicherung), rechnet Headroom bewusst vorsichtig: Die Zahlung
+ * zählt voll im Monat, in dem sie ausgezahlt wird, und im Jahr. Das kann einen Monat
+ * strenger aussehen lassen als die amtliche Beurteilung, aber nie großzügiger.
+ */
+export const oneTimePaymentRules: Record<string, { counts: boolean; rule: string; rule_en: string }> = {
+  miniJobMonthly: {
+    counts: true,
+    rule: 'Zählt im Auszahlungsmonat voll mit. Amtlich gehören regelmäßig zu erwartende Einmalzahlungen zum Jahresverdienst; die Monatsanzeige ist dadurch vorsichtiger.',
+    rule_en: 'Counts in full in the month it is paid. Officially, expected one-off payments belong to annual earnings; the monthly view is therefore more cautious.',
+  },
+  miniJobYearly: {
+    counts: true,
+    rule: 'Zählt im Jahresverdienst voll mit.',
+    rule_en: 'Counts in full towards annual earnings.',
+  },
+  familyInsurance: {
+    counts: true,
+    rule: 'Zählt im Auszahlungsmonat voll mit (vorsichtig). Die Krankenkasse betrachtet das regelmäßige Gesamteinkommen und verteilt Einmalzahlungen gegebenenfalls aufs Jahr.',
+    rule_en: 'Counts in full in the month it is paid (cautious). Health insurers look at regular total income and may spread one-off payments over the year.',
+  },
+  bafoegSideIncome: {
+    counts: true,
+    rule: 'Zählt mit. BAföG rechnet mit dem Einkommen im Bewilligungszeitraum.',
+    rule_en: 'Counts. BAföG uses the income in the approval period.',
+  },
+  incomeTaxThreshold: {
+    counts: true,
+    rule: 'Zählt als Arbeitslohn im Jahr mit.',
+    rule_en: 'Counts as annual wages.',
+  },
+  shortTermEmployment: { counts: false, rule: 'Zählt nicht: Die Grenze misst Arbeitstage.', rule_en: 'Does not count: the limit measures workdays.' },
+  workingStudentHours: { counts: false, rule: 'Zählt nicht: Die Grenze misst Stunden.', rule_en: 'Does not count: the limit measures hours.' },
+  workingStudent26Weeks: { counts: false, rule: 'Zählt nicht: Die Grenze misst Wochen.', rule_en: 'Does not count: the limit measures weeks.' },
+};
+
+/** Summe der Einmalzahlungen mit Datum-Präfix (Monat „2026-03“ oder Jahr „2026“). */
+export function paymentTotal(
+  payments: OneTimePayment[],
+  jobs: Job[],
+  prefix: string,
+  employmentTypes?: Job['type'][],
+): number {
+  return payments.reduce((total, payment) => {
+    if (!payment.date.startsWith(prefix)) return total;
+    const job = jobs.find((entry) => entry.id === payment.jobId);
+    if (!job || (employmentTypes && !employmentTypes.includes(job.type))) return total;
+    return total + Math.max(0, Number.isFinite(payment.amount) ? payment.amount : 0);
+  }, 0);
+}
+
 export function monthTotal(
   shifts: Shift[],
   jobs: Job[],
   month: string,
   employmentTypes?: Job['type'][],
+  payments: OneTimePayment[] = [],
 ): number {
-  return shifts.reduce((total, shift) => {
+  const fromShifts = shifts.reduce((total, shift) => {
     if (!shift.date.startsWith(month)) return total;
     const job = jobForShift(shift, jobs);
     if (!job || (employmentTypes && !employmentTypes.includes(job.type))) return total;
     return total + earnings(shift, job);
   }, 0);
+  return fromShifts + paymentTotal(payments, jobs, month, employmentTypes);
 }
 
 export function monthlySummary(
@@ -116,8 +171,9 @@ export function annualMiniProjection(
   jobs: Job[],
   year: number,
   nowMonth = 12,
+  payments: OneTimePayment[] = [],
 ): number {
-  return annualIncomeProjection(shifts, jobs, year, ['mini-job'], nowMonth);
+  return annualIncomeProjection(shifts, jobs, year, ['mini-job'], nowMonth, payments);
 }
 
 export function annualIncomeProjection(
@@ -126,16 +182,23 @@ export function annualIncomeProjection(
   year: number,
   employmentTypes: Job['type'][],
   nowMonth = 12,
+  payments: OneTimePayment[] = [],
 ): number {
-  return annualProjectionBreakdown(shifts, jobs, year, employmentTypes, nowMonth).projected;
+  return annualProjectionBreakdown(shifts, jobs, year, employmentTypes, nowMonth, payments).projected;
 }
 
+/**
+ * Jahresprognose: tatsächliche Schichten + geplante Schichten + Durchschnitt der
+ * bisherigen Monate für Monate ohne Daten. Einmalzahlungen zählen mit ihrem Betrag,
+ * fließen aber nicht in den Monatsdurchschnitt ein (ein Bonus wiederholt sich nicht jeden Monat).
+ */
 export function annualProjectionBreakdown(
   shifts: Shift[],
   jobs: Job[],
   year: number,
   employmentTypes: Job['type'][],
   nowMonth = 12,
+  payments: OneTimePayment[] = [],
 ) {
   const eligibleJobs = new Set(
     jobs.filter((job) => employmentTypes.includes(job.type)).map((job) => job.id),
@@ -156,10 +219,18 @@ export function annualProjectionBreakdown(
       return sum + (job ? earnings(shift, job) : 0);
     }, 0);
 
-  const actualTotal = amount(actual);
-  const plannedTotal = amount(future);
+  const yearPayments = payments.filter((payment) => payment.date.startsWith(String(year)));
+  const paidSoFar = paymentTotal(
+    yearPayments.filter((payment) => Number(payment.date.slice(5, 7)) <= currentMonth), jobs, String(year), employmentTypes,
+  );
+  const paidLater = paymentTotal(
+    yearPayments.filter((payment) => Number(payment.date.slice(5, 7)) > currentMonth), jobs, String(year), employmentTypes,
+  );
+  const shiftActual = amount(actual);
+  const actualTotal = shiftActual + paidSoFar;
+  const plannedTotal = amount(future) + paidLater;
   const monthsWithActualIncome = new Set(actual.map((shift) => shift.date.slice(0, 7))).size;
-  const averagePastMonth = monthsWithActualIncome ? actualTotal / monthsWithActualIncome : 0;
+  const averagePastMonth = monthsWithActualIncome ? shiftActual / monthsWithActualIncome : 0;
   const plannedMonths = new Set(
     future
       .map((shift) => shift.date.slice(0, 7))
@@ -180,11 +251,13 @@ export function monthlyIncomeForLimit(
   jobs: Job[],
   limitId: string,
   month: string,
+  payments: OneTimePayment[] = [],
 ): number {
+  const counted = oneTimePaymentRules[limitId]?.counts === false ? [] : payments;
   if (limitId === 'miniJobMonthly') {
-    return monthTotal(shifts, jobs, month, ['mini-job']);
+    return monthTotal(shifts, jobs, month, ['mini-job'], counted);
   }
-  return monthTotal(shifts, jobs, month);
+  return monthTotal(shifts, jobs, month, undefined, counted);
 }
 
 export type MonthlyLimitCheck = {
@@ -205,12 +278,12 @@ export type MonthlyLimitCheck = {
   status: RiskStatus;
 };
 
-function hasNonMiniIncome(shifts: Shift[], jobs: Job[], month: string): boolean {
+function hasNonMiniIncome(shifts: Shift[], jobs: Job[], month: string, payments: OneTimePayment[] = []): boolean {
   return shifts.some((shift) => {
     if (!shift.date.startsWith(month)) return false;
     const job = jobForShift(shift, jobs);
     return Boolean(job && job.type !== 'mini-job' && shift.hours > 0);
-  });
+  }) || paymentTotal(payments, jobs, month, ['short-term', 'working student', 'regular']) > 0;
 }
 
 /**
@@ -230,8 +303,10 @@ export function monthlyLimitCheck(
   jobs: Job[],
   month: string,
   year = Number(month.slice(0, 4)),
+  payments: OneTimePayment[] = [],
 ): MonthlyLimitCheck | null {
   if (!limit.verified || limit.value === null) return null;
+  const counted = oneTimePaymentRules[limit.id]?.counts === false ? [] : payments;
   const build = (
     total: number,
     cap: number,
@@ -243,10 +318,10 @@ export function monthlyLimitCheck(
   };
   switch (limit.id) {
     case 'miniJobMonthly':
-      return build(monthTotal(shifts, jobs, month, ['mini-job']), limit.value, 'gross', 'limit');
+      return build(monthTotal(shifts, jobs, month, ['mini-job'], counted), limit.value, 'gross', 'limit');
     case 'familyInsurance': {
-      const total = monthTotal(shifts, jobs, month);
-      if (!hasNonMiniIncome(shifts, jobs, month)) {
+      const total = monthTotal(shifts, jobs, month, undefined, counted);
+      if (!hasNonMiniIncome(shifts, jobs, month, counted)) {
         const miniCap = usableLimitValue('miniJobMonthly', year);
         if (miniCap === null) return null;
         return build(total, miniCap, 'gross-orientation', 'miniJobCap');
@@ -255,10 +330,10 @@ export function monthlyLimitCheck(
     }
     case 'bafoegSideIncome': {
       if (!limit.grossEquivalent) return null;
-      return build(monthTotal(shifts, jobs, month), limit.grossEquivalent.value, 'gross-orientation', 'grossEquivalent');
+      return build(monthTotal(shifts, jobs, month, undefined, counted), limit.grossEquivalent.value, 'gross-orientation', 'grossEquivalent');
     }
     default:
-      return build(monthTotal(shifts, jobs, month), limit.value, limit.basis === 'gross' || !limit.basis ? 'gross' : 'gross-orientation', 'limit');
+      return build(monthTotal(shifts, jobs, month, undefined, counted), limit.value, limit.basis === 'gross' || !limit.basis ? 'gross' : 'gross-orientation', 'limit');
   }
 }
 
@@ -273,10 +348,11 @@ export function miniJobRoomBesideOthers(
   month: string,
   excludeJobId?: string,
   cap: number | null = usableLimitValue('miniJobMonthly', Number(month.slice(0, 4))),
+  payments: OneTimePayment[] = [],
 ) {
   if (cap === null) return null;
   const others = jobs.filter((job) => job.type === 'mini-job' && job.id !== excludeJobId);
-  const used = monthTotal(shifts, others, month, ['mini-job']);
+  const used = monthTotal(shifts, others, month, ['mini-job'], payments);
   const otherJobsWithIncome = others.filter((job) =>
     shifts.some((shift) => shift.jobId === job.id && shift.date.startsWith(month)),
   ).length;
@@ -292,12 +368,16 @@ export function multipleMiniJobsOverCap(
   jobs: Job[],
   month: string,
   cap: number | null = usableLimitValue('miniJobMonthly', Number(month.slice(0, 4))),
+  payments: OneTimePayment[] = [],
 ): boolean {
   if (cap === null) return false;
   const miniJobsWithIncome = jobs.filter((job) =>
-    job.type === 'mini-job' && shifts.some((shift) => shift.jobId === job.id && shift.date.startsWith(month)),
+    job.type === 'mini-job' && (
+      shifts.some((shift) => shift.jobId === job.id && shift.date.startsWith(month)) ||
+      payments.some((payment) => payment.jobId === job.id && payment.date.startsWith(month))
+    ),
   ).length;
-  return cap > 0 && miniJobsWithIncome >= 2 && monthTotal(shifts, jobs, month, ['mini-job']) > cap;
+  return cap > 0 && miniJobsWithIncome >= 2 && monthTotal(shifts, jobs, month, ['mini-job'], payments) > cap;
 }
 
 export function shortDays(shifts: Shift[], year?: number): number {
@@ -425,8 +505,9 @@ export function hoursInWeek(shifts: Shift[], date: string): number {
 }
 
 export function isInLecturePeriod(date: string, profile: Profile): boolean {
+  // Unvollständige oder vertauschte Zeiträume zählen nicht (die Eingabe meldet sie als Fehler).
   return (profile.semesterPeriods ?? []).some(
-    ({ start, end }) => date >= start && date <= end,
+    ({ start, end }) => Boolean(start && end) && start <= end && date >= start && date <= end,
   );
 }
 

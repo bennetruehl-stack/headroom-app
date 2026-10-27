@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import type { Job, Shift } from '@headroom/core';
+import { inputRules, validateDate, validateNumber, type Job, type Shift } from '@headroom/core';
 import { t, type Language } from '../../i18n/translations';
 import { hoursFromTimes, id, localToday, withLocalDate } from '../../lib/format';
+import { dateError, numberError, numberInputValue } from '../../lib/inputErrors';
 
 export function ShiftForm({
   jobs,
@@ -18,7 +19,7 @@ export function ShiftForm({
 }) {
   const [jobId, setJobId] = useState(initial?.jobId ?? jobs[0]?.id ?? '');
   const [date, setDate] = useState(initial?.date ?? localToday());
-  const [hours, setHours] = useState(initial?.hours ? String(initial.hours) : '');
+  const [hours, setHours] = useState(initial?.hours ? numberInputValue(initial.hours, language) : '');
   const [start, setStart] = useState(initial?.startTime ?? '');
   const [end, setEnd] = useState(initial?.endTime ?? '');
   const [planned, setPlanned] = useState(Boolean(initial?.planned));
@@ -28,7 +29,7 @@ export function ShiftForm({
   useEffect(() => {
     setJobId(initial?.jobId ?? jobs[0]?.id ?? '');
     setDate(initial?.date ?? localToday());
-    setHours(initial?.hours ? String(initial.hours) : '');
+    setHours(initial?.hours ? numberInputValue(initial.hours, language) : '');
     setStart(initial?.startTime ?? '');
     setEnd(initial?.endTime ?? '');
     setPlanned(Boolean(initial?.planned));
@@ -41,12 +42,24 @@ export function ShiftForm({
       setError(t(language, 'noJob'));
       return;
     }
-    const duration = start && end ? hoursFromTimes(start, end) : Number(hours);
-    if (!date || !Number.isFinite(duration) || duration <= 0) {
-      setError(t(language, 'shiftValidation'));
+    const dateMessage = dateError(validateDate(date), t(language, 'shiftDate'), language);
+    if (dateMessage) { setError(dateMessage); return; }
+    if (date < job.startDate || (job.endDate && date > job.endDate)) {
+      setError(t(language, 'errShiftOutsideJob'));
       return;
     }
-    const surchargeAmount = duration * job.wage * Math.max(0, job.surcharges ?? 0) / 100;
+    let duration: number;
+    if (start && end) {
+      duration = hoursFromTimes(start, end);
+      if (!Number.isFinite(duration) || duration <= 0) { setError(t(language, 'shiftValidation')); return; }
+    } else {
+      const parsed = validateNumber(hours, inputRules.shiftHours);
+      const message = numberError(parsed, t(language, 'hoursWorked'), language);
+      if (message || !parsed.ok || parsed.value === null) { setError(message || t(language, 'shiftValidation')); return; }
+      duration = parsed.value;
+    }
+    // job.surcharges ist bereits ein Anteil (25 % = 0,25); früher wurde hier ein zweites Mal durch 100 geteilt.
+    const surchargeAmount = duration * job.wage * Math.max(0, job.surcharges ?? 0);
     const result: Shift[] = [];
     const count = weekly && !initial ? 12 : 1;
     const firstDate = new Date(date + 'T12:00:00');
@@ -74,7 +87,7 @@ export function ShiftForm({
   };
 
   return (
-    <form className="form-grid" onSubmit={submit}>
+    <form className="form-grid" onSubmit={submit} noValidate>
       <label className="field">
         <span>{t(language, 'selectJob')}</span>
         <select value={jobId} onChange={(event) => setJobId(event.target.value)} required>
@@ -98,10 +111,9 @@ export function ShiftForm({
       <label className="field">
         <span>{t(language, 'hoursWorked')}</span>
         <input
-          type="number"
-          min="0.25"
-          max="24"
-          step="0.25"
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
           value={hours}
           onChange={(event) => setHours(event.target.value)}
           aria-describedby="shift-hours-hint"

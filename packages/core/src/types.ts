@@ -130,3 +130,16 @@ export type PeerWageRow = {
   expectedWage: number;
   month: string;
 };
+
+export const ONE_TIME_PAYMENT_KINDS = ['bonus', 'holidayPay', 'christmasBonus', 'other'] as const;
+export type OneTimePaymentKind = (typeof ONE_TIME_PAYMENT_KINDS)[number];
+
+/** Einmalzahlung (Bonus, Urlaubs- oder Weihnachtsgeld). Bruttobetrag in Euro. */
+export type OneTimePayment = {
+  id: string;
+  jobId: string;
+  date: string;
+  amount: number;
+  kind: OneTimePaymentKind;
+  note?: string;
+};

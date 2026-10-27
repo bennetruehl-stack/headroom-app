@@ -15,7 +15,7 @@ export function PartnerPanel({
   onUpdate: (values: Partial<AppState>) => void;
 }) {
   const year = Number(localToday().slice(0, 4));
-  const annual = annualMiniProjection(data.shifts, data.jobs, year, Number(localToday().slice(5, 7)));
+  const annual = annualMiniProjection(data.shifts, data.jobs, year, Number(localToday().slice(5, 7)), data.payments);
   const annualLimit = usableLimitValue('miniJobYearly', year);
   const taxLimitRecord = limitsForYear(year).find((limit) => limit.id === 'incomeTaxThreshold');
   const taxLimit = taxLimitRecord?.value ?? 0;
@@ -23,16 +23,16 @@ export function PartnerPanel({
   const secondRegular = data.jobs.filter((job) => job.type === 'regular').length > 1;
   const familyLimit = limitsForYear(year).find((limit) => limit.id === 'familyInsurance');
   const familyThreshold = getAgeBoundary(familyLimit);
-  const familyCheck = familyLimit ? monthlyLimitCheck(familyLimit, data.shifts, data.jobs, month, year) : null;
+  const familyCheck = familyLimit ? monthlyLimitCheck(familyLimit, data.shifts, data.jobs, month, year, data.payments) : null;
   const currentFacts = {
-    regularSecondJob: Boolean(taxLimitRecord?.verified) && secondRegular && annualIncomeProjection(data.shifts, data.jobs, year, ['regular']) <= taxLimit,
-    underTaxThreshold: Boolean(taxLimitRecord?.verified) && annualIncomeProjection(data.shifts, data.jobs, year, ['regular', 'working student']) <= taxLimit,
+    regularSecondJob: Boolean(taxLimitRecord?.verified) && secondRegular && annualIncomeProjection(data.shifts, data.jobs, year, ['regular'], 12, data.payments) <= taxLimit,
+    underTaxThreshold: Boolean(taxLimitRecord?.verified) && annualIncomeProjection(data.shifts, data.jobs, year, ['regular', 'working student'], 12, data.payments) <= taxLimit,
     familyInsuranceEnds: data.profile.familyInsured && (
       (familyThreshold !== null && data.profile.age >= familyThreshold) ||
       (familyCheck !== null && familyCheck.total > familyCheck.cap)
     ),
     overMiniJobPermanently: annualLimit !== null && annual > annualLimit,
-    unclassified: secondRegular && (!taxLimitRecord?.verified || annualIncomeProjection(data.shifts, data.jobs, year, ['regular']) > taxLimit),
+    unclassified: secondRegular && (!taxLimitRecord?.verified || annualIncomeProjection(data.shifts, data.jobs, year, ['regular'], 12, data.payments) > taxLimit),
   };
   const level = recommendationLevel(currentFacts);
   const isOpen = level > 0 && !data.dismissedRecommendations.includes(level);

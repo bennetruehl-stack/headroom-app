@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { consentAgeRule, peerMedian, peerWagePosition } from '@headroom/core';
+import { consentAgeRule, peerMedian, peerWagePosition, parseLocaleNumber } from '@headroom/core';
 import { jobPresets } from '@headroom/core/data/jobPresets';
 import { PageHeading } from '../../components/PageHeading';
 import { t, type Language } from '../../i18n/translations';
@@ -33,8 +33,8 @@ export function PeerStatsPage({
     (row) => row.city === city && (!selectedPreset || row.jobPresetId === presetId),
   );
   const demoMedian = peerMedian(demoGroup);
-  const position = demoMedian ? peerWagePosition(Number(hourlyWage), demoMedian) : null;
-  const expectationGap = expectedWage.trim() ? Number(expectedWage) - Number(hourlyWage) : Number.NaN;
+  const position = demoMedian ? peerWagePosition((parseLocaleNumber(hourlyWage) ?? Number.NaN), demoMedian) : null;
+  const expectationGap = expectedWage.trim() ? (parseLocaleNumber(expectedWage) ?? Number.NaN) - (parseLocaleNumber(hourlyWage) ?? Number.NaN) : Number.NaN;
   const loadAggregate = async () => {
     if (!data.peerOptIn || !city.trim() || !presetId) return;
     const query = new URLSearchParams({ jobPresetId: presetId, city: city.trim() });
@@ -54,15 +54,15 @@ export function PeerStatsPage({
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
-    if (!peerAllowed || !consent || !selectedJob || !city.trim() || !Number.isFinite(Number(hourlyWage)) || !Number.isFinite(Number(expectedWage)) || data.peerOptIn) return;
+    if (!peerAllowed || !consent || !selectedJob || !city.trim() || !Number.isFinite((parseLocaleNumber(hourlyWage) ?? Number.NaN)) || !Number.isFinite((parseLocaleNumber(expectedWage) ?? Number.NaN)) || data.peerOptIn) return;
     const token = data.peerToken ?? id();
     if (!data.peerToken) onUpdate({ peerToken: token });
     const row = {
       deviceToken: token,
       jobPresetId: presetId,
       city: city.trim(),
-      hourlyWage: Number(hourlyWage),
-      expectedWage: Number(expectedWage),
+      hourlyWage: (parseLocaleNumber(hourlyWage) ?? Number.NaN),
+      expectedWage: (parseLocaleNumber(expectedWage) ?? Number.NaN),
       month: localToday().slice(0, 7),
     };
     try {
@@ -117,7 +117,7 @@ export function PeerStatsPage({
               <>
                 <p>{t(language, 'peerPosition', { job: selectedJob?.title ?? '–', city: city || '–' })}</p>
                 <div className="peer-compare">
-                  <strong>{preciseMoney(Number(hourlyWage) || 0, language)} / h</strong>
+                  <strong>{preciseMoney((parseLocaleNumber(hourlyWage) ?? Number.NaN) || 0, language)} / h</strong>
                   <span>{t(language, 'demoMedian')}: {preciseMoney(demoMedian, language)} / {t(language, 'hourShort')}</span>
                   {position && <b className={'peer-position peer-' + position}>{t(language, position === 'below' ? 'peerBelow' : position === 'above' ? 'peerAbove' : 'peerUsual')}</b>}
                 </div>
@@ -135,9 +135,9 @@ export function PeerStatsPage({
                 <>
                   <p>{t(language, 'peerPosition', { job: selectedJob?.title ?? '–', city: city || '–' })}</p>
                   <div className="peer-compare">
-                    <strong>{preciseMoney(Number(hourlyWage) || 0, language)} / {t(language, 'hourShort')}</strong>
+                    <strong>{preciseMoney((parseLocaleNumber(hourlyWage) ?? Number.NaN) || 0, language)} / {t(language, 'hourShort')}</strong>
                     <span>{t(language, 'peerGroupMedian')}: {preciseMoney(aggregate.median ?? 0, language)} / {t(language, 'hourShort')}</span>
-                    <b className={'peer-position peer-' + (peerWagePosition(Number(hourlyWage) || 0, aggregate.median ?? 0))}>{t(language, peerWagePosition(Number(hourlyWage) || 0, aggregate.median ?? 0) === 'below' ? 'peerBelow' : peerWagePosition(Number(hourlyWage) || 0, aggregate.median ?? 0) === 'above' ? 'peerAbove' : 'peerUsual')}</b>
+                    <b className={'peer-position peer-' + (peerWagePosition((parseLocaleNumber(hourlyWage) ?? Number.NaN) || 0, aggregate.median ?? 0))}>{t(language, peerWagePosition((parseLocaleNumber(hourlyWage) ?? Number.NaN) || 0, aggregate.median ?? 0) === 'below' ? 'peerBelow' : peerWagePosition((parseLocaleNumber(hourlyWage) ?? Number.NaN) || 0, aggregate.median ?? 0) === 'above' ? 'peerAbove' : 'peerUsual')}</b>
                   </div>
                   <p className="field-hint">{t(language, 'expectationGap')}: {preciseMoney(aggregate.medianGap ?? 0, language)} / {t(language, 'hourShort')} · {aggregate.count}</p>
                 </>
@@ -159,8 +159,8 @@ export function PeerStatsPage({
               }}>{data.jobs.map((job) => <option value={job.id} key={job.id}>{job.title}</option>)}</select></label>
               <label className="field"><span>{t(language, 'city')}</span><input value={city} onChange={(event) => setCity(event.target.value)} /></label>
               <div className="form-grid two-columns">
-                <label className="field"><span>{t(language, 'hourlyWage')}</span><input type="number" min="0" step=".01" value={hourlyWage} onChange={(event) => setHourlyWage(event.target.value)} required /></label>
-                <label className="field"><span>{t(language, 'expectedWage')}</span><input type="number" min="0" step=".01" value={expectedWage} onChange={(event) => setExpectedWage(event.target.value)} required /></label>
+                <label className="field"><span>{t(language, 'hourlyWage')}</span><input type="text" inputMode="decimal" autoComplete="off" value={hourlyWage} onChange={(event) => setHourlyWage(event.target.value)} required /></label>
+                <label className="field"><span>{t(language, 'expectedWage')}</span><input type="text" inputMode="decimal" autoComplete="off" value={expectedWage} onChange={(event) => setExpectedWage(event.target.value)} required /></label>
               </div>
               <label className="check-row"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>{t(language, 'peerConsent')}</span></label>
               {error && <p role="alert" className="form-error">{error}</p>}

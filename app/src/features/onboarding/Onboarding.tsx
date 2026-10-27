@@ -1,8 +1,9 @@
 import { useState, type CSSProperties } from 'react';
-import { consentAgeRule, type Profile } from '@headroom/core';
+import { consentAgeRule, inputRules, validateDateRange, validateNumber, type Profile } from '@headroom/core';
 import { profileChoices } from '../../app/constants';
 import { RadioChoice } from '../../components/RadioChoice';
 import { t, type Language } from '../../i18n/translations';
+import { dateError, numberError } from '../../lib/inputErrors';
 import type { ExampleProfile } from '../../lib/storage';
 
 export function Onboarding({
@@ -21,6 +22,8 @@ export function Onboarding({
   onExample: (example: ExampleProfile) => void;
 }) {
   const [draft, setDraft] = useState<Profile>(profile);
+  const [ageText, setAgeText] = useState(String(profile.age));
+  const [error, setError] = useState('');
   const update = (values: Partial<Profile>) => setDraft((current) => ({ ...current, ...values }));
   const currentPeriod = draft.semesterPeriods?.[0] ?? { start: '', end: '' };
   const setSemester = (key: 'start' | 'end', value: string) =>
@@ -56,12 +59,15 @@ export function Onboarding({
           <label className="field">
             <span>{t(language, 'age')}</span>
             <input
-              type="number"
+              type="text"
               inputMode="numeric"
-              min="0"
-              max="120"
-              value={draft.age}
-              onChange={(event) => update({ age: Math.max(0, Number(event.target.value)) })}
+              autoComplete="off"
+              value={ageText}
+              onChange={(event) => {
+                setAgeText(event.target.value);
+                const parsed = validateNumber(event.target.value, inputRules.age);
+                if (parsed.ok && parsed.value !== null) update({ age: parsed.value });
+              }}
             />
           </label>
 
@@ -171,7 +177,20 @@ export function Onboarding({
           <p className="notice notice-neutral">{t(language, 'optInsBlocked')}</p>
         )}
 
-        <button className="button button-primary button-wide" type="button" onClick={() => onContinue(draft)}>
+        {error && <p role="alert" className="form-error">{error}</p>}
+        <button
+          className="button button-primary button-wide"
+          type="button"
+          onClick={() => {
+            const ageMessage = numberError(validateNumber(ageText, inputRules.age), t(language, 'age'), language);
+            const semester = draft.status === 'Working student' && (currentPeriod.start || currentPeriod.end)
+              ? dateError(validateDateRange(currentPeriod.start, currentPeriod.end, false), t(language, 'lecturePeriod'), language)
+              : '';
+            const message = ageMessage || semester;
+            setError(message);
+            if (!message) onContinue(draft);
+          }}
+        >
           {t(language, 'start')}
           <span aria-hidden="true">↗</span>
         </button>

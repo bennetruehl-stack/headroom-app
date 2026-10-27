@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, multipleMiniJobsOverCap, usableLimitValue, type Limit, type MonthlyLimitCheck, type Shift } from '@headroom/core';
+import { annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, multipleMiniJobsOverCap, paymentTotal, usableLimitValue, type Limit, type MonthlyLimitCheck, type Shift } from '@headroom/core';
 import type { DashboardPeriod, Screen } from '../../app/types';
 import { AnimatedMoney } from '../../components/AnimatedMoney';
 import { ProgressBar } from '../../components/ProgressBar';
@@ -66,7 +66,9 @@ export function DashboardMetrics({
   const annualMiniRecord = limitsForYear(year).find((limit) => limit.id === 'miniJobYearly');
   const taxLimitRecord = limitsForYear(year).find((limit) => limit.id === 'incomeTaxThreshold');
   const shortTermRecord = limitsForYear(year).find((limit) => limit.id === 'shortTermEmployment');
+  // Ohne Einmalzahlungen: Die Warnung ist eine feste Aussage, Einmalzahlungen verteilt das Recht aufs Jahr.
   const multipleOver = multipleMiniJobsOverCap(data.shifts, data.jobs, month, miniMonthCap);
+  const paymentsThisMonth = paymentTotal(data.payments, data.jobs, month);
   // Eine Hauptaktion pro Bildschirm: „Schicht eintragen“ direkt unter der großen Zahl.
   const actions = (
     <>
@@ -101,7 +103,7 @@ export function DashboardMetrics({
     !multipleOver &&
     miniMonthCap !== null && yearlyMiniCap !== null &&
     miniMonthCap > 0 &&
-    monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', month) > miniMonthCap &&
+    monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', month, data.payments) > miniMonthCap &&
     annualMini <= yearlyMiniCap;
 
   return (
@@ -146,6 +148,9 @@ export function DashboardMetrics({
                     ? t(language, 'overBy', { amount: money(monthSummary.over, language) })
                     : monthSummary.hours !== null ? t(language, 'hoursApprox', { hours: Math.round(monthSummary.hours) }) : null}
                 </div>
+                {paymentsThisMonth > 0 && (
+                  <p className="metric-caption">{t(language, 'includesPayment', { amount: money(paymentsThisMonth, language) })}</p>
+                )}
                 {strictest?.value.comparison === 'gross-orientation' && (
                   <p className="metric-caption"><span className="pill-subtle">{t(language, 'grossOrientation')}</span></p>
                 )}

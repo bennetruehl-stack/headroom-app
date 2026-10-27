@@ -180,11 +180,11 @@ function App() {
           />
         );
       case 'Shifts':
-        return <ShiftsPage data={data} language={language} onUpdate={(shifts) => update({ shifts })} onImport={() => setPage('Import')} />;
+        return <ShiftsPage data={data} language={language} onUpdate={(shifts) => update({ shifts })} onPayments={(payments) => update({ payments })} onImport={() => setPage('Import')} />;
       case 'Import':
         return <ImportPage data={data} language={language} onUpdate={update} onDone={() => setPage('Shifts')} />;
       case 'Jobs':
-        return <JobsPage data={data} language={language} features={features} onUpdate={(jobs) => update({ jobs, shifts: data.shifts.filter((shift) => jobs.some((job) => job.id === shift.jobId)) })} />;
+        return <JobsPage data={data} language={language} features={features} onUpdate={(jobs) => update({ jobs, shifts: data.shifts.filter((shift) => jobs.some((job) => job.id === shift.jobId)), payments: data.payments.filter((payment) => jobs.some((job) => job.id === payment.jobId)) })} />;
       case 'Limits':
         return <LimitsPage language={language} profile={data.profile} />;
       case 'More':
@@ -211,6 +211,7 @@ function App() {
               fresh.profile = { status: 'Student', age: 0, familyInsured: false, bafoeg: false, hasMainJob: false, semesterPeriods: [] };
               fresh.jobs = [];
               fresh.shifts = [];
+              fresh.payments = [];
               fresh.dismissedRecommendations = [];
               fresh.peerOptIn = false;
               fresh.peerToken = undefined;

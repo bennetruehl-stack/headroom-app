@@ -33,7 +33,7 @@ export function Dashboard({
   const yearLimits = activeLimits(data.profile, year);
   const monthlyLimits = yearLimits.filter((limit) => limit.period === 'month');
   const monthlySummaries = monthlyLimits.map((limit) => {
-    const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year);
+    const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year, data.payments);
     return { limit, value };
   });
   const primaryMonthly = monthlySummaries.filter(({ limit }) => roleTier(data.profile.status, limit.id) === 'primary');
@@ -45,7 +45,7 @@ export function Dashboard({
     null,
   );
 
-  const miniMonthly = monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', month);
+  const miniMonthly = monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', month, data.payments);
   const monthSummary = strictest
     ? monthlySummary(strictest.value.total, strictest.value.cap, usableLimitValue('minimumWage', year))
     : monthlySummary(miniMonthly, usableLimitValue('miniJobMonthly', year), usableLimitValue('minimumWage', year));
@@ -55,13 +55,14 @@ export function Dashboard({
     year,
     ['mini-job'],
     Number(today.slice(5, 7)),
+    data.payments,
   );
   const annualMini = annualMiniBreakdown.projected;
   const yearlyMiniCap = usableLimitValue('miniJobYearly', year);
   const annualRegular = calculateAnnualProjection(data.shifts, data.jobs, year, [
     'regular',
     'working student',
-  ]);
+  ], data.payments);
   const taxLimit = limitsForYear(year).find((limit) => limit.id === 'incomeTaxThreshold')?.value ?? null;
   const shortTermShifts = data.shifts.filter(
     (shift) => data.jobs.find((job) => job.id === shift.jobId)?.type === 'short-term',
@@ -70,7 +71,7 @@ export function Dashboard({
   const familyLimit = limitsForYear(year).find((limit) => limit.id === 'familyInsurance');
   const familyAge = getAgeBoundary(familyLimit);
   // Gleiche Rechnung wie in der Grenzwert-Zeile (Core), damit Hinweis und Zeile übereinstimmen.
-  const familyCheck = familyLimit ? monthlyAmountForLimit(familyLimit, data.jobs, data.shifts, month, year) : null;
+  const familyCheck = familyLimit ? monthlyAmountForLimit(familyLimit, data.jobs, data.shifts, month, year, data.payments) : null;
   const [period, setPeriod] = useState<DashboardPeriod>('month');
   const kickerKey: Record<DashboardPeriod, MessageKey> = {
     month: 'welcomeKicker',

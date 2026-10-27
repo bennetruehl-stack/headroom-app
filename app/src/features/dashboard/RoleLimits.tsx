@@ -55,13 +55,13 @@ export function roleRows(
     const verified = limit.verified && limit.value !== null;
     switch (item) {
       case 'miniJobMonthly': {
-        const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year);
+        const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year, data.payments);
         if (!value) { rows.push({ item, title, limit }); break; }
         rows.push({ item, title, limit, ratio: value.ratio, status: value.status, amount: money(value.total, language) + ' / ' + money(value.cap, language) });
         break;
       }
       case 'familyInsurance': {
-        const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year);
+        const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year, data.payments);
         if (!value) { rows.push({ item, title, limit }); break; }
         rows.push({
           item, title, limit, ratio: value.ratio, status: value.status,
@@ -72,7 +72,7 @@ export function roleRows(
         break;
       }
       case 'bafoegSideIncome': {
-        const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year);
+        const value = monthlyAmountForLimit(limit, data.jobs, data.shifts, month, year, data.payments);
         if (!value || limit.value === null) { rows.push({ item, title, limit }); break; }
         rows.push({
           item, title, limit, ratio: value.ratio, status: value.status,

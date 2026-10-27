@@ -81,6 +81,7 @@ export function JobsPage({
             initial={activeEdit}
             jobs={data.jobs}
             shifts={data.shifts}
+            payments={data.payments}
             onCancel={() => setEditing(null)}
             onSave={(job) => {
               onUpdate(editing === 'new'

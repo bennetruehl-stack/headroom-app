@@ -1,4 +1,4 @@
-import { annualIncomeProjection, monthlyLimitCheck, type Job, type Limit, type MonthlyLimitCheck, type RiskStatus, type Shift } from '@headroom/core';
+import { annualIncomeProjection, monthlyLimitCheck, type Job, type Limit, type MonthlyLimitCheck, type OneTimePayment, type RiskStatus, type Shift } from '@headroom/core';
 import { employmentTypes } from '../app/constants';
 import { t, type Language, type MessageKey } from '../i18n/translations';
 import { localToday } from './format';
@@ -68,10 +68,11 @@ export function calculateAnnualProjection(
   jobs: Job[],
   year: number,
   types: Job['type'][],
+  payments: OneTimePayment[] = [],
 ): number {
   const now = localToday();
   const month = Number(now.slice(0, 4)) === year ? Number(now.slice(5, 7)) : 12;
-  return annualIncomeProjection(shifts, jobs, year, types, month);
+  return annualIncomeProjection(shifts, jobs, year, types, month, payments);
 }
 
 /** Monatsprüfung aus dem Core; `null`, wenn der Wert fehlt oder ungeprüft ist. */
@@ -81,6 +82,7 @@ export function monthlyAmountForLimit(
   shifts: Shift[],
   month: string,
   year: number,
+  payments: OneTimePayment[] = [],
 ): MonthlyLimitCheck | null {
-  return monthlyLimitCheck(limit, shifts, jobs, month, year);
+  return monthlyLimitCheck(limit, shifts, jobs, month, year, payments);
 }

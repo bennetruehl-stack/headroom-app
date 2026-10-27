@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { activeLimits, annualMiniProjection, hoursInWeek, isInLecturePeriod, limitsForYear, monthlyIncomeForLimit, monthlyLimitCheck, shiftCheck, shortDays, usableLimitValue, workingHoursCheck, workingStudent26Weeks, workingStudentReferenceDate, type Shift } from '@headroom/core';
+import { activeLimits, annualMiniProjection, inputRules, validateNumber, hoursInWeek, isInLecturePeriod, limitsForYear, monthlyIncomeForLimit, monthlyLimitCheck, shiftCheck, shortDays, usableLimitValue, workingHoursCheck, workingStudent26Weeks, workingStudentReferenceDate, type Shift } from '@headroom/core';
 import { SourceStamp } from '../../components/SourceStamp';
 import { t, type Language } from '../../i18n/translations';
 import { dateText, localToday, money, prefersReducedMotion } from '../../lib/format';
 import { limitName } from '../../lib/limitText';
+import { numberError } from '../../lib/inputErrors';
 import type { AppState } from '../../lib/storage';
 
 export function ShiftCheckDialog({
@@ -34,9 +35,12 @@ export function ShiftCheckDialog({
   const job = data.jobs.find((item) => item.id === jobId);
   const year = Number(date.slice(0, 4));
   const month = date.slice(0, 7);
-  const duration = Number(hours || 0);
+  // Leere Eingabe heißt 0 Stunden; alles andere wird zentral und lokalisiert geprüft.
+  const hoursResult = hours.trim() ? validateNumber(hours, inputRules.shiftHours) : { ok: true as const, value: 0 };
+  const hoursMessage = numberError(hoursResult, t(language, 'hoursWorked'), language);
+  const duration = hoursResult.ok ? hoursResult.value ?? 0 : 0;
   const amount = job ? duration * job.wage * (1 + Math.max(0, job.surcharges ?? 0)) : 0;
-  const miniTotal = monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', month);
+  const miniTotal = monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', month, data.payments);
   const miniCap = usableLimitValue('miniJobMonthly', year);
   const isMini = job?.type === 'mini-job';
   const result = isMini && miniCap !== null ? shiftCheck(miniTotal, amount, miniCap) : null;
@@ -56,7 +60,7 @@ export function ShiftCheckDialog({
     surchargeAmount: job ? duration * job.wage * Math.max(0, job.surcharges ?? 0) : 0,
   };
   const annualMiniAfter = isMini
-    ? annualMiniProjection([...data.shifts, projectedShift], data.jobs, year, Number(localToday().slice(5, 7)))
+    ? annualMiniProjection([...data.shifts, projectedShift], data.jobs, year, Number(localToday().slice(5, 7)), data.payments)
     : 0;
   const annualMiniOver = annualMiniCap === null ? 0 : Math.max(0, annualMiniAfter - annualMiniCap);
   const shortTermCap = usableLimitValue('shortTermEmployment', year);
@@ -67,9 +71,9 @@ export function ShiftCheckDialog({
   // Familienversicherung und BAföG: dieselbe Core-Rechnung wie in der Übersicht, mit der neuen Schicht.
   const withShift = job && duration > 0 ? [...data.shifts, projectedShift] : data.shifts;
   const familyLimit = activeLimits(data.profile, year).find((limit) => limit.id === 'familyInsurance');
-  const familyResult = familyLimit && job ? monthlyLimitCheck(familyLimit, withShift, data.jobs, month, year) : null;
+  const familyResult = familyLimit && job ? monthlyLimitCheck(familyLimit, withShift, data.jobs, month, year, data.payments) : null;
   const bafoegLimit = activeLimits(data.profile, year).find((limit) => limit.id === 'bafoegSideIncome');
-  const bafoegResult = bafoegLimit && job ? monthlyLimitCheck(bafoegLimit, withShift, data.jobs, month, year) : null;
+  const bafoegResult = bafoegLimit && job ? monthlyLimitCheck(bafoegLimit, withShift, data.jobs, month, year, data.payments) : null;
   const weeks26Limit = activeLimits(data.profile, year).find((limit) => limit.id === 'workingStudent26Weeks');
   const weeks26 = weeks26Limit && job
     ? workingStudent26Weeks(withShift, workingStudentReferenceDate(data.jobs, withShift, date), year)
@@ -99,7 +103,8 @@ export function ShiftCheckDialog({
           </label>
           <label className="field">
             <span>{t(language, 'hoursWorked')}</span>
-            <input type="number" min="0" step="0.25" value={hours} onChange={(event) => setHours(event.target.value)} />
+            <input type="text" inputMode="decimal" autoComplete="off" value={hours} onChange={(event) => setHours(event.target.value)} aria-invalid={Boolean(hoursMessage) || undefined} aria-describedby={hoursMessage ? 'shift-check-hours-error' : undefined} />
+            {hoursMessage && <small id="shift-check-hours-error" className="form-error" role="alert">{hoursMessage}</small>}
           </label>
         </div>
         {job && (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { activeLimits, annualMiniProjection, consentAgeRule, hoursInWeek, isInLecturePeriod, latestKnownLimitValue, limitsForYear, monthlyIncomeForLimit, usableLimitValue, workingHoursCheck, type Job, type MonthlyLimitCheck, type Shift } from '@headroom/core';
+import { activeLimits, annualMiniProjection, consentAgeRule, hoursInWeek, isInLecturePeriod, latestKnownLimitValue, parseLocaleNumber, limitsForYear, monthlyIncomeForLimit, usableLimitValue, workingHoursCheck, type Job, type MonthlyLimitCheck, type Shift } from '@headroom/core';
 import { PageHeading } from '../../components/PageHeading';
 import { t, type Language } from '../../i18n/translations';
 import { dateText, id, localToday, money, preciseMoney } from '../../lib/format';
@@ -79,8 +79,8 @@ export function JobBoardPage({
       {showPost && data.profile.age >= consentAgeRule.minimumAge && (
         <form className="surface form-surface form-grid" onSubmit={(event) => {
           event.preventDefault();
-          const listing = { title: title.trim(), city: city.trim(), date, hours: Number(hours), hourlyWage: Number(wage) };
-          if (!listing.title || !listing.city || !listing.date || listing.hours <= 0 || listing.hourlyWage < 0) return;
+          const listing = { title: title.trim(), city: city.trim(), date, hours: parseLocaleNumber(hours) ?? Number.NaN, hourlyWage: parseLocaleNumber(wage) ?? Number.NaN };
+          if (!listing.title || !listing.city || !listing.date || !Number.isFinite(listing.hours) || listing.hours <= 0 || listing.hours > 24 || !Number.isFinite(listing.hourlyWage) || listing.hourlyWage <= 0) return;
           void fetch('/api/listings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -100,8 +100,8 @@ export function JobBoardPage({
           <label className="field"><span>{t(language, 'listingCity')}</span><input value={city} onChange={(event) => setCity(event.target.value)} required /></label>
           <label className="field"><span>{t(language, 'shiftDate')}</span><input type="date" min={today} value={date} onChange={(event) => setDate(event.target.value)} required /></label>
           <div className="form-grid two-columns">
-            <label className="field"><span>{t(language, 'listingHours')}</span><input type="number" min="1" step=".5" value={hours} onChange={(event) => setHours(event.target.value)} /></label>
-            <label className="field"><span>{t(language, 'listingWage')}</span><input type="number" min="0" step=".1" value={wage} onChange={(event) => setWage(event.target.value)} /></label>
+            <label className="field"><span>{t(language, 'listingHours')}</span><input type="text" inputMode="decimal" autoComplete="off" value={hours} onChange={(event) => setHours(event.target.value)} /></label>
+            <label className="field"><span>{t(language, 'listingWage')}</span><input type="text" inputMode="decimal" autoComplete="off" value={wage} onChange={(event) => setWage(event.target.value)} /></label>
           </div>
           <button className="button button-dark" type="submit">{t(language, 'postShift')}</button>
         </form>
@@ -116,18 +116,18 @@ export function JobBoardPage({
           const yearLimitRecord = limitsForYear(listingYear).find((limit) => limit.id === 'miniJobYearly');
           const applicableMonthlyLimits = activeProfileLimits
             .filter((limit) => limit.period === 'month' && limit.verified)
-            .map((limit) => monthlyAmountForLimit(limit, data.jobs, data.shifts, listingMonth, listingYear))
+            .map((limit) => monthlyAmountForLimit(limit, data.jobs, data.shifts, listingMonth, listingYear, data.payments))
             .filter((value): value is MonthlyLimitCheck => value !== null);
           const listingMiniCap = usableLimitValue('miniJobMonthly', listingYear);
           const headroom = applicableMonthlyLimits.length
             ? Math.max(0, Math.min(...applicableMonthlyLimits.map((limit) => limit.cap - limit.total)))
             : listingMiniCap === null
               ? null
-              : Math.max(0, listingMiniCap - monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', listingMonth));
+              : Math.max(0, listingMiniCap - monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', listingMonth, data.payments));
           const listingJob: Job = { id: 'listing-' + listing.id, title: listing.title, type: 'mini-job', wage: listing.hourlyWage, startDate: listing.date };
           const listingShift: Shift = { jobId: listingJob.id, date: listing.date, hours: listing.hours, planned: true };
           const currentMonthNumber = listingYear === Number(today.slice(0, 4)) ? Number(today.slice(5, 7)) : 1;
-          const annualMini = annualMiniProjection([...data.shifts, listingShift], [...data.jobs, listingJob], listingYear, currentMonthNumber);
+          const annualMini = annualMiniProjection([...data.shifts, listingShift], [...data.jobs, listingJob], listingYear, currentMonthNumber, data.payments);
           const annualExceeded = Boolean(yearLimitRecord?.verified && yearLimitRecord.value !== null && annualMini > yearLimitRecord.value);
           const secondMiniJob = activeProfileLimits.some((limit) => limit.id === 'miniJobAlongsideMainJob') &&
             data.jobs.some((job) => job.type === 'mini-job' && job.startDate <= listing.date && (!job.endDate || job.endDate >= listing.date));

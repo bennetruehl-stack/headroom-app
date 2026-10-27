@@ -1,20 +1,23 @@
 import { useState } from 'react';
-import type { Shift } from '@headroom/core';
+import type { OneTimePayment, Shift } from '@headroom/core';
 import { PageHeading } from '../../components/PageHeading';
 import { t, type Language } from '../../i18n/translations';
 import { dateText, money } from '../../lib/format';
 import type { AppState } from '../../lib/storage';
+import { PaymentsSection } from './PaymentsSection';
 import { ShiftForm } from './ShiftForm';
 
 export function ShiftsPage({
   data,
   language,
   onUpdate,
+  onPayments,
   onImport,
 }: {
   data: AppState;
   language: Language;
   onUpdate: (shifts: Shift[]) => void;
+  onPayments: (payments: OneTimePayment[]) => void;
   onImport: () => void;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -89,6 +92,7 @@ export function ShiftsPage({
           );
         })}
       </div>
+      <PaymentsSection data={data} language={language} onUpdate={onPayments} />
     </section>
   );
 }

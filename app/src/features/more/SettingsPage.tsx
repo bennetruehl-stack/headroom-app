@@ -1,9 +1,11 @@
-import type { ProfileStatus } from '@headroom/core';
+import { useState } from 'react';
+import { inputRules, validateDateRange, validateNumber, type ProfileStatus } from '@headroom/core';
 import { profileChoices } from '../../app/constants';
 import type { Screen } from '../../app/types';
 import { PageHeading } from '../../components/PageHeading';
 import { sanitizeFeatures, type FeatureName } from '../../config/features';
 import { t, type Language } from '../../i18n/translations';
+import { dateError, numberError } from '../../lib/inputErrors';
 import { normalizeState, stateForExport, type AppState } from '../../lib/storage';
 
 export function SettingsPage({
@@ -29,6 +31,12 @@ export function SettingsPage({
   onReset: () => void;
   onDelete: () => void;
 }) {
+  const [ageText, setAgeText] = useState(String(data.profile.age));
+  const ageMessage = numberError(validateNumber(ageText, inputRules.age), t(language, 'age'), language);
+  const semester = data.profile.semesterPeriods?.[0];
+  const semesterMessage = semester && (semester.start || semester.end)
+    ? dateError(validateDateRange(semester.start, semester.end, false), t(language, 'lecturePeriod'), language)
+    : '';
   const importFile = async (file?: File) => {
     if (!file) return;
     try {
@@ -84,7 +92,21 @@ export function SettingsPage({
         </label>
         <label className="field">
           <span>{t(language, 'age')}</span>
-          <input type="number" min="0" max="120" value={data.profile.age} onChange={(event) => onUpdate({ profile: { ...data.profile, age: Number(event.target.value) } })} />
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            value={ageText}
+            aria-invalid={Boolean(ageMessage) || undefined}
+            aria-describedby={ageMessage ? 'settings-age-error' : undefined}
+            onChange={(event) => {
+              setAgeText(event.target.value);
+              const parsed = validateNumber(event.target.value, inputRules.age);
+              // Nur gültige Werte speichern; sonst bleibt das letzte gültige Alter erhalten.
+              if (parsed.ok && parsed.value !== null) onUpdate({ profile: { ...data.profile, age: parsed.value } });
+            }}
+          />
+          {ageMessage && <small id="settings-age-error" className="form-error" role="alert">{ageMessage}</small>}
         </label>
         <label className="check-row">
           <input type="checkbox" checked={data.profile.familyInsured} onChange={(event) => onUpdate({ profile: { ...data.profile, familyInsured: event.target.checked } })} />
@@ -98,6 +120,7 @@ export function SettingsPage({
           <div className="form-grid two-columns">
             <label className="field"><span>{t(language, 'lectureStart')}</span><input type="date" value={data.profile.semesterPeriods?.[0]?.start ?? ''} onChange={(event) => onUpdate({ profile: { ...data.profile, semesterPeriods: [{ start: event.target.value, end: data.profile.semesterPeriods?.[0]?.end ?? '' }] } })} /></label>
             <label className="field"><span>{t(language, 'lectureEnd')}</span><input type="date" value={data.profile.semesterPeriods?.[0]?.end ?? ''} onChange={(event) => onUpdate({ profile: { ...data.profile, semesterPeriods: [{ start: data.profile.semesterPeriods?.[0]?.start ?? '', end: event.target.value }] } })} /></label>
+            {semesterMessage && <p role="alert" className="form-error wide-hint">{semesterMessage}</p>}
           </div>
         )}
         <label className="check-row">
