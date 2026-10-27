@@ -181,7 +181,7 @@ const sourceLimits: Limit[] = [
     70,
     'Arbeitstage',
     'year',
-    ['Student', 'Working student', 'Mini-jobber', 'Pupil'],
+    ['Student', 'Working student', 'Mini-jobber', 'Employee', 'Pupil'],
     'Grundsätzlich höchstens 70 Arbeitstage oder 3 Monate je Kalenderjahr. Für landwirtschaftliche Betriebe gelten seit 2026 abweichende Grenzen; diese App prüft sie nicht.',
     'Minijob-Zentrale',
     'https://www.minijob-zentrale.de/DE/meta/faq-bereich/begriffe-und-beschaeftigungsarten/_node.html',

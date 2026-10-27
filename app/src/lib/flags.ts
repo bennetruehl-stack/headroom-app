@@ -1,9 +1,9 @@
-import { defaultFeatures, sanitizeFeatures, type FeatureName } from '../config/features';
+import { advancedDefaults, defaultFeatures, sanitizeFeatures, type FeatureName } from '../config/features';
 
 export function getFeatureFlags(): Record<FeatureName, boolean> {
   try {
     const stored = localStorage.getItem('headroom-features');
-    return stored ? sanitizeFeatures(JSON.parse(stored)) : { ...defaultFeatures };
+    return stored ? sanitizeFeatures(JSON.parse(stored), advancedDefaults) : { ...defaultFeatures };
   } catch {
     return { ...defaultFeatures };
   }

@@ -7,6 +7,7 @@ import type { Job, Limit, OneTimePayment, Profile, ProfileStatus, RiskStatus, Sh
 export * from './types';
 export * from './input';
 export * from './shiftImport';
+export * from './combinations';
 export { availableLimitYears, consentAgeRule, jobPresets, limits, limitsForYear, miniJobCapFormula, roleLayouts, roleTier };
 export type { RoleItem, RoleLayout, RoleTier } from '../data/roles';
 

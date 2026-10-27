@@ -8,7 +8,8 @@
     "./data/jobPresets": "./data/jobPresets.ts",
     "./data/references": "./data/references.ts",
     "./data/privacy": "./data/privacy.ts",
-    "./data/roles": "./data/roles.ts"
+    "./data/roles": "./data/roles.ts",
+    "./data/combinations": "./data/combinations.ts"
   },
   "scripts": {
     "test": "vitest run"

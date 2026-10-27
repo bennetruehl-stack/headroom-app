@@ -26,7 +26,7 @@ export const roleLayouts: Record<ProfileStatus, RoleLayout> = {
   },
   'Working student': {
     primary: ['workingStudentHours', 'workingStudent26Weeks', 'miniJobMonthly', 'incomeTaxThreshold'],
-    secondary: ['familyInsurance', 'bafoegSideIncome'],
+    secondary: ['familyInsurance', 'bafoegSideIncome', 'shortTermEmployment'],
   },
   'Mini-jobber': {
     primary: ['miniJobMonthly', 'shortTermEmployment'],
@@ -34,7 +34,7 @@ export const roleLayouts: Record<ProfileStatus, RoleLayout> = {
   },
   Employee: {
     primary: ['miniJobAlongsideMainJob', 'taxClassInfo'],
-    secondary: ['miniJobMonthly'],
+    secondary: ['miniJobMonthly', 'shortTermEmployment'],
   },
   Pupil: {
     primary: ['miniJobMonthly', 'youthWorkProtection', 'familyInsurance'],

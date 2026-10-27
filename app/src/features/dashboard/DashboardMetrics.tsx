@@ -14,6 +14,7 @@ import { ShiftForm } from '../shifts/ShiftForm';
 import { InformationCards } from './InformationCards';
 import { RoleLimits, roleRows } from './RoleLimits';
 import { TaxAppCard } from '../advanced/TaxAppCard';
+import { JobComboCard } from '../advanced/JobComboCard';
 
 export function DashboardMetrics({
   data,
@@ -182,6 +183,8 @@ export function DashboardMetrics({
 
           {features.partnerRecommendations && <TaxAppCard data={data} language={language} />}
 
+          {features.jobCombinations && <JobComboCard data={data} language={language} />}
+
           {multipleOver && (
             <div className="notice notice-over" role="status">
               <span className="info-mark" aria-hidden="true">!</span>
@@ -198,7 +201,7 @@ export function DashboardMetrics({
           {actions}
 
           <RoleLimits
-            rows={roleRows(data, language, month, year, localToday(), daysUsed, annualRegular)}
+            rows={roleRows(data, language, month, year, localToday(), daysUsed, annualRegular, features.jobCombinations)}
             status={data.profile.status}
             language={language}
           />
@@ -314,6 +317,8 @@ export function DashboardMetrics({
         language={language}
         familyAge={familyAge}
         familyOver={familyOver}
+        features={features}
+        year={year}
       />
     </>
   );

@@ -1,4 +1,4 @@
-import { activeLimits, employeeMiniJobStatus, hoursInWeek, isInLecturePeriod, roleLayouts, roleTier, statusFor, workingStudent26Weeks, workingStudentReferenceDate, type Limit, type ProfileStatus, type RiskStatus, type RoleItem } from '@headroom/core';
+import { activeLimits, employeeMiniJobStatus, shortTermApplies, shortTermProfessionalRisk, usableLimitValue, hoursInWeek, isInLecturePeriod, roleLayouts, roleTier, statusFor, workingStudent26Weeks, workingStudentReferenceDate, type Limit, type ProfileStatus, type RiskStatus, type RoleItem } from '@headroom/core';
 import { ProgressBar } from '../../components/ProgressBar';
 import { SourceStamp } from '../../components/SourceStamp';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -35,11 +35,18 @@ export function roleRows(
   today: string,
   daysUsed: number,
   annualRegular: number,
+  /** Advanced (Jobkombis): Zeile für kurzfristige Beschäftigung nur mit kurzfristigem Job, plus Hinweis auf Berufsmäßigkeit. */
+  adaptiveShortTerm = false,
 ): RoleRowData[] {
   const active = activeLimits(data.profile, year);
   const find = (id: string) => active.find((limit) => limit.id === id);
   const items = [...roleLayouts[data.profile.status].primary, ...roleLayouts[data.profile.status].secondary];
   const rows: RoleRowData[] = [];
+  // Werkstudent und Angestellt sehen die Zeile nur im Advanced-Modus und nur mit kurzfristigem Job.
+  const addedForCombos = data.profile.status === 'Working student' || data.profile.status === 'Employee';
+  const hideShortTerm = adaptiveShortTerm
+    ? !shortTermApplies(data.profile, data.jobs, year)
+    : addedForCombos;
   for (const item of items) {
     const limit = find(item);
     if (item === 'taxClassInfo') {
@@ -47,6 +54,7 @@ export function roleRows(
       continue;
     }
     if (!limit) continue;
+    if (item === 'shortTermEmployment' && hideShortTerm) continue;
     const title = limitName(limit, language);
     if (limitUnavailable(limit)) {
       rows.push({ item, title, limit, unavailable: true, status: 'Unknown', note: t(language, 'limitUnavailable', { year }) });
@@ -95,9 +103,16 @@ export function roleRows(
         break;
       }
       case 'shortTermEmployment': {
-        if (!verified || !limit.value) { rows.push({ item, title, limit }); break; }
+        const risk = adaptiveShortTerm ? shortTermProfessionalRisk(data.profile, data.jobs, data.shifts, month, year, data.payments) : null;
+        const riskNote = risk === 'noMainJob'
+          ? t(language, 'shortTermProfessionalNoMainJob')
+          : risk === 'highEarnings'
+            ? t(language, 'shortTermProfessionalHighEarnings', { cap: money(usableLimitValue('miniJobMonthly', year) ?? 0, language) })
+            : undefined;
+        const extra = riskNote ? { note: riskNote, tone: 'amber' as const } : {};
+        if (!verified || !limit.value) { rows.push({ item, title, limit, ...extra }); break; }
         const ratio = daysUsed / limit.value;
-        rows.push({ item, title, limit, ratio, status: statusFor(ratio), amount: t(language, 'daysOf', { used: daysUsed, limit: limit.value }) });
+        rows.push({ item, title, limit, ratio, status: statusFor(ratio), amount: t(language, 'daysOf', { used: daysUsed, limit: limit.value }), ...extra });
         break;
       }
       case 'workingStudentHours': {

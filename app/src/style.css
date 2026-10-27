@@ -3509,3 +3509,107 @@ select:focus {
   color: var(--muted);
   font-size: 12px;
 }
+
+/* ---------- Jobkombi (Advanced) ---------- */
+
+.job-combo {
+  margin: 14px 0;
+  padding: 18px;
+}
+
+.job-combo-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.job-combo-head > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.job-combo-head .eyebrow {
+  display: block;
+  margin: 0 0 2px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.job-combo-head h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.job-combo-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.job-combo-list {
+  display: grid;
+  margin-top: 14px;
+}
+
+.job-combo-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.job-combo-row .row-note {
+  margin: 0;
+}
+
+.job-combo-split {
+  color: var(--ink-soft);
+}
+
+.job-combo-risk {
+  margin: 4px 0 0;
+}
+
+.job-combo-source {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+
+.job-combo-source a {
+  color: var(--muted);
+}
+
+.combo-info-list {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0 33px;
+  padding: 0;
+  list-style: none;
+}
+
+.combo-info-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.combo-info-list li > span:last-child {
+  flex-basis: 100%;
+  color: var(--ink-soft);
+}
+
+.info-details > p.combo-info-note {
+  color: var(--muted);
+  font-size: 13px;
+}

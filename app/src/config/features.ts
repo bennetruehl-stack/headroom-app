@@ -1,7 +1,7 @@
 // Optionale Demo-Funktionen. Sie sind nur über den Advanced-Modus erreichbar und standardmäßig aus.
-export type FeatureName = 'jobBoard' | 'partnerRecommendations' | 'premium' | 'peerStats' | 'osmCompanyCheck' | 'weekCalendar';
+export type FeatureName = 'jobBoard' | 'partnerRecommendations' | 'premium' | 'peerStats' | 'osmCompanyCheck' | 'weekCalendar' | 'jobCombinations';
 
-export const featureNames: FeatureName[] = ['jobBoard', 'partnerRecommendations', 'premium', 'peerStats', 'osmCompanyCheck', 'weekCalendar'];
+export const featureNames: FeatureName[] = ['jobBoard', 'partnerRecommendations', 'premium', 'peerStats', 'osmCompanyCheck', 'weekCalendar', 'jobCombinations'];
 
 export const defaultFeatures: Record<FeatureName, boolean> = {
   jobBoard: false,
@@ -10,19 +10,24 @@ export const defaultFeatures: Record<FeatureName, boolean> = {
   peerStats: false,
   osmCompanyCheck: false,
   weekCalendar: false,
+  jobCombinations: false,
 };
 
-/** Was beim ersten Einschalten des Advanced-Modus aktiv wird: Jobbörse mit Partner-Jobbörsen, Partnerhinweise und Wochenkalender. */
+/** Was beim ersten Einschalten des Advanced-Modus aktiv wird: Jobbörse mit Partner-Jobbörsen, Partnerhinweise, Wochenkalender und Jobkombis. */
 export const advancedDefaults: Record<FeatureName, boolean> = {
   ...defaultFeatures,
   jobBoard: true,
   partnerRecommendations: true,
   weekCalendar: true,
+  jobCombinations: true,
 };
 
-/** Nur bekannte Schlüssel mit Wahrheitswerten übernehmen (alte Flags wie „scheduleScan“ fallen weg). */
-export function sanitizeFeatures(value: unknown): Record<FeatureName, boolean> {
-  const result = { ...defaultFeatures };
+/**
+ * Nur bekannte Schlüssel mit Wahrheitswerten übernehmen (alte Flags wie „scheduleScan“ fallen weg).
+ * Fehlende Schlüssel (neu hinzugekommene Flags) kommen aus `fallback`.
+ */
+export function sanitizeFeatures(value: unknown, fallback: Record<FeatureName, boolean> = defaultFeatures): Record<FeatureName, boolean> {
+  const result = { ...fallback };
   if (!value || typeof value !== 'object') return result;
   for (const name of featureNames) {
     const flag = (value as Record<string, unknown>)[name];
