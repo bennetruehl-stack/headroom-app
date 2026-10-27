@@ -95,6 +95,11 @@ summary:focus-visible {
   color: var(--ink);
 }
 
+/* Der Hauptinhalt erhält beim Seitenwechsel programmatisch den Fokus; kein Rahmen um die ganze Seite. */
+.app-content:focus {
+  outline: none;
+}
+
 .app-content {
   flex: 1;
   padding: 0 20px calc(120px + env(safe-area-inset-bottom));

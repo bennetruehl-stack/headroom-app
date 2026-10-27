@@ -123,8 +123,13 @@ function App() {
     navigator.serviceWorker.register('/sw.js').catch(() => undefined);
   }, []);
 
+  // Beim Seitenwechsel nach oben scrollen und den Fokus in den Hauptinhalt setzen,
+  // damit Tastatur- und Screenreader-Nutzer nicht in der unteren Navigation hängen bleiben.
+  const firstPage = useRef(true);
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
+    if (firstPage.current) { firstPage.current = false; return; }
+    document.getElementById('main-content')?.focus({ preventScroll: true });
   }, [page]);
 
   // Stabile Updater: immer auf dem aktuellen Stand, nie auf einer veralteten Kopie.
@@ -275,7 +280,7 @@ function App() {
         onLanguage={languageChanged}
         onHome={() => setPage(data.onboarded ? 'Dashboard' : 'Onboarding')}
       />
-      <main id="main-content" className="app-content">
+      <main id="main-content" className="app-content" tabIndex={-1}>
         {!ready ? (
           <div className="loading-shell" role="status">{t(language, 'preparingApp')}</div>
         ) : (

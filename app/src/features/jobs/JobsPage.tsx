@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { consentAgeRule, employeeMiniJobStatus, type Job } from '@headroom/core';
 import { PageHeading } from '../../components/PageHeading';
 import type { FeatureName } from '../../config/features';
@@ -22,6 +22,21 @@ export function JobsPage({
   onUpdate: (jobs: Job[]) => void;
 }) {
   const [editing, setEditing] = useState<string | 'new' | null>(null);
+  // Tastatur: beim Öffnen ins erste Feld springen, nach Speichern/Abbrechen zurück zum Auslöser.
+  const formRef = useRef<HTMLElement>(null);
+  const openedFrom = useRef<HTMLElement | null>(null);
+  const open = (value: string | 'new') => {
+    openedFrom.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setEditing(value);
+  };
+  useEffect(() => {
+    if (editing) {
+      formRef.current?.querySelector<HTMLElement>('input, select, textarea')?.focus();
+    } else if (openedFrom.current?.isConnected) {
+      openedFrom.current.focus();
+      openedFrom.current = null;
+    }
+  }, [editing]);
   const [osmLookup, setOsmLookup] = useState<Record<string, { status: 'loading' | 'found' | 'empty' | 'error'; result?: string }>>({});
   const activeEdit = data.jobs.find((job) => job.id === editing);
   const today = localToday();
@@ -61,7 +76,7 @@ export function JobsPage({
       <PageHeading
         kicker={t(language, 'jobsKicker')}
         title={t(language, 'jobs')}
-        trailing={<button className="button button-primary" type="button" onClick={() => setEditing('new')}>{t(language, 'createJob')} <span aria-hidden="true">+</span></button>}
+        trailing={<button className="button button-primary" type="button" onClick={() => open('new')}>{t(language, 'createJob')} <span aria-hidden="true">+</span></button>}
       />
 
       {employeeRule?.over && (
@@ -71,7 +86,7 @@ export function JobsPage({
       )}
 
       {editing && (
-        <section className="surface form-surface">
+        <section ref={formRef} className="surface form-surface">
           <div className="section-heading">
             <div><p className="eyebrow">{t(language, editing === 'new' ? 'newEntryKicker' : 'editEntryKicker')}</p><h2>{editing === 'new' ? t(language, 'createJob') : t(language, 'updateJob')}</h2></div>
             <button className="icon-button" type="button" aria-label={t(language, 'closeDialog')} onClick={() => setEditing(null)}>×</button>
@@ -130,7 +145,7 @@ export function JobsPage({
                 </details>
               )}
               <div className="card-actions">
-                <button className="text-button" type="button" onClick={() => setEditing(job.id)}>{t(language, 'edit')}</button>
+                <button className="text-button" type="button" onClick={() => open(job.id)}>{t(language, 'edit')}</button>
                 <button className="text-button danger-text" type="button" onClick={() => {
                   if (window.confirm(t(language, 'confirmDelete'))) {
                     onUpdate(data.jobs.filter((item) => item.id !== job.id));

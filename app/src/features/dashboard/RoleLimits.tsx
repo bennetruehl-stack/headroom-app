@@ -103,7 +103,8 @@ export function roleRows(
       case 'workingStudentHours': {
         if (!verified || !limit.value) { rows.push({ item, title, limit }); break; }
         if (!isInLecturePeriod(today, data.profile)) {
-          rows.push({ item, title, limit, note: t(language, 'outsideLecture') });
+          const hasDates = (data.profile.semesterPeriods ?? []).some((period) => period.start && period.end);
+          rows.push({ item, title, limit, note: t(language, hasDates ? 'outsideLecture' : 'semesterDatesMissing') });
           break;
         }
         const hours = Math.round(hoursInWeek(data.shifts, today) * 10) / 10;
