@@ -4,7 +4,7 @@ Headroom ist eine mobile, informationsorientierte PWA für Menschen in Deutschla
 
 ## Lokal starten
 
-Voraussetzung ist eine aktuelle Node.js-Version. Im Projektstamm:
+Voraussetzung ist Node.js 24 LTS (siehe `.nvmrc`) mit npm; das Projekt nutzt npm-Workspaces, kein pnpm. Im Projektstamm:
 
 ```sh
 npm install
@@ -20,6 +20,8 @@ npm run test:e2e            # Playwright-Smoketests; Chromium muss verfügbar se
 npx tsc --noEmit -p server/tsconfig.json
 npm run build
 ```
+
+Fehlermeldung `Cannot find native binding` (Rolldown): Vite 8 und Vitest laden eine native Rolldown-Bibliothek. Sie fehlt, wenn `node_modules` auf einem anderen Rechner oder mit einer abgeschotteten Node-Laufzeit (z. B. aus einer Desktop-App) installiert wurde. Abhilfe: `rm -rf node_modules && npm ci` mit einem regulären Node.js.
 
 `HEADROOM_DB_PATH=/anderer/pfad/headroom.sqlite npm run dev:server` legt die SQLite-Datenbank des lokalen Demo-Servers an einem alternativen Ort an. Im Standardfall liegt sie unter `server/data/headroom.sqlite` und wird nicht eingecheckt.
 

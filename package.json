@@ -14,5 +14,8 @@
     "dev:all": "npm run dev:server & npm run dev",
     "dev:server": "npm --workspace server run dev",
     "test:e2e": "npm --workspace app run test:e2e"
+  },
+  "engines": {
+    "node": ">=22.12"
   }
 }
