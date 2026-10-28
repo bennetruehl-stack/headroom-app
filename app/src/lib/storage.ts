@@ -264,7 +264,7 @@ function monthDays(year: number, month: number, weekday: number): string[] {
  * nicht die Kinderregeln. Minijob in der Bäckerei (11 €/h, unter dem Mindestlohn: unter 18 erlaubt;
  * samstags früh ab 5:30 dank Bäckerei-Ausnahme ab 16), Nachhilfe und ein Ferienjob in der Eisdiele.
  * Im laufenden Monat endet eine Freitagsschicht bewusst erst um 21 Uhr (Nachtruhe ab 20 Uhr),
- * damit der Jugendschutz-Check etwas zeigt. Die Ferien sind Beispielwerte, keine amtlichen Termine.
+ * damit der Jugendschutz-Check etwas zeigt.
  */
 export function createMiaState(): AppState {
   const date = today();
@@ -328,19 +328,6 @@ export function createMiaState(): AppState {
       // 11. Klasse: Vollzeitschulpflicht (in NRW 10 Schuljahre) ist erfüllt.
       isFullTimeSchoolObligated: false,
       bundesland: 'NW',
-      schoolSchedule: [
-        { weekday: 1, start: '08:00', end: '15:15' },
-        { weekday: 2, start: '08:00', end: '15:15' },
-        { weekday: 3, start: '08:00', end: '13:15' },
-        { weekday: 4, start: '08:00', end: '15:15' },
-        { weekday: 5, start: '08:00', end: '13:15' },
-      ],
-      schoolHolidays: [
-        { start: year + '-03-30', end: year + '-04-11', name: 'Osterferien' },
-        { start: summerStart, end: summerEnd, name: 'Sommerferien' },
-        { start: year + '-10-17', end: year + '-10-31', name: 'Herbstferien' },
-        { start: year + '-12-23', end: (year + 1) + '-01-06', name: 'Weihnachtsferien' },
-      ],
       parentalConsent: {
         'mia-tutoring': { job: true, hours: true, wage: true, commute: true, signedOn: (year - 1) + '-09-01' },
         'mia-bakery': { job: true, hours: false, wage: true, commute: true },

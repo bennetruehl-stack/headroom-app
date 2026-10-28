@@ -178,10 +178,6 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
       'Trag in deinem Profil ein, ob du noch vollzeitschulpflichtig bist. Bis dahin rechnet Headroom mit „ja“.',
       'Add in your profile whether you still have to attend school full time. Until then Headroom assumes “yes”.');
   }
-  if (schooling.value && !(profile.schoolHolidays ?? []).length && allowed.some((day) => ageOn(profile, day.date) >= 15)) {
-    add('holidaysMissing', 'info', { lawRef: '§ 5 Abs. 4 JArbSchG', url: 'https://www.gesetze-im-internet.de/jarbschg/__5.html' }, allowed,
-      'Trag deine Schulferien ein. In den Ferien gelten andere Regeln.', 'Add your school holidays. Different rules apply then.');
-  }
   const withoutTimes = allowed.filter((day) => day.start === undefined && (day.shift.days ?? 1) <= 1);
   if (withoutTimes.length) {
     add('timesMissing', 'info', YOUTH_NIGHT_REST, withoutTimes,
@@ -467,7 +463,9 @@ export function holidayJobDays(profile: Profile, shifts: Shift[], jobs: Job[], y
       .filter((day) => isSchoolHoliday(profile, day.date) && youthGroup(profile, day.date) === 'holidayYouth')
       .map((day) => day.date),
   );
+  // Ohne eingetragene Ferien lässt sich nichts zählen (die Ferien-Eingabe ist derzeit nicht in der App).
   const applies = fullTimeSchoolObligated(profile).value
+    && (profile.schoolHolidays ?? []).length > 0
     && [year + '-01-01', year + '-12-31'].some((date) => ageOn(profile, date) >= 15 && ageOn(profile, date) < 18);
   return { applies, used: dates.size, limit, remaining: Math.max(0, limit - dates.size), ratio: dates.size / limit, lawRef: HOLIDAY_JOB_MAX_DAYS.lawRef, url: HOLIDAY_JOB_MAX_DAYS.url };
 }

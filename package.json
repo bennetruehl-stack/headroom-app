@@ -17,7 +17,7 @@
     "test:e2e": "npm --workspace app run test:e2e",
     "desktop": "npm run build && npm --workspace desktop run start",
     "desktop:build": "npm run build && npm --workspace desktop run dist",
-    "desktop:install": "ditto desktop/dist/mac-arm64/Headroom.app ~/Applications/Headroom.app && echo Headroom liegt jetzt in ~/Applications"
+    "desktop:install": "rm -rf ~/Applications/Headroom.app && ditto desktop/dist/mac-arm64/Headroom.app ~/Applications/Headroom.app && echo Headroom liegt jetzt in ~/Applications"
   },
   "engines": {
     "node": ">=22.12"

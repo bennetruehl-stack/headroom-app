@@ -25,7 +25,6 @@ export type YouthRuleId =
   | 'freeSundays'
   | 'holidayJobLimit'
   | 'timesMissing'
-  | 'holidaysMissing'
   | 'schoolObligationAssumed'
   | 'pieceWork'
   | 'hazardousWork'
@@ -154,11 +153,6 @@ export const youthRuleExplanations: Record<YouthRuleId, RuleExplanation> = {
     title: 'Uhrzeiten fehlen', title_en: 'Times missing',
     text: 'Ohne Start und Ende kann Headroom Nachtruhe, Schulzeit, Pausen und freie Stunden nicht prüfen.',
     text_en: 'Without start and end times Headroom can’t check night rest, school hours, breaks and time off.',
-  },
-  holidaysMissing: {
-    title: 'Ferien fehlen', title_en: 'Holidays missing',
-    text: 'In den Ferien gelten andere Regeln als in der Schulzeit. Trag deine Ferien im Profil ein, sonst rechnet Headroom mit Schulzeit.',
-    text_en: 'Different rules apply in the holidays. Add your holidays in your profile, otherwise Headroom assumes it’s term time.',
   },
   schoolObligationAssumed: {
     title: 'Vollzeitschulpflicht angenommen', title_en: 'Full-time schooling assumed',
