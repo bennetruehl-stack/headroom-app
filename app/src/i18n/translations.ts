@@ -631,6 +631,8 @@ const de = {
   transitionGraduationText: "Laut deinem Profil hast du am {date} die Schule abgeschlossen. Soll dein Status jetzt „{status}“ sein? Davon hängt ab, welche Grenzen Headroom dir zeigt.",
   transitionGraduationAccept: "Ja, ändern",
   transitionDecline: "Nein, danke",
+  exampleMia: "Mia, 16: Oberstufe, Minijob und Ferienjob",
+  exampleBadgeMia: "Beispiel · Mia, 16",
 } as const;
 
 const en: Record<keyof typeof de, string> = {
@@ -1264,6 +1266,8 @@ const en: Record<keyof typeof de, string> = {
   transitionGraduationText: "According to your profile you finished school on {date}. Should your status now be “{status}”? It decides which limits Headroom shows you.",
   transitionGraduationAccept: "Yes, change",
   transitionDecline: "No, thanks",
+  exampleMia: "Mia, 16: upper school, mini-job and holiday job",
+  exampleBadgeMia: "Example · Mia, 16",
 };
 
 export type MessageKey = keyof typeof de;

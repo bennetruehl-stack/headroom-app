@@ -40,7 +40,8 @@ export const roleLayouts: Record<ProfileStatus, RoleLayout> = {
   },
   Pupil: {
     primary: ['miniJobMonthly', 'youthWorkProtection', 'holidayJobDays', 'familyInsurance'],
-    secondary: ['incomeTaxThreshold'],
+    // Kurzfristig nur mit kurzfristigem Job (z. B. Ferienjob), siehe roleRows.
+    secondary: ['shortTermEmployment', 'incomeTaxThreshold'],
   },
   'School leaver': {
     primary: ['miniJobMonthly', 'shortTermEmployment', 'youthWorkProtection', 'familyInsurance'],

@@ -76,6 +76,16 @@ describe('Gruppe A: Kinderregeln', () => {
   });
 });
 
+describe('Begründung der Kinderregeln ab 15', () => {
+  it('nennt die Vollzeitschulpflicht als Grund', () => {
+    const obligated = pupil({ isFullTimeSchoolObligated: true });
+    const result = run(obligated, [shift('2026-11-03', '15:00', '18:00')], [job({ tags: ['lightWork'] })]);
+    expect(result.find((item) => item.ruleId === 'childDailyHours')?.message).toMatch(/^Weil du noch vollzeitschulpflichtig bist/);
+    const child = pupil({ birthDate: '2012-06-01' });
+    expect(run(child, [shift('2026-11-03', '15:00', '18:00')], [job({ tags: ['lightWork'] })]).find((item) => item.ruleId === 'childDailyHours')?.message).toMatch(/^Am /);
+  });
+});
+
 describe('Gruppe B: Jugendliche', () => {
   it('meldet mehr als 8,5 Stunden am Tag und mehr als 40 in der Woche', () => {
     const long = run(pupil(), [shift('2026-11-02', '08:00', '17:30', { breaks: [{ start: '12:00', end: '13:00' }], hours: 8.6 })]);

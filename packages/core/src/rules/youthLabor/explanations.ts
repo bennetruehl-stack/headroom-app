@@ -52,13 +52,13 @@ export const youthRuleExplanations: Record<YouthRuleId, RuleExplanation> = {
   },
   childDailyHours: {
     title: 'Höchstens 2 Stunden am Tag', title_en: 'At most 2 hours a day',
-    text: 'Mit 13 und 14 – und als vollzeitschulpflichtige:r Jugendliche:r außerhalb der Ferien – darfst du höchstens 2 Stunden am Tag arbeiten. Im landwirtschaftlichen Familienbetrieb sind es 3 Stunden.',
-    text_en: 'At 13 and 14 – and outside holidays while you still have to attend school full time – you may work at most 2 hours a day (3 hours on a family farm).',
+    text: 'Diese Kinderregel gilt mit 13 und 14. Ab 15 gilt sie nur, solange du noch vollzeitschulpflichtig bist, und dann nur außerhalb der Ferien: höchstens 2 Stunden am Tag, im landwirtschaftlichen Familienbetrieb 3. Ist deine Vollzeitschulpflicht erfüllt (meist nach 9 oder 10 Schuljahren), stell das im Profil um.',
+    text_en: 'This child rule applies at 13 and 14. From 15 it applies only while you still have to attend school full time, and then only outside the holidays: at most 2 hours a day (3 on a family farm). If you have completed full-time schooling (usually after 9 or 10 years), change it in your profile.',
   },
   childTimeWindow: {
     title: 'Nur zwischen 8 und 18 Uhr', title_en: 'Only between 8 am and 6 pm',
-    text: 'Solange die Kinderregeln gelten, darfst du nicht zwischen 18 und 8 Uhr arbeiten.',
-    text_en: 'While the child rules apply, you may not work between 6 pm and 8 am.',
+    text: 'Solange die Kinderregeln gelten (mit 13 und 14 oder ab 15, solange du vollzeitschulpflichtig bist, außerhalb der Ferien), darfst du nicht zwischen 18 und 8 Uhr arbeiten.',
+    text_en: 'While the child rules apply (at 13 and 14, or from 15 while you still have to attend school full time, outside the holidays), you may not work between 6 pm and 8 am.',
   },
   duringSchool: {
     title: 'Nicht während des Unterrichts', title_en: 'Not during lessons',

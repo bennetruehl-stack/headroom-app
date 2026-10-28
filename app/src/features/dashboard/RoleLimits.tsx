@@ -50,7 +50,8 @@ export function roleRows(
   const rows: RoleRowData[] = [];
   // Werkstudent und Angestellt sehen die Zeile nur im Advanced-Modus und nur mit kurzfristigem Job.
   const addedForCombos = data.profile.status === 'Working student' || data.profile.status === 'Employee';
-  const hideShortTerm = adaptiveShortTerm
+  // Schüler:innen sehen die Zeile nur mit kurzfristigem Job (z. B. Ferienjob).
+  const hideShortTerm = adaptiveShortTerm || data.profile.status === 'Pupil'
     ? !shortTermApplies(data.profile, data.jobs, year)
     : addedForCombos;
   for (const item of items) {

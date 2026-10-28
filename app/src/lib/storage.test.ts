@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { annualMiniProjection, monthTotal } from '@headroom/core';
-import { createDemoState } from './storage';
+import { createDemoState, normalizeState } from './storage';
 
 describe('demo state', () => {
   const state = createDemoState();
@@ -46,5 +46,32 @@ describe('state migration', () => {
     expect(withCalendar?.calendars).toHaveLength(1);
     expect(withCalendar?.pendingImports).toHaveLength(1);
     expect(stateForExport(withCalendar!).calendars[0]).toEqual({ id: 'c', name: 'Arbeit', kind: 'url' });
+  });
+});
+
+describe('Beispielprofil Mia, 16', () => {
+  it('ist ein gültiger Stand im Schüler-Modus mit Jugendschutz-Meldungen', async () => {
+    const { createMiaState } = await import('./storage');
+    const { ageOn, checkYouthLabor, isStudentMode } = await import('@headroom/core');
+    const mia = createMiaState();
+    const today = new Date().toISOString().slice(0, 10);
+    expect(normalizeState(JSON.parse(JSON.stringify(mia)))?.example).toBe('mia');
+    expect(ageOn(mia.profile, today)).toBe(16);
+    expect(isStudentMode(mia.profile, today)).toBe(true);
+    const month = today.slice(0, 7);
+    const errors = checkYouthLabor({ profile: mia.profile, jobs: mia.jobs, shifts: mia.shifts, from: month + '-01', to: month + '-31' })
+      .filter((item) => item.severity === 'error');
+    // Grenzen passend zu 16: kein Mindestlohn, keine Steuergrenze, dafür Jugendschutz und kurzfristig.
+    const { activeLimits, referenceHourlyWage } = await import('@headroom/core');
+    const year = Number(today.slice(0, 4));
+    const ids = activeLimits(mia.profile, year).map((limit) => limit.id);
+    expect(ids).not.toContain('minimumWage');
+    expect(ids).not.toContain('incomeTaxThreshold');
+    expect(ids).toEqual(expect.arrayContaining(['miniJobMonthly', 'familyInsurance', 'youthWorkProtection', 'shortTermEmployment']));
+    expect(referenceHourlyWage(mia.profile, mia.jobs, year)).toBe(11.5);
+    // 16 und Oberstufe: Jugendregeln, keine Kinderregeln. Die Freitagsschicht bis 21 Uhr fällt auf.
+    const ruleIds = errors.map((item) => item.ruleId);
+    expect(ruleIds).toContain('nightRest');
+    expect(ruleIds.filter((id) => id.startsWith('child'))).toEqual([]);
   });
 });

@@ -3786,3 +3786,8 @@ select:focus {
 .transition-notice p + p {
   margin-top: 6px;
 }
+
+.brand-logo {
+  display: block;
+  flex: 0 0 auto;
+}

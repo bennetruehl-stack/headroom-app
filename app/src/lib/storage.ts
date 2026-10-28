@@ -33,7 +33,7 @@ export type CalendarSource = {
   lastError?: string;
 };
 
-export type ExampleProfile = 'standard' | 'lena';
+export type ExampleProfile = 'standard' | 'lena' | 'mia';
 
 const DATABASE = 'headroom-local';
 const STORE = 'app-state';
@@ -240,6 +240,168 @@ export function createLenaState(): AppState {
   };
 }
 
+function addDaysTo(date: string, days: number): string {
+  const day = new Date(date + 'T12:00:00Z');
+  day.setUTCDate(day.getUTCDate() + days);
+  return day.toISOString().slice(0, 10);
+}
+
+/** Alle Tage eines Monats mit dem Wochentag (1 = Montag … 7 = Sonntag). */
+function monthDays(year: number, month: number, weekday: number): string[] {
+  const result: string[] = [];
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  for (let day = 1; day <= last; day += 1) {
+    const date = year + '-' + pad(month) + '-' + pad(day);
+    const value = new Date(date + 'T12:00:00Z').getUTCDay();
+    if ((value === 0 ? 7 : value) === weekday) result.push(date);
+  }
+  return result;
+}
+
+/**
+ * Mia, 16, Schülerin in der 11. Klasse (Oberstufe, NRW) – Beispiel für den Schüler-Modus.
+ * Die Vollzeitschulpflicht ist erfüllt, deshalb gelten die Jugendregeln (bis 8 Stunden, 6–20 Uhr),
+ * nicht die Kinderregeln. Minijob in der Bäckerei (11 €/h, unter dem Mindestlohn: unter 18 erlaubt;
+ * samstags früh ab 5:30 dank Bäckerei-Ausnahme ab 16), Nachhilfe und ein Ferienjob in der Eisdiele.
+ * Im laufenden Monat endet eine Freitagsschicht bewusst erst um 21 Uhr (Nachtruhe ab 20 Uhr),
+ * damit der Jugendschutz-Check etwas zeigt. Die Ferien sind Beispielwerte, keine amtlichen Termine.
+ */
+export function createMiaState(): AppState {
+  const date = today();
+  const year = Number(date.slice(0, 4));
+  const currentMonth = Number(date.slice(5, 7));
+  // 16 Jahre und gut vier Monate alt, egal wann die Demo läuft.
+  const birth = new Date(date + 'T12:00:00Z');
+  birth.setUTCFullYear(birth.getUTCFullYear() - 16);
+  birth.setUTCMonth(birth.getUTCMonth() - 4);
+  const birthDate = birth.toISOString().slice(0, 10);
+  const summerStart = year + '-07-13';
+  const summerEnd = year + '-08-25';
+  const shifts: Shift[] = [];
+  const add = (jobId: string, day: string, start: string, end: string, extra: Partial<Shift> = {}) => {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    const pause = extra.breaks?.reduce((sum, item) => {
+      const [bh, bm] = item.start.split(':').map(Number);
+      const [ch, cm] = item.end.split(':').map(Number);
+      return sum + (ch * 60 + cm - bh * 60 - bm);
+    }, 0) ?? 0;
+    shifts.push({
+      id: 'mia-' + jobId + '-' + day,
+      jobId,
+      date: day,
+      hours: (eh * 60 + em - sh * 60 - sm - pause) / 60,
+      startTime: start,
+      endTime: end,
+      planned: day > date,
+      ...extra,
+    });
+  };
+  // Vormonat und laufender Monat: Nachhilfe dienstags, Bäckerei an zwei Samstagen.
+  for (const offset of [-1, 0]) {
+    const monthIndex = currentMonth + offset;
+    const y = monthIndex < 1 ? year - 1 : year;
+    const m = monthIndex < 1 ? 12 : monthIndex;
+    if (y === year && m >= 7 && m <= 8) continue;
+    for (const day of monthDays(y, m, 2)) add('mia-tutoring', day, '16:00', '17:30');
+    monthDays(y, m, 6).slice(0, 2).forEach((day) => add('mia-bakery', day, '05:30', '10:00'));
+  }
+  // Bewusst nicht erlaubt: Freitag im laufenden Monat bis 21 Uhr (Nachtruhe ab 20 Uhr, keine Ausnahme).
+  const friday = monthDays(year, currentMonth, 5)[1];
+  if (friday) add('mia-bakery', friday, '17:00', '21:00');
+  // Ferienjob in der Eisdiele: zwei Wochen werktags, mit Pause.
+  for (let day = summerStart, count = 0; count < 10; day = addDaysTo(day, 1)) {
+    const weekday = new Date(day + 'T12:00:00Z').getUTCDay();
+    if (weekday === 0 || weekday === 6) continue;
+    add('mia-icecream', day, '11:00', '16:30', { breaks: [{ start: '13:30', end: '14:00' }], days: 1 });
+    count += 1;
+  }
+  return {
+    profile: {
+      status: 'Pupil',
+      age: 16,
+      birthDate,
+      familyInsured: true,
+      bafoeg: false,
+      hasMainJob: false,
+      semesterPeriods: [],
+      // 11. Klasse: Vollzeitschulpflicht (in NRW 10 Schuljahre) ist erfüllt.
+      isFullTimeSchoolObligated: false,
+      bundesland: 'NW',
+      schoolSchedule: [
+        { weekday: 1, start: '08:00', end: '15:15' },
+        { weekday: 2, start: '08:00', end: '15:15' },
+        { weekday: 3, start: '08:00', end: '13:15' },
+        { weekday: 4, start: '08:00', end: '15:15' },
+        { weekday: 5, start: '08:00', end: '13:15' },
+      ],
+      schoolHolidays: [
+        { start: year + '-03-30', end: year + '-04-11', name: 'Osterferien' },
+        { start: summerStart, end: summerEnd, name: 'Sommerferien' },
+        { start: year + '-10-17', end: year + '-10-31', name: 'Herbstferien' },
+        { start: year + '-12-23', end: (year + 1) + '-01-06', name: 'Weihnachtsferien' },
+      ],
+      parentalConsent: {
+        'mia-tutoring': { job: true, hours: true, wage: true, commute: true, signedOn: (year - 1) + '-09-01' },
+        'mia-bakery': { job: true, hours: false, wage: true, commute: true },
+      },
+      afterSchool: 'study',
+      graduationDate: (year + 2) + '-06-30',
+    },
+    jobs: [
+      {
+        id: 'mia-bakery',
+        title: 'Bäckerei Kornfeld',
+        type: 'mini-job',
+        wage: 11,
+        startDate: (year - 1) + '-09-01',
+        industry: '47',
+        skillLevel: 1,
+        company: 'Bäckerei Kornfeld',
+        city: 'Münster',
+        presetId: 'preset-33',
+        tags: ['bakery', 'retail'],
+      },
+      {
+        id: 'mia-tutoring',
+        title: 'Nachhilfe Mathe',
+        type: 'mini-job',
+        wage: 12,
+        startDate: (year - 1) + '-09-01',
+        industry: '85',
+        skillLevel: 2,
+        city: 'Münster',
+        presetId: 'preset-14',
+        tags: ['lightWork'],
+      },
+      {
+        id: 'mia-icecream',
+        title: 'Eisdiele Venezia',
+        type: 'short-term',
+        wage: 12.5,
+        startDate: summerStart,
+        endDate: summerEnd,
+        industry: '56',
+        skillLevel: 1,
+        company: 'Eisdiele Venezia',
+        city: 'Münster',
+        tags: ['gastronomy'],
+      },
+    ],
+    shifts,
+    onboarded: true,
+    language: 'de',
+    darkMode: false,
+    isPremium: false,
+    dismissedRecommendations: [],
+    peerOptIn: false,
+    example: 'mia',
+    calendars: [],
+    pendingImports: [],
+    payments: [],
+  };
+}
+
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (!('indexedDB' in globalThis)) {
@@ -339,7 +501,7 @@ export function normalizeState(value: unknown): AppState | null {
       : [],
     peerOptIn: Boolean(candidate.peerOptIn),
     peerToken: typeof candidate.peerToken === 'string' ? candidate.peerToken : undefined,
-    example: candidate.example === 'standard' || candidate.example === 'lena' ? candidate.example : undefined,
+    example: candidate.example === 'standard' || candidate.example === 'lena' || candidate.example === 'mia' ? candidate.example : undefined,
     calendars: Array.isArray(candidate.calendars)
       ? candidate.calendars.filter((item): item is CalendarSource =>
         Boolean(item) && typeof item.id === 'string' && typeof item.name === 'string' && (item.kind === 'url' || item.kind === 'file'))

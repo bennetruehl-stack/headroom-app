@@ -6,6 +6,7 @@ import type { Job, Profile, Shift } from '../../types';
 import { jobTagFindings, tagsForJob } from '../jobTags';
 import {
   BREAK_RULES,
+  CHILD_AGE_LIMIT,
   CHILD_MAX_HOURS_PER_DAY,
   CHILD_MAX_HOURS_PER_DAY_AGRICULTURE,
   CHILD_WORK_WINDOW,
@@ -212,13 +213,17 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
     if (group === 'forbidden' || group === 'none') continue;
     const total = entries.reduce((sum, day) => sum + day.hours, 0);
     const age = ageOn(profile, date);
+    // Ab 15 gelten die Kinderregeln nur wegen der Vollzeitschulpflicht. Das sagt die Meldung dazu.
+    const why = age >= CHILD_AGE_LIMIT.value
+      ? { de: 'Weil du noch vollzeitschulpflichtig bist, gelten außerhalb der Ferien die Kinderregeln. ', en: 'Because you still have to attend school full time, the child rules apply outside the holidays. ' }
+      : { de: '', en: '' };
     if (group === 'child') {
       const agriculture = entries.every((day) => tagsForJob(day.job).includes('agriculture'));
       const cap = agriculture ? CHILD_MAX_HOURS_PER_DAY_AGRICULTURE : CHILD_MAX_HOURS_PER_DAY;
       if (total > cap.value) {
         add('childDailyHours', 'error', cap, entries,
-          'Am ' + dayLabel(date) + ' sind es ' + fmt(total) + ' Stunden. Erlaubt sind höchstens ' + cap.value + '.',
-          'On ' + date + ' it’s ' + fmtEn(total) + ' hours. At most ' + cap.value + ' are allowed.', date);
+          why.de + 'Am ' + dayLabel(date) + ' sind es ' + fmt(total) + ' Stunden. Erlaubt sind höchstens ' + cap.value + '.',
+          why.en + 'On ' + date + ' it’s ' + fmtEn(total) + ' hours. At most ' + cap.value + ' are allowed.', date);
       }
       const windowStart = toMinutes(CHILD_WORK_WINDOW.value.from);
       const windowEnd = toMinutes(CHILD_WORK_WINDOW.value.to);
@@ -227,8 +232,8 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
         const base = dayNumber(date) * 1440;
         if (day.start < base + windowStart || day.end > base + windowEnd) {
           add('childTimeWindow', 'error', CHILD_WORK_WINDOW, [day],
-            'Deine Schicht am ' + dayLabel(date) + ' liegt außerhalb von 8 bis 18 Uhr.',
-            'Your shift on ' + date + ' is outside 8 am to 6 pm.', date);
+            why.de + 'Deine Schicht am ' + dayLabel(date) + ' liegt außerhalb von 8 bis 18 Uhr.',
+            why.en + 'Your shift on ' + date + ' is outside 8 am to 6 pm.', date);
         }
       }
     } else {
@@ -251,8 +256,8 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
           'Your shift on ' + date + ' overlaps your school hours.', date);
       } else if (collision === 'before' && group === 'child') {
         add('beforeSchool', 'error', { lawRef: '§ 5 Abs. 3 JArbSchG', url: CHILD_MAX_HOURS_PER_DAY.url }, [day],
-          'Am ' + dayLabel(date) + ' arbeitest du vor dem Unterricht. Das ist nicht erlaubt.',
-          'On ' + date + ' you work before school. That isn’t allowed.', date);
+          why.de + 'Am ' + dayLabel(date) + ' arbeitest du vor dem Unterricht. Das ist nicht erlaubt.',
+          why.en + 'On ' + date + ' you work before school. That isn’t allowed.', date);
       }
     }
     // Wochenende (§§ 16, 17 gelten über § 5 Abs. 3 auch für Kinder)

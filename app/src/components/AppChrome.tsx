@@ -1,4 +1,5 @@
 import type { Screen } from '../app/types';
+import { BrandLogo } from './BrandLogo';
 import { t, type Language } from '../i18n/translations';
 
 export function AppHeader({
@@ -13,7 +14,7 @@ export function AppHeader({
   return (
     <header className="app-header">
       <button className="brand-mark" type="button" onClick={onHome} aria-label={t(language, 'brand')}>
-        <span className="brand-symbol" aria-hidden="true">h<span>·</span></span>
+        <BrandLogo />
         <span className="brand-word">{t(language, 'brand')}</span>
       </button>
       <label className="language-select">

@@ -209,6 +209,9 @@ export function Onboarding({
           <button className="button button-quiet button-wide" type="button" onClick={() => onExample('lena')}>
             <span>{t(language, 'exampleLena')}</span><span aria-hidden="true">→</span>
           </button>
+          <button className="button button-quiet button-wide" type="button" onClick={() => onExample('mia')}>
+            <span>{t(language, 'exampleMia')}</span><span aria-hidden="true">→</span>
+          </button>
         </div>
       </section>
     </section>

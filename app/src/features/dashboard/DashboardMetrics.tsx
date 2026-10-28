@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, multipleMiniJobsOverCap, paymentTotal, usableLimitValue, type Limit, type MonthlyLimitCheck, type Shift } from '@headroom/core';
+import { activeLimits, annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, multipleMiniJobsOverCap, paymentTotal, usableLimitValue, type Limit, type MonthlyLimitCheck, type Shift } from '@headroom/core';
 import type { DashboardPeriod, Screen } from '../../app/types';
 import { AnimatedMoney } from '../../components/AnimatedMoney';
 import { ProgressBar } from '../../components/ProgressBar';
@@ -69,6 +69,8 @@ export function DashboardMetrics({
   const noLimitsForYear = limitsForYear(year).length === 0;
   const annualMiniRecord = limitsForYear(year).find((limit) => limit.id === 'miniJobYearly');
   const taxLimitRecord = limitsForYear(year).find((limit) => limit.id === 'incomeTaxThreshold');
+  // Steuer-Orientierung nur, wenn sie für den Status gilt (z. B. nicht für Schüler:innen mit Minijob).
+  const taxRelevant = activeLimits(data.profile, year).some((limit) => limit.id === 'incomeTaxThreshold');
   const shortTermRecord = limitsForYear(year).find((limit) => limit.id === 'shortTermEmployment');
   // Ohne Einmalzahlungen: Die Warnung ist eine feste Aussage, Einmalzahlungen verteilt das Recht aufs Jahr.
   const multipleOver = multipleMiniJobsOverCap(data.shifts, data.jobs, month, miniMonthCap);
@@ -236,7 +238,7 @@ export function DashboardMetrics({
             <summary>{t(language, 'projectionMethod').split('.')[0]}</summary>
             <p>{t(language, 'projectionMethod')}</p>
           </details>
-          <div className="tax-reference">
+          {taxRelevant && <div className="tax-reference">
             <div className="tax-reference-head">
               <strong>{t(language, 'approximateTaxThreshold')}</strong>
               <span className="tax-reference-value">
@@ -246,7 +248,7 @@ export function DashboardMetrics({
             </div>
             <p>{t(language, 'taxThresholdNote')}</p>
             {taxLimitRecord && <SourceStamp limit={taxLimitRecord} language={language} />}
-          </div>
+          </div>}
           <div className="annual-breakdown">
             <div><span>{t(language, 'actualSoFar')}</span><strong>{money(annualMiniBreakdown.actual, language)}</strong></div>
             <div><span>{t(language, 'planned')}</span><strong>{money(annualMiniBreakdown.planned, language)}</strong></div>

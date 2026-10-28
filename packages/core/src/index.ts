@@ -2,6 +2,7 @@ import { jobPresets } from '../data/jobPresets';
 import { availableLimitYears, limits, limitsForYear, miniJobCapFormula } from '../data/limits';
 import { consentAgeRule } from '../data/privacy';
 import { roleLayouts, roleTier } from '../data/roles';
+import { MINIMUM_WAGE_EXEMPT_UNDER_AGE } from './rules/legalConstants';
 import { PROFILE_STATUSES, type Job, type Limit, type OneTimePayment, type Profile, type ProfileStatus, type RiskStatus, type Shift } from './types';
 
 export * from './types';
@@ -70,10 +71,29 @@ export function activeLimits(profile: Profile, year = new Date().getFullYear()):
         return true;
       case 'youthWorkProtection':
         return ageBoundary !== undefined && profile.age < Number(ageBoundary);
+      case 'minimumWage':
+        // § 22 Abs. 2 MiLoG: unter 18 ohne abgeschlossene Ausbildung gilt der Mindestlohn nicht.
+        return minimumWageApplies(profile);
       default:
         return true;
     }
   });
+}
+
+/** Gilt der gesetzliche Mindestlohn für dieses Profil? (§ 22 Abs. 2 MiLoG) */
+export function minimumWageApplies(profile: Pick<Profile, 'age' | 'completedVocationalTraining'>): boolean {
+  return profile.age >= MINIMUM_WAGE_EXEMPT_UNDER_AGE.value || Boolean(profile.completedVocationalTraining);
+}
+
+/**
+ * Stundenlohn für Schätzungen wie „etwa 33 Stunden“: der Mindestlohn, wenn er gilt.
+ * Sonst (unter 18) der Durchschnitt der eigenen Minijob-Löhne im Jahr, ersatzweise aller Jobs.
+ */
+export function referenceHourlyWage(profile: Profile, jobs: Job[], year: number): number | null {
+  if (minimumWageApplies(profile)) return usableLimitValue('minimumWage', year);
+  const inYear = jobs.filter((job) => job.wage > 0 && job.startDate <= year + '-12-31' && (!job.endDate || job.endDate >= year + '-01-01'));
+  const pool = inYear.some((job) => job.type === 'mini-job') ? inYear.filter((job) => job.type === 'mini-job') : inYear;
+  return pool.length ? pool.reduce((sum, job) => sum + job.wage, 0) / pool.length : null;
 }
 
 export function earnings(shift: Shift, job: Job): number {

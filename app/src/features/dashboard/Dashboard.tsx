@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { activeLimits, annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, roleTier, shortDays, usableLimitValue, type Limit, type MonthlyLimitCheck, type Profile, type Shift } from '@headroom/core';
+import { activeLimits, annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, referenceHourlyWage, roleTier, shortDays, usableLimitValue, type Limit, type MonthlyLimitCheck, type Profile, type Shift } from '@headroom/core';
 import type { DashboardPeriod, Screen } from '../../app/types';
 import type { FeatureName } from '../../config/features';
 import { t, type Language, type MessageKey } from '../../i18n/translations';
@@ -48,10 +48,12 @@ export function Dashboard({
     null,
   );
 
+  // Unter 18 gilt der Mindestlohn nicht: Stunden dann mit dem eigenen Lohn schätzen.
+  const hourlyWage = referenceHourlyWage(data.profile, data.jobs, year);
   const miniMonthly = monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', month, data.payments);
   const monthSummary = strictest
-    ? monthlySummary(strictest.value.total, strictest.value.cap, usableLimitValue('minimumWage', year))
-    : monthlySummary(miniMonthly, usableLimitValue('miniJobMonthly', year), usableLimitValue('minimumWage', year));
+    ? monthlySummary(strictest.value.total, strictest.value.cap, hourlyWage)
+    : monthlySummary(miniMonthly, usableLimitValue('miniJobMonthly', year), hourlyWage);
   const annualMiniBreakdown = annualProjectionBreakdown(
     data.shifts,
     data.jobs,
@@ -92,7 +94,7 @@ export function Dashboard({
             <time className="date-stamp" dateTime={today}>{dateText(today, language)}</time>
             {data.example && (
               <span className="badge-demo">
-                {t(language, data.example === 'lena' ? 'exampleBadgeLena' : 'exampleBadge')}
+                {t(language, data.example === 'lena' ? 'exampleBadgeLena' : data.example === 'mia' ? 'exampleBadgeMia' : 'exampleBadge')}
               </span>
             )}
           </div>

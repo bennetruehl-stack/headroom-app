@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { basicIncomeView, medicalExamStatus, minimumWageAssessment, shortTermProfessionalRisk, taxRefundHint, type Job, type Profile, type Shift } from './index';
+import { activeLimits, basicIncomeView, medicalExamStatus, referenceHourlyWage, minimumWageAssessment, shortTermProfessionalRisk, taxRefundHint, type Job, type Profile, type Shift } from './index';
 
 const teen: Profile = { status: 'Pupil', age: 16, birthDate: '2010-03-15', familyInsured: true, bafoeg: false };
 
@@ -94,5 +94,27 @@ describe('Erstuntersuchung (§ 32 JArbSchG)', () => {
   it('gilt nicht unter 15 oder ab 18', () => {
     expect(medicalExamStatus({ ...teen, birthDate: '2012-01-01' }, base)).toBeNull();
     expect(medicalExamStatus({ ...teen, birthDate: '2008-01-01' }, base)).toBeNull();
+  });
+});
+
+describe('Grenzen für unter 18', () => {
+  it('führt den Mindestlohn unter 18 ohne Ausbildung nicht als geltende Grenze', () => {
+    const ids = (profile: Profile) => activeLimits(profile, 2026).map((limit) => limit.id);
+    expect(ids(teen)).not.toContain('minimumWage');
+    expect(ids({ ...teen, completedVocationalTraining: true })).toContain('minimumWage');
+    expect(ids({ ...teen, age: 18 })).toContain('minimumWage');
+    expect(ids(teen)).toEqual(expect.arrayContaining(['miniJobMonthly', 'familyInsurance', 'youthWorkProtection', 'shortTermEmployment']));
+    expect(ids(teen)).not.toContain('incomeTaxThreshold');
+  });
+
+  it('schätzt Stunden unter 18 mit dem eigenen Minijob-Lohn statt dem Mindestlohn', () => {
+    const jobs: Job[] = [
+      { id: 'a', title: 'Bäckerei', type: 'mini-job', wage: 11, startDate: '2025-09-01' },
+      { id: 'b', title: 'Nachhilfe', type: 'mini-job', wage: 12, startDate: '2025-09-01' },
+      { id: 'c', title: 'Eisdiele', type: 'short-term', wage: 12.5, startDate: '2026-07-13', endDate: '2026-08-25' },
+    ];
+    expect(referenceHourlyWage(teen, jobs, 2026)).toBe(11.5);
+    expect(referenceHourlyWage({ ...teen, age: 20 }, jobs, 2026)).toBe(13.9);
+    expect(referenceHourlyWage(teen, [], 2026)).toBeNull();
   });
 });

@@ -19,7 +19,7 @@ import { t, type Language } from './i18n/translations';
 import { getAdvancedMode, getFeatureFlags } from './lib/flags';
 import { CalendarFeedError, fetchCalendarFeed, syncDue, syncFromIcs } from './lib/shiftImport';
 import { localToday } from './lib/format';
-import { clearLocalState, createDemoState, createLenaState, loadState, saveState, type AppState } from './lib/storage';
+import { clearLocalState, createDemoState, createLenaState, createMiaState, loadState, saveState, type AppState } from './lib/storage';
 
 // Seltener genutzte Bereiche werden erst beim Öffnen geladen.
 const JobBoardPage = lazy(() => import('./features/advanced/JobBoardPage').then((module) => ({ default: module.JobBoardPage })));
@@ -173,7 +173,7 @@ function App() {
             }}
             onReadLimits={() => setPage('Limits')}
             onExample={(example) => {
-              const fresh = example === 'lena' ? createLenaState() : createDemoState();
+              const fresh = example === 'lena' ? createLenaState() : example === 'mia' ? createMiaState() : createDemoState();
               setData({ ...fresh, language: data.language, darkMode: data.darkMode, onboarded: true });
               setPage('Dashboard');
             }}
