@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { activeLimits, annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, roleTier, shortDays, usableLimitValue, type Limit, type MonthlyLimitCheck, type Shift } from '@headroom/core';
+import { activeLimits, annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, roleTier, shortDays, usableLimitValue, type Limit, type MonthlyLimitCheck, type Profile, type Shift } from '@headroom/core';
 import type { DashboardPeriod, Screen } from '../../app/types';
 import type { FeatureName } from '../../config/features';
 import { t, type Language, type MessageKey } from '../../i18n/translations';
@@ -7,6 +7,7 @@ import { dateText, localToday } from '../../lib/format';
 import { calculateAnnualProjection, getAgeBoundary, monthlyAmountForLimit } from '../../lib/limitText';
 import type { AppState } from '../../lib/storage';
 import { DashboardMetrics } from './DashboardMetrics';
+import { TransitionNotices } from '../youth/TransitionNotices';
 
 export function Dashboard({
   data,
@@ -17,6 +18,7 @@ export function Dashboard({
   features,
   syncNotice,
   onDismissSync,
+  onProfile,
 }: {
   data: AppState;
   language: Language;
@@ -26,6 +28,7 @@ export function Dashboard({
   features: Record<FeatureName, boolean>;
   syncNotice: string;
   onDismissSync: () => void;
+  onProfile: (profile: Profile) => void;
 }) {
   const today = localToday();
   const month = today.slice(0, 7);
@@ -95,6 +98,8 @@ export function Dashboard({
           </div>
         </div>
       </section>
+
+      <TransitionNotices profile={data.profile} today={today} language={language} onProfile={onProfile} />
 
       {(syncNotice || data.pendingImports.length > 0) && (
         <section className={'notice import-pending ' + (data.pendingImports.length ? 'notice-amber' : 'notice-lime')} role="status">

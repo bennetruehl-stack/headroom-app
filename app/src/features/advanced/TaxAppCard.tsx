@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { annualMiniProjection, consentAgeRule, limitsForYear, monthlyLimitCheck, usableLimitValue } from '@headroom/core';
+import { annualMiniProjection, consentAgeRule, limitsForYear, monthlyLimitCheck, taxRefundHint, usableLimitValue } from '@headroom/core';
 import { t, type Language } from '../../i18n/translations';
 import { localToday, money } from '../../lib/format';
 import type { AppState } from '../../lib/storage';
@@ -20,13 +20,17 @@ function dismissedMonth(): string {
  * sobald der Minijob-Verdienst über einer geprüften Grenze liegt. Weggeklickt bleibt er
  * nur für den laufenden Monat weg.
  */
-export function TaxAppCard({ data, language }: { data: AppState; language: Language }) {
+export function TaxAppCard({ data, language, partners = true }: { data: AppState; language: Language; partners?: boolean }) {
   const today = localToday();
   const month = today.slice(0, 7);
   const year = Number(today.slice(0, 4));
   const [hiddenFor, setHiddenFor] = useState(dismissedMonth);
 
-  if (data.profile.age < consentAgeRule.minimumAge || hiddenFor === month) return null;
+  // Erstattungshinweis: unabhängig von Partnern und Alter, ohne Werbung, nur mit ELSTER.
+  const refund = taxRefundHint(data.jobs, data.shifts, data.payments, year, today);
+  if (refund?.likelyRefund) return <TaxRefundCard language={language} projected={refund.projected} allowance={refund.basicAllowance} years={refund.yearsBack} />;
+
+  if (!partners || data.profile.age < consentAgeRule.minimumAge || hiddenFor === month) return null;
 
   const monthlyLimit = limitsForYear(year).find((limit) => limit.id === 'miniJobMonthly');
   const monthly = monthlyLimit ? monthlyLimitCheck(monthlyLimit, data.shifts, data.jobs, month, year, data.payments) : null;
@@ -89,6 +93,34 @@ export function TaxAppCard({ data, language }: { data: AppState; language: Langu
         <span className="badge-demo">{t(language, 'partnerBadge')}</span>
         {t(language, 'taxCheckNote')}
       </p>
+    </section>
+  );
+}
+
+function TaxRefundCard({ language, projected, allowance, years }: { language: Language; projected: number; allowance: number; years: number }) {
+  const elster = demoPartners.find((partner) => partner.name === 'ELSTER');
+  return (
+    <section className="surface tax-check tax-refund" aria-labelledby="tax-refund-title">
+      <div className="tax-check-head">
+        <span className="tax-check-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3v12M7 10l5 5 5-5" />
+            <path d="M5 20h14" />
+          </svg>
+        </span>
+        <div className="tax-check-heading">
+          <span className="eyebrow">{t(language, 'taxCheckKicker')}</span>
+          <h2 id="tax-refund-title">{t(language, 'taxRefundTitle')}</h2>
+        </div>
+      </div>
+      <p className="tax-check-text">{t(language, 'taxRefundText', { projected: money(projected, language), allowance: money(allowance, language) })}</p>
+      <p className="tax-check-text">{t(language, 'taxRefundYears', { years })}</p>
+      {elster && (
+        <div className="tax-check-actions">
+          <a className="button button-quiet" href={elster.url} target="_blank" rel="noreferrer">{t(language, 'elsterFree')}</a>
+        </div>
+      )}
+      <p className="tax-check-note">{t(language, 'youthNotAdvice')}</p>
     </section>
   );
 }

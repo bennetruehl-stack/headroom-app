@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { dateKey, earnings, hoursInWeek, isInLecturePeriod, mondayOf, statusFor, usableLimitValue, type Shift } from '@headroom/core';
+import { dateKey, earnings, hoursInWeek, isInLecturePeriod, mondayOf, schoolCollision, statusFor, usableLimitValue, type Shift } from '@headroom/core';
 import { StatusBadge } from '../../components/StatusBadge';
 import { t, type Language } from '../../i18n/translations';
 import { localToday, money } from '../../lib/format';
@@ -119,11 +119,13 @@ export function WeekCalendar({
                 {dayShifts.map((shift) => {
                   const job = jobById.get(shift.jobId);
                   const id = shiftKey(shift);
+                  // Schulzeit-Kollision nach Stundenplan und Ferien aus dem Profil.
+                  const duringSchool = schoolCollision(data.profile, shift) === 'during';
                   return (
                     <button
                       key={id}
                       type="button"
-                      className={'week-shift' + (shift.planned ? ' is-planned' : '') + (editing === id ? ' is-editing' : '')}
+                      className={'week-shift' + (shift.planned ? ' is-planned' : '') + (editing === id ? ' is-editing' : '') + (duringSchool ? ' is-school-collision' : '')}
                       aria-expanded={editing === id}
                       onClick={() => setEditing(editing === id ? null : id)}
                     >
@@ -134,6 +136,7 @@ export function WeekCalendar({
                         {money(job ? earnings(shift, job) : 0, language)}
                         {shift.planned && <> · {t(language, 'planned')}</>}
                       </span>
+                      {duringSchool && <span className="week-shift-flag">{t(language, 'schoolCollisionLabel')}</span>}
                     </button>
                   );
                 })}

@@ -7,12 +7,16 @@ export function MorePage({
   language,
   features,
   onNavigate,
+  studentMode = false,
 }: {
   language: Language;
   features: Record<FeatureName, boolean>;
   onNavigate: (screen: Screen) => void;
+  /** Schüler-Modus: Eltern-Bereich oben anzeigen. */
+  studentMode?: boolean;
 }) {
   const entries: { screen: Screen; title: MessageKey; description: MessageKey; visible?: boolean }[] = [
+    { screen: 'Parents', title: 'parentsTitle', description: 'descParents', visible: studentMode },
     { screen: 'Import', title: 'importTitle', description: 'descImport' },
     { screen: 'Trends', title: 'trends', description: 'descTrends' },
     { screen: 'WageCheck', title: 'wageCheck', description: 'descWage' },

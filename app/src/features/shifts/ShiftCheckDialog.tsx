@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { activeLimits, annualMiniProjection, inputRules, validateNumber, hoursInWeek, isInLecturePeriod, limitsForYear, monthlyIncomeForLimit, monthlyLimitCheck, shiftCheck, shortDays, usableLimitValue, workingHoursCheck, workingStudent26Weeks, workingStudentReferenceDate, type Shift } from '@headroom/core';
+import { activeLimits, annualMiniProjection, checkYouthLabor, holidayJobDays, shiftId, youthCheckRange, youthLaborApplies, inputRules, validateNumber, hoursInWeek, isInLecturePeriod, limitsForYear, monthlyIncomeForLimit, monthlyLimitCheck, shiftCheck, shortDays, usableLimitValue, workingHoursCheck, workingStudent26Weeks, workingStudentReferenceDate, type Shift } from '@headroom/core';
+import { ProgressBar } from '../../components/ProgressBar';
 import { SourceStamp } from '../../components/SourceStamp';
+import { ViolationList } from '../youth/ViolationList';
 import { t, type Language } from '../../i18n/translations';
-import { dateText, localToday, money, prefersReducedMotion } from '../../lib/format';
+import { dateText, hoursFromTimes, localToday, money, prefersReducedMotion } from '../../lib/format';
 import { limitName } from '../../lib/limitText';
 import { numberError } from '../../lib/inputErrors';
 import { useDialogFocus } from '../../lib/useDialogFocus';
@@ -35,13 +37,22 @@ export function ShiftCheckDialog({
   const [jobId, setJobId] = useState(data.jobs[0]?.id ?? '');
   const [hours, setHours] = useState('');
   const [date, setDate] = useState(localToday());
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [breakStart, setBreakStart] = useState('');
+  const [breakEnd, setBreakEnd] = useState('');
+  const youth = youthLaborApplies(data.profile, date);
   const job = data.jobs.find((item) => item.id === jobId);
   const year = Number(date.slice(0, 4));
   const month = date.slice(0, 7);
   // Leere Eingabe heißt 0 Stunden; alles andere wird zentral und lokalisiert geprüft.
   const hoursResult = hours.trim() ? validateNumber(hours, inputRules.shiftHours) : { ok: true as const, value: 0 };
   const hoursMessage = numberError(hoursResult, t(language, 'hoursWorked'), language);
-  const duration = hoursResult.ok ? hoursResult.value ?? 0 : 0;
+  const timed = youth && startTime && endTime;
+  const breaks = timed && breakStart && breakEnd ? [{ start: breakStart, end: breakEnd }] : undefined;
+  const duration = timed
+    ? Math.max(0, hoursFromTimes(startTime, endTime) - (breaks ? hoursFromTimes(breakStart, breakEnd) : 0))
+    : hoursResult.ok ? hoursResult.value ?? 0 : 0;
   const amount = job ? duration * job.wage * (1 + Math.max(0, job.surcharges ?? 0)) : 0;
   const miniTotal = monthlyIncomeForLimit(data.shifts, data.jobs, 'miniJobMonthly', month, data.payments);
   const miniCap = usableLimitValue('miniJobMonthly', year);
@@ -56,9 +67,13 @@ export function ShiftCheckDialog({
   const annualMiniRecord = limitsForYear(year).find((limit) => limit.id === 'miniJobYearly');
   const annualMiniCap = usableLimitValue('miniJobYearly', year);
   const projectedShift: Shift = {
+    id: 'shift-check-preview',
     jobId,
     date,
     hours: duration,
+    startTime: timed ? startTime : undefined,
+    endTime: timed ? endTime : undefined,
+    breaks,
     planned: true,
     surchargeAmount: job ? duration * job.wage * Math.max(0, job.surcharges ?? 0) : 0,
   };
@@ -84,6 +99,15 @@ export function ShiftCheckDialog({
   const weeklyLimitRecord = activeLimits(data.profile, year).find((limit) => limit.id === 'workingStudentHours');
   const miniMonthRecord = limitsForYear(year).find((limit) => limit.id === 'miniJobMonthly');
   const shortTermRecord = limitsForYear(year).find((limit) => limit.id === 'shortTermEmployment');
+  // Jugendarbeitsschutz: immer Monat plus angeschnittene Wochen prüfen, weil Wochen-, Ruhezeit-
+  // und Wochenendregeln mehrere Schichten betreffen.
+  const youthViolations = youth && job && duration > 0
+    ? checkYouthLabor({ profile: data.profile, jobs: data.jobs, shifts: withShift, ...youthCheckRange(date) })
+    : [];
+  const previewId = shiftId(projectedShift);
+  const forThisShift = youthViolations.filter((item) => item.shiftIds.includes(previewId));
+  const elsewhere = youthViolations.filter((item) => !item.shiftIds.includes(previewId) && item.severity !== 'info');
+  const holidayUsage = youth ? holidayJobDays(data.profile, withShift, data.jobs, year) : null;
   const unverifiedActiveLimits = activeLimits(data.profile, year).filter((limit) => !limit.verified || limit.value === null);
 
   return (
@@ -104,15 +128,51 @@ export function ShiftCheckDialog({
             <span>{t(language, 'shiftDate')}</span>
             <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
           </label>
-          <label className="field">
+          {youth && (
+            <div className="form-grid two-columns">
+              <label className="field"><span>{t(language, 'startTime')}</span><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
+              <label className="field"><span>{t(language, 'endTime')}</span><input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} /></label>
+              {startTime && endTime && (
+                <>
+                  <label className="field"><span>{t(language, 'breakStart')}</span><input type="time" value={breakStart} onChange={(event) => setBreakStart(event.target.value)} /></label>
+                  <label className="field"><span>{t(language, 'breakEnd')}</span><input type="time" value={breakEnd} onChange={(event) => setBreakEnd(event.target.value)} /></label>
+                </>
+              )}
+              <small className="field-hint wide-hint">{t(language, 'youthTimesForCheck')}</small>
+            </div>
+          )}
+          {!timed && <label className="field">
             <span>{t(language, 'hoursWorked')}</span>
             <input type="text" inputMode="decimal" autoComplete="off" value={hours} onChange={(event) => setHours(event.target.value)} aria-invalid={Boolean(hoursMessage) || undefined} aria-describedby={hoursMessage ? 'shift-check-hours-error' : undefined} />
             {hoursMessage && <small id="shift-check-hours-error" className="form-error" role="alert">{hoursMessage}</small>}
-          </label>
+          </label>}
         </div>
         {job && (
           <div className="what-if-results">
             <div className="what-if-total"><span>{t(language, 'shiftEarnings')}</span><strong>{money(amount, language)}</strong></div>
+            {youth && duration > 0 && (
+              <section className="youth-check" aria-label={t(language, 'youthCheckTitle')}>
+                <h3>{t(language, 'youthCheckTitle')}</h3>
+                {forThisShift.length === 0 && elsewhere.length === 0
+                  ? <div className="result-line result-safe"><span>{t(language, 'youthAllGood')}</span></div>
+                  : <ViolationList violations={forThisShift} language={language} />}
+                {elsewhere.length > 0 && (
+                  <>
+                    <p className="eyebrow">{t(language, 'youthAlsoThisMonth')}</p>
+                    <ViolationList violations={elsewhere} language={language} />
+                  </>
+                )}
+                {holidayUsage?.applies && (
+                  <div className={'result-line ' + (holidayUsage.used > holidayUsage.limit ? 'result-over' : 'result-safe')}>
+                    <strong>{t(language, 'holidayJobTitle')}</strong>
+                    <span>{t(language, 'holidayJobRow', { used: holidayUsage.used, limit: holidayUsage.limit })}</span>
+                    <ProgressBar ratio={holidayUsage.ratio} label={t(language, 'holidayJobTitle')} />
+                    <small>{holidayUsage.lawRef}</small>
+                  </div>
+                )}
+                <small className="muted">{t(language, 'youthNotAdvice')}</small>
+              </section>
+            )}
             {isMini && result && miniCap !== null && (
               <div className={'result-line ' + (result.over ? 'result-over' : 'result-safe')}>
                 <strong>{miniMonthRecord ? limitName(miniMonthRecord, language) : t(language, 'miniJobCap')}</strong>

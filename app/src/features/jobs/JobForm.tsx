@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { companyPlausibility, inputRules, latestKnownLimitValue, limitsForYear, miniJobRoomBesideOthers, validateDate, validateDateRange, validateNumber, type Job, type OneTimePayment, type Shift } from '@headroom/core';
+import { companyPlausibility, inputRules, latestKnownLimitValue, limitsForYear, miniJobRoomBesideOthers, validateDate, validateDateRange, validateNumber, type Job, type JobTag, type OneTimePayment, type Profile, type Shift, isStudentMode, JOB_TAG_RULES, tagsForJob, youthLaborApplies } from '@headroom/core';
 import { jobPresets } from '@headroom/core/data/jobPresets';
+import { JobTagFindings } from '../youth/JobTagFindings';
 import { employmentTypes } from '../../app/constants';
+import { visibleEmploymentType, visiblePreset } from '../../config/studentMode';
 import { t, type Language } from '../../i18n/translations';
 import { id, localToday, money } from '../../lib/format';
 import { dateError, numberError, numberInputValue } from '../../lib/inputErrors';
@@ -15,12 +17,15 @@ export function JobForm({
   payments = [],
   onSave,
   onCancel,
+  profile,
 }: {
   language: Language;
   initial?: Job;
   jobs: Job[];
   shifts: Shift[];
   payments?: OneTimePayment[];
+  /** Für den Schüler-Modus: Merkmale der Arbeit abfragen und Vorlagen markieren. */
+  profile?: Profile;
   onSave: (job: Job) => void;
   onCancel: () => void;
 }) {
@@ -42,6 +47,13 @@ export function JobForm({
   const [tips, setTips] = useState(numberInputValue(initial?.tips, language));
   const [expectedWage, setExpectedWage] = useState(numberInputValue(initial?.expectedWage, language));
   const [keywords, setKeywords] = useState((initial?.calendarKeywords ?? []).join(', '));
+  const [tags, setTags] = useState<JobTag[]>(initial ? tagsForJob(initial) : preset?.tags ?? []);
+  const [incomeTaxWithheld, setIncomeTaxWithheld] = useState(Boolean(initial?.incomeTaxWithheld));
+  const youth = profile ? youthLaborApplies(profile, localToday()) : false;
+  const studentMode = profile ? isStudentMode(profile, localToday()) : false;
+  // Vorlagen mit Merkmalen, die unter 18 verboten sind (Regeln aus dem Core, nicht aus der UI).
+  const forbiddenTags = new Set(JOB_TAG_RULES.filter((rule) => rule.severity === 'error').map((rule) => rule.tag));
+  const youthTags: JobTag[] = ['lightWork', 'pieceWork', 'hazardous', 'barNightclub', 'alcoholTobacco'];
   const [error, setError] = useState('');
   const [suggestion, setSuggestion] = useState('');
 
@@ -51,6 +63,7 @@ export function JobForm({
     setIndustry(preset.industry.wzDivision);
     setSkillLevel(preset.skillLevel);
     setType(preset.typicalEmploymentTypes[0] ?? 'mini-job');
+    setTags(preset.tags);
   }, [presetId, language]);
 
   const thisMonth = localToday().slice(0, 7);
@@ -61,6 +74,7 @@ export function JobForm({
     : null;
 
   const matches = jobPresets.filter((item) => {
+    if (!visiblePreset(item, studentMode)) return false;
     const haystack = [item.title_de, item.title_en, item.area, item.area_en].join(' ').toLocaleLowerCase();
     return haystack.includes(query.toLocaleLowerCase());
   });
@@ -114,6 +128,9 @@ export function JobForm({
       tips: tipsEnabled ? valueOf(tipsResult) ?? 0 : undefined,
       expectedWage: valueOf(expectedResult) ?? undefined,
       calendarKeywords: keywords.split(',').map((word) => word.trim()).filter(Boolean),
+      presetId: initial?.presetId ?? (initial ? undefined : presetId),
+      tags,
+      incomeTaxWithheld: incomeTaxWithheld || undefined,
     });
   };
 
@@ -131,7 +148,8 @@ export function JobForm({
           <select value={presetId} onChange={(event) => setPresetId(event.target.value)}>
             {matches.map((item) => (
               <option value={item.id} key={item.id}>
-                {(language === 'de' ? item.area : item.area_en) + ' · ' + (language === 'de' ? item.title_de : item.title_en)}
+                {(language === 'de' ? item.area : item.area_en) + ' · ' + (language === 'de' ? item.title_de : item.title_en)
+                  + (youth && item.tags.some((tag) => forbiddenTags.has(tag)) ? ' · ' + t(language, 'jobTagNotForMinors') : '')}
               </option>
             ))}
           </select>
@@ -142,7 +160,7 @@ export function JobForm({
       <label className="field">
         <span>{t(language, 'employmentType')}</span>
         <select value={type} onChange={(event) => setType(event.target.value as Job['type'])}>
-          {employmentTypes.map((item) => <option value={item.value} key={item.value}>{t(language, item.key)}</option>)}
+          {employmentTypes.filter((item) => visibleEmploymentType(item.value, studentMode) || item.value === type).map((item) => <option value={item.value} key={item.value}>{t(language, item.key)}</option>)}
         </select>
       </label>
 
@@ -227,6 +245,26 @@ export function JobForm({
         </label>
       </div>
       <p className="field-hint wide-hint">{t(language, 'tipsInfo')}</p>
+      {youth && profile && (
+        <fieldset className="wide-fieldset job-tags">
+          <legend>{t(language, 'jobTagsLabel')}</legend>
+          {youthTags.map((tag) => (
+            <label className="check-row" key={tag}>
+              <input
+                type="checkbox"
+                checked={tags.includes(tag)}
+                onChange={(event) => setTags((current) => event.target.checked ? [...current, tag] : current.filter((item) => item !== tag))}
+              />
+              <span>{t(language, ('jobTag_' + tag) as 'jobTag_lightWork')}</span>
+            </label>
+          ))}
+          <JobTagFindings job={{ id: initial?.id ?? 'draft', title, type, wage: 0, startDate, tags }} profile={profile} language={language} />
+        </fieldset>
+      )}
+      <label className="check-row">
+        <input type="checkbox" checked={incomeTaxWithheld} onChange={(event) => setIncomeTaxWithheld(event.target.checked)} />
+        <span>{t(language, 'incomeTaxWithheld')}</span>
+      </label>
       <label className="field">
         <span>{t(language, 'calendarKeywords')}</span>
         <input value={keywords} onChange={(event) => setKeywords(event.target.value)} placeholder={t(language, 'calendarKeywordsPlaceholder')} />

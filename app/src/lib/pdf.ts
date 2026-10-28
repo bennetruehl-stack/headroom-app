@@ -1,11 +1,30 @@
+// WinAnsi-Codes für Zeichen außerhalb von ASCII, die in deutschen Texten vorkommen.
+// Helvetica kennt sie mit /WinAnsiEncoding, ohne dass eine Schrift eingebettet werden muss.
+const winAnsi: Record<string, number> = {
+  'ä': 0xe4, 'ö': 0xf6, 'ü': 0xfc, 'Ä': 0xc4, 'Ö': 0xd6, 'Ü': 0xdc, 'ß': 0xdf, '€': 0x80,
+  'é': 0xe9, 'è': 0xe8, 'à': 0xe0, '§': 0xa7, '–': 0x96, '—': 0x97, '„': 0x84, '“': 0x93, '”': 0x94,
+  '‘': 0x91, '’': 0x92, '…': 0x85, '·': 0xb7, '×': 0xd7, '°': 0xb0,
+};
+
+/** Zeile als PDF-String: Klammern und Backslash escapen, Nicht-ASCII als Oktal-Escape (WinAnsi). */
+function pdfString(row: string): string {
+  let result = '';
+  for (const char of row) {
+    if (char === '\\' || char === '(' || char === ')') result += '\\' + char;
+    else if (char >= ' ' && char <= '~') result += char;
+    else if (winAnsi[char] !== undefined) result += '\\' + winAnsi[char].toString(8).padStart(3, '0');
+    else result += '?';
+  }
+  return result;
+}
 
 export function makeTextPdf(text: string): string {
-  const normalized = text
-    .replace(/€/g, ' EUR')
-    .replace(/ß/g, 'ss')
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\x20-\x7E\n]/g, '?');
+  // Zeichen ohne WinAnsi-Code (z. B. Emojis) werden zu Grundbuchstaben oder „?“.
+  const normalized = [...text.replace(/\t/g, '  ')]
+    .map((char) => (char === '\n' || (char >= ' ' && char <= '~') || winAnsi[char] !== undefined)
+      ? char
+      : char.normalize('NFKD').replace(/[\u0300-\u036f]/g, '') || '?')
+    .join('');
   const rows = normalized.split('\n').flatMap((paragraph) => {
     if (!paragraph) return [''];
     const wrapped: string[] = [];
@@ -27,13 +46,13 @@ export function makeTextPdf(text: string): string {
   const objects = [
     '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
     '2 0 obj << /Type /Pages /Kids [' + pageIds.map((id) => id + ' 0 R').join(' ') + '] /Count ' + pages.length + ' >> endobj',
-    '3 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
+    '3 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> endobj',
   ];
   pages.forEach((pageRows, index) => {
     const pageId = pageIds[index];
     const contentId = pageId + 1;
     const textCommands = pageRows.map((row) =>
-      '(' + row.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)') + ') Tj T*',
+      '(' + pdfString(row) + ') Tj T*',
     ).join('\n');
     const stream = 'BT /F1 10 Tf 48 790 Td 14 TL\n' + textCommands + '\nET';
     objects.push(

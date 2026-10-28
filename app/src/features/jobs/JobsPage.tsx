@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { JobTagFindings } from '../youth/JobTagFindings';
 import { consentAgeRule, employeeMiniJobStatus, type Job } from '@headroom/core';
 import { PageHeading } from '../../components/PageHeading';
 import type { FeatureName } from '../../config/features';
@@ -97,6 +98,7 @@ export function JobsPage({
             jobs={data.jobs}
             shifts={data.shifts}
             payments={data.payments}
+            profile={data.profile}
             onCancel={() => setEditing(null)}
             onSave={(job) => {
               onUpdate(editing === 'new'
@@ -127,6 +129,7 @@ export function JobsPage({
                 <span>{t(language, 'industry')} · {job.industry || '–'}</span>
                 <span>{jobShifts.length} {t(language, 'shiftCount')}</span>
               </div>
+              <JobTagFindings job={job} profile={data.profile} language={language} />
               {job.tipsEnabled && <p className="field-hint">{t(language, 'tipsInfo')}</p>}
               {features.osmCompanyCheck && job.company && job.city && (
                 <details className="osm-lookup">

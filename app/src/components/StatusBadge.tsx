@@ -6,9 +6,12 @@ import { statusKey } from '../lib/limitText';
 export function StatusBadge({
   status,
   language,
+  label,
 }: {
   status: RiskStatus;
   language: Language;
+  /** Eigenes Wort statt „Sicher/Knapp/Über der Grenze“, z. B. bei Regelverstößen. */
+  label?: string;
 }) {
   // Animation nur bei einem echten Wechsel, nicht bei jedem Seitenaufruf.
   const previous = useRef(status);
@@ -22,7 +25,7 @@ export function StatusBadge({
   return (
     <span key={changes} className={'status-badge status-' + status.toLowerCase() + (changes ? ' status-changed' : '')}>
       <span className="status-dot" aria-hidden="true" />
-      {t(language, statusKey(status))}
+      {label ?? t(language, statusKey(status))}
     </span>
   );
 }

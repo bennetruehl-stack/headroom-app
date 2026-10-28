@@ -1,4 +1,4 @@
-import { annualIncomeProjection, monthlyLimitCheck, type Job, type Limit, type MonthlyLimitCheck, type OneTimePayment, type RiskStatus, type Shift } from '@headroom/core';
+import { annualIncomeProjection, monthlyLimitCheck, type Job, type Limit, type MonthlyLimitCheck, type OneTimePayment, type RiskStatus, type Shift, type ShortTermRisk } from '@headroom/core';
 import { employmentTypes } from '../app/constants';
 import { t, type Language, type MessageKey } from '../i18n/translations';
 import { localToday } from './format';
@@ -85,4 +85,14 @@ export function monthlyAmountForLimit(
   payments: OneTimePayment[] = [],
 ): MonthlyLimitCheck | null {
   return monthlyLimitCheck(limit, shifts, jobs, month, year, payments);
+}
+
+/** Hinweistext zur Berufsmäßigkeit einer kurzfristigen Beschäftigung. */
+export function shortTermRiskText(risk: ShortTermRisk, language: Language, cap: string): string {
+  switch (risk) {
+    case 'noMainJob': return t(language, 'shortTermProfessionalNoMainJob');
+    case 'highEarnings': return t(language, 'shortTermProfessionalHighEarnings', { cap });
+    case 'schoolLeaverToTraining': return t(language, 'shortTermSchoolLeaverTraining', { cap });
+    case 'schoolLeaverUndecided': return t(language, 'shortTermSchoolLeaverUndecided', { cap });
+  }
 }

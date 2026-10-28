@@ -2,12 +2,18 @@ import { jobPresets } from '../data/jobPresets';
 import { availableLimitYears, limits, limitsForYear, miniJobCapFormula } from '../data/limits';
 import { consentAgeRule } from '../data/privacy';
 import { roleLayouts, roleTier } from '../data/roles';
-import type { Job, Limit, OneTimePayment, Profile, ProfileStatus, RiskStatus, Shift } from './types';
+import { PROFILE_STATUSES, type Job, type Limit, type OneTimePayment, type Profile, type ProfileStatus, type RiskStatus, type Shift } from './types';
 
 export * from './types';
 export * from './input';
 export * from './shiftImport';
 export * from './combinations';
+export * from './rules/legalConstants';
+export * from './rules/jobTags';
+export * from './rules/youthLabor';
+export * from './rules/money';
+export * from './rules/medicalExam';
+export * from './rules/transitions';
 export { availableLimitYears, consentAgeRule, jobPresets, limits, limitsForYear, miniJobCapFormula, roleLayouts, roleTier };
 export type { RoleItem, RoleLayout, RoleTier } from '../data/roles';
 
@@ -605,5 +611,5 @@ export function companyPlausibility(value: string, existing: string[] = []) {
 }
 
 export function validProfileStatus(value: string): value is ProfileStatus {
-  return ['Student', 'Working student', 'Mini-jobber', 'Employee', 'Pupil'].includes(value);
+  return (PROFILE_STATUSES as readonly string[]).includes(value);
 }

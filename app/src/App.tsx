@@ -1,10 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { consentAgeRule, type Shift } from '@headroom/core';
+import { consentAgeRule, isStudentMode, type Shift } from '@headroom/core';
 import type { Screen } from './app/types';
 import { AppFooter, AppHeader } from './components/AppChrome';
 import { Navigation } from './components/Navigation';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { advancedDefaults, defaultFeatures, effectiveFeatures, type FeatureName } from './config/features';
+import { studentModeFeatures } from './config/studentMode';
 import { PartnerPanel } from './features/advanced/PartnerPanel';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { JobsPage } from './features/jobs/JobsPage';
@@ -17,6 +18,7 @@ import { ShiftsPage } from './features/shifts/ShiftsPage';
 import { t, type Language } from './i18n/translations';
 import { getAdvancedMode, getFeatureFlags } from './lib/flags';
 import { CalendarFeedError, fetchCalendarFeed, syncDue, syncFromIcs } from './lib/shiftImport';
+import { localToday } from './lib/format';
 import { clearLocalState, createDemoState, createLenaState, loadState, saveState, type AppState } from './lib/storage';
 
 // Seltener genutzte Bereiche werden erst beim Öffnen geladen.
@@ -28,6 +30,7 @@ const TrendsPage = lazy(() => import('./features/more/TrendsPage').then((module)
 const WageCheckPage = lazy(() => import('./features/more/WageCheckPage').then((module) => ({ default: module.WageCheckPage })));
 const PrivacyPage = lazy(() => import('./features/legal/LegalPages').then((module) => ({ default: module.PrivacyPage })));
 const ImprintPage = lazy(() => import('./features/legal/LegalPages').then((module) => ({ default: module.ImprintPage })));
+const ParentsPage = lazy(() => import('./features/youth/ParentsPage').then((module) => ({ default: module.ParentsPage })));
 const ImportPage = lazy(() => import('./import/ImportPage').then((module) => ({ default: module.ImportPage })));
 
 function App() {
@@ -39,7 +42,9 @@ function App() {
   const [featureReady, setFeatureReady] = useState(false);
   const [syncNotice, setSyncNotice] = useState('');
   // Komponenten sehen nur die wirksamen Flags: ohne Advanced-Modus ist jede Demo-Funktion aus.
-  const features = effectiveFeatures(advancedMode, flags);
+  // Im Schüler-Modus sind Werbung, Datenweitergabe und die ungeprüfte Jobbörse aus (config/studentMode.ts).
+  const studentMode = isStudentMode(data.profile, localToday());
+  const features = studentModeFeatures(effectiveFeatures(advancedMode, flags), studentMode);
   const [checkOpen, setCheckOpen] = useState(false);
   const language = data.language;
 
@@ -185,6 +190,7 @@ function App() {
             features={features}
             syncNotice={syncNotice}
             onDismissSync={() => setSyncNotice('')}
+            onProfile={(profile) => update({ profile })}
           />
         );
       case 'Shifts':
@@ -196,7 +202,7 @@ function App() {
       case 'Limits':
         return <LimitsPage language={language} profile={data.profile} />;
       case 'More':
-        return <MorePage language={language} features={features} onNavigate={setPage} />;
+        return <MorePage language={language} features={features} onNavigate={setPage} studentMode={studentMode} />;
       case 'Settings':
         return (
           <SettingsPage
@@ -253,23 +259,25 @@ function App() {
       case 'Developer':
         return advancedMode
           ? <DeveloperPage language={language} features={flags} onChange={setFeatures} />
-          : <MorePage language={language} features={features} onNavigate={setPage} />;
+          : <MorePage language={language} features={features} onNavigate={setPage} studentMode={studentMode} />;
       case 'JobBoard':
         return features.jobBoard
           ? <JobBoardPage data={data} language={language} />
-          : <MorePage language={language} features={features} onNavigate={setPage} />;
+          : <MorePage language={language} features={features} onNavigate={setPage} studentMode={studentMode} />;
       case 'PeerStats':
         return features.peerStats
           ? <PeerStatsPage data={data} language={language} onUpdate={update} />
-          : <MorePage language={language} features={features} onNavigate={setPage} />;
+          : <MorePage language={language} features={features} onNavigate={setPage} studentMode={studentMode} />;
       case 'Privacy':
         return <PrivacyPage language={language} onNavigate={setPage} backTo={data.onboarded ? 'More' : 'Onboarding'} />;
       case 'Imprint':
         return <ImprintPage language={language} onNavigate={setPage} backTo={data.onboarded ? 'More' : 'Onboarding'} />;
+      case 'Parents':
+        return <ParentsPage data={data} language={language} onProfile={(profile) => update({ profile })} />;
       case 'Premium':
         return features.premium
           ? <PremiumPage data={data} language={language} onUpdate={update} />
-          : <MorePage language={language} features={features} onNavigate={setPage} />;
+          : <MorePage language={language} features={features} onNavigate={setPage} studentMode={studentMode} />;
     }
   })();
 

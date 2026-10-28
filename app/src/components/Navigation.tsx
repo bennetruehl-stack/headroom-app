@@ -47,7 +47,7 @@ const items: { screen: keyof typeof icons; key: MessageKey }[] = [
   { screen: 'More', key: 'more' },
 ];
 
-const moreScreens: Screen[] = ['Settings', 'Trends', 'WageCheck', 'Developer', 'JobBoard', 'PeerStats', 'Premium', 'Privacy', 'Imprint'];
+const moreScreens: Screen[] = ['Settings', 'Trends', 'WageCheck', 'Developer', 'JobBoard', 'PeerStats', 'Premium', 'Privacy', 'Imprint', 'Parents'];
 
 export function Navigation({
   language,

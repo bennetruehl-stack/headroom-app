@@ -15,6 +15,7 @@ import { InformationCards } from './InformationCards';
 import { RoleLimits, roleRows } from './RoleLimits';
 import { TaxAppCard } from '../advanced/TaxAppCard';
 import { JobComboCard } from '../advanced/JobComboCard';
+import { BasicIncomeCard } from '../youth/BasicIncomeCard';
 
 export function DashboardMetrics({
   data,
@@ -181,7 +182,9 @@ export function DashboardMetrics({
             </div>
           </section>
 
-          {features.partnerRecommendations && <TaxAppCard data={data} language={language} />}
+          <TaxAppCard data={data} language={language} partners={features.partnerRecommendations} />
+
+          <BasicIncomeCard data={data} language={language} month={month} />
 
           {features.jobCombinations && <JobComboCard data={data} language={language} />}
 

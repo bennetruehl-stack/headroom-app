@@ -1,5 +1,5 @@
 import type { Job, OneTimePayment, Profile, ProfileStatus, Shift, ShiftCandidate } from '@headroom/core';
-import { isValidIsoDate, latestKnownLimitValue, ONE_TIME_PAYMENT_KINDS } from '@headroom/core';
+import { isValidIsoDate, latestKnownLimitValue, ONE_TIME_PAYMENT_KINDS, PROFILE_STATUSES } from '@headroom/core';
 import type { Language } from '../i18n/translations';
 
 export type AppState = {
@@ -296,7 +296,7 @@ function writeToIndexedDb(state: AppState): Promise<void> {
   );
 }
 
-const profileStatuses: ProfileStatus[] = ['Student', 'Working student', 'Mini-jobber', 'Employee', 'Pupil'];
+const profileStatuses: readonly ProfileStatus[] = PROFILE_STATUSES;
 const employmentTypeValues: Job['type'][] = ['mini-job', 'short-term', 'working student', 'regular'];
 
 export function normalizeState(value: unknown): AppState | null {

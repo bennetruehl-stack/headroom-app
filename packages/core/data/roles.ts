@@ -4,7 +4,7 @@
 // Die Zuordnung entscheidet nur über primär oder sekundär, nicht über richtig oder falsch.
 import type { ProfileStatus } from '../src/types';
 
-/** Limit-IDs aus limits.ts plus reine Hinweiskarten (taxClassInfo). */
+/** Limit-IDs aus limits.ts plus reine Hinweiskarten (taxClassInfo) und Zähler (holidayJobDays). */
 export type RoleItem =
   | 'miniJobMonthly'
   | 'familyInsurance'
@@ -15,7 +15,9 @@ export type RoleItem =
   | 'workingStudent26Weeks'
   | 'miniJobAlongsideMainJob'
   | 'taxClassInfo'
-  | 'youthWorkProtection';
+  | 'youthWorkProtection'
+  /** Ferienjob-Zähler (§ 5 Abs. 4 JArbSchG), keine Limit-ID. */
+  | 'holidayJobDays';
 
 export type RoleLayout = { primary: RoleItem[]; secondary: RoleItem[] };
 
@@ -37,8 +39,16 @@ export const roleLayouts: Record<ProfileStatus, RoleLayout> = {
     secondary: ['miniJobMonthly', 'shortTermEmployment'],
   },
   Pupil: {
-    primary: ['miniJobMonthly', 'youthWorkProtection', 'familyInsurance'],
+    primary: ['miniJobMonthly', 'youthWorkProtection', 'holidayJobDays', 'familyInsurance'],
     secondary: ['incomeTaxThreshold'],
+  },
+  'School leaver': {
+    primary: ['miniJobMonthly', 'shortTermEmployment', 'youthWorkProtection', 'familyInsurance'],
+    secondary: ['incomeTaxThreshold'],
+  },
+  Apprentice: {
+    primary: ['miniJobMonthly', 'youthWorkProtection', 'incomeTaxThreshold'],
+    secondary: [],
   },
 };
 

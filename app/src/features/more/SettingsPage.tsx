@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { inputRules, validateDateRange, validateNumber, type ProfileStatus } from '@headroom/core';
+import { inputRules, isStudentMode, validateDateRange, validateNumber, type ProfileStatus } from '@headroom/core';
 import { profileChoices } from '../../app/constants';
 import type { Screen } from '../../app/types';
 import { PageHeading } from '../../components/PageHeading';
 import { sanitizeFeatures, type FeatureName } from '../../config/features';
 import { t, type Language } from '../../i18n/translations';
 import { dateError, numberError } from '../../lib/inputErrors';
+import { localToday } from '../../lib/format';
+import { YouthProfileFields } from '../youth/YouthProfileFields';
+import { bafoegRelevant } from '../../config/studentMode';
 import { normalizeState, stateForExport, type AppState } from '../../lib/storage';
 
 export function SettingsPage({
@@ -112,16 +115,19 @@ export function SettingsPage({
           <input type="checkbox" checked={data.profile.familyInsured} onChange={(event) => onUpdate({ profile: { ...data.profile, familyInsured: event.target.checked } })} />
           <span>{t(language, 'familyInsured')}</span>
         </label>
-        <label className="check-row">
+        {bafoegRelevant(data.profile.status) && <label className="check-row">
           <input type="checkbox" checked={data.profile.bafoeg} onChange={(event) => onUpdate({ profile: { ...data.profile, bafoeg: event.target.checked } })} />
           <span>{t(language, 'bafoeg')}</span>
-        </label>
+        </label>}
         {data.profile.status === 'Working student' && (
           <div className="form-grid two-columns">
             <label className="field"><span>{t(language, 'lectureStart')}</span><input type="date" value={data.profile.semesterPeriods?.[0]?.start ?? ''} onChange={(event) => onUpdate({ profile: { ...data.profile, semesterPeriods: [{ start: event.target.value, end: data.profile.semesterPeriods?.[0]?.end ?? '' }] } })} /></label>
             <label className="field"><span>{t(language, 'lectureEnd')}</span><input type="date" value={data.profile.semesterPeriods?.[0]?.end ?? ''} onChange={(event) => onUpdate({ profile: { ...data.profile, semesterPeriods: [{ start: data.profile.semesterPeriods?.[0]?.start ?? '', end: event.target.value }] } })} /></label>
             {semesterMessage && <p role="alert" className="form-error wide-hint">{semesterMessage}</p>}
           </div>
+        )}
+        {(isStudentMode(data.profile, localToday()) || data.profile.status === 'School leaver') && (
+          <YouthProfileFields profile={data.profile} language={language} onChange={(profile) => onUpdate({ profile })} />
         )}
         <label className="check-row">
           <input type="checkbox" checked={data.darkMode} onChange={(event) => onUpdate({ darkMode: event.target.checked })} />

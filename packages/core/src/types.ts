@@ -4,6 +4,8 @@ export const PROFILE_STATUSES = [
   'Mini-jobber',
   'Employee',
   'Pupil',
+  'School leaver',
+  'Apprentice',
 ] as const;
 
 export type ProfileStatus = (typeof PROFILE_STATUSES)[number];
@@ -64,14 +66,96 @@ export type SemesterPeriod = {
   end: string;
 };
 
+/** Wöchentlich wiederkehrender Unterrichtsblock. weekday: 1 = Montag … 7 = Sonntag. */
+export type SchoolLesson = {
+  weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  start: string;
+  end: string;
+};
+
+/** Schulferien als Zeitraum (beide Tage einschließlich). */
+export type SchoolHoliday = {
+  start: string;
+  end: string;
+  name?: string;
+};
+
+export const BUNDESLAENDER = [
+  'BW', 'BY', 'BE', 'BB', 'HB', 'HH', 'HE', 'MV', 'NI', 'NW', 'RP', 'SL', 'SN', 'ST', 'SH', 'TH',
+] as const;
+export type Bundesland = (typeof BUNDESLAENDER)[number];
+
+/** „Was machst du nach der Schule?“ – entscheidet, ob ein Job dazwischen berufsmäßig ist. */
+export const AFTER_SCHOOL_PLANS = ['study', 'apprenticeship', 'voluntaryService', 'work', 'undecided'] as const;
+export type AfterSchoolPlan = (typeof AFTER_SCHOOL_PLANS)[number];
+
+/** Checkliste der Eltern für einen Job. Jeder Punkt ist „besprochen und einverstanden“. */
+export type ParentalConsentChecklist = {
+  job: boolean;
+  hours: boolean;
+  wage: boolean;
+  commute: boolean;
+  /** Datum, an dem die unterschriebene Einwilligung vorlag. */
+  signedOn?: string;
+};
+
 export type Profile = {
   status: ProfileStatus;
+  /** Ältere Stände kennen nur das Alter. Mit Geburtsdatum wird das Alter je Stichtag berechnet. */
   age: number;
   familyInsured: boolean;
   bafoeg: boolean;
   hasMainJob?: boolean;
   semesterPeriods?: SemesterPeriod[];
+  birthDate?: string;
+  /**
+   * Vollzeitschulpflichtig (§ 2 Abs. 3 JArbSchG). Wie lange die Vollzeitschulpflicht dauert,
+   * regelt jedes Bundesland selbst (meist 9 oder 10 Schuljahre). Deshalb fragt Headroom das ab.
+   */
+  isFullTimeSchoolObligated?: boolean;
+  bundesland?: Bundesland;
+  schoolSchedule?: SchoolLesson[];
+  schoolHolidays?: SchoolHoliday[];
+  /** Die Familie (Bedarfsgemeinschaft) bekommt Bürgergeld bzw. die Nachfolgeleistung. */
+  familyReceivesBasicIncome?: boolean;
+  /** Einwilligung der Eltern je Job-ID. */
+  parentalConsent?: Record<string, ParentalConsentChecklist>;
+  afterSchool?: AfterSchoolPlan;
+  /** Voraussichtlicher oder tatsächlicher Schulabschluss. */
+  graduationDate?: string;
+  /** Datum der ärztlichen Erstuntersuchung nach § 32 JArbSchG. */
+  medicalExamDate?: string;
+  /** Abgeschlossene Berufsausbildung (wichtig für den Mindestlohn unter 18). */
+  completedVocationalTraining?: boolean;
+  /** Bereits bestätigte oder abgelehnte Übergänge, damit sie nicht erneut erscheinen. */
+  handledTransitions?: string[];
 };
+
+/**
+ * Merkmale einer Tätigkeit, an denen Jugendarbeitsschutz-Regeln hängen.
+ * Kommen aus den Job-Vorlagen; für ältere Jobs werden sie aus dem WZ-Code abgeleitet.
+ */
+export const JOB_TAGS = [
+  'gastronomy',
+  'retail',
+  'bakery',
+  'agriculture',
+  'multiShift',
+  'showmen',
+  'hospital',
+  'household',
+  'sport',
+  'transport',
+  'pieceWork',
+  'hazardous',
+  'barNightclub',
+  'alcoholTobacco',
+  'lightWork',
+] as const;
+export type JobTag = (typeof JOB_TAGS)[number];
+
+/** Pausenblock innerhalb einer Schicht. */
+export type ShiftBreak = { start: string; end: string };
 
 export type Job = {
   id: string;
@@ -90,6 +174,12 @@ export type Job = {
   tips?: number;
   /** Stichwörter, an denen Kalendertermine oder Dienstplanzeilen diesem Job zugeordnet werden. */
   calendarKeywords?: string[];
+  /** Vorlage, aus der der Job angelegt wurde. */
+  presetId?: string;
+  /** Merkmale für den Jugendarbeitsschutz (Branche, Akkord, gefährlich …). */
+  tags?: JobTag[];
+  /** Laut Lohnabrechnung wird Lohnsteuer abgezogen. */
+  incomeTaxWithheld?: boolean;
 };
 
 export type ShiftSource = 'manual' | 'calendar' | 'photo';
@@ -113,6 +203,8 @@ export type Shift = {
   calendarId?: string;
   /** Nach dem Import von Hand bearbeitet: spätere Kalender-Syncs überschreiben die Zeiten nicht. */
   editedManually?: boolean;
+  /** Pausen in der Schicht. Fehlen sie, prüft Headroom die Pausenregel nur als Hinweis. */
+  breaks?: ShiftBreak[];
 };
 
 export type CalculationSummary = {

@@ -15,6 +15,7 @@ export type Screen =
   | 'Premium'
   | 'Import'
   | 'Privacy'
-  | 'Imprint';
+  | 'Imprint'
+  | 'Parents';
 
 export type DashboardPeriod = 'month' | 'year' | 'season';

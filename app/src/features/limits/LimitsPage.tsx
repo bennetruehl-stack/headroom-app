@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { activeLimits, availableLimitYears, limitsForYear, roleTier, type Limit, type Profile } from '@headroom/core';
+import { activeLimits, availableLimitYears, isStudentMode, limitsForYear, roleTier, type Limit, type Profile } from '@headroom/core';
 import { references } from '@headroom/core/data/references';
 import { PageHeading } from '../../components/PageHeading';
 import { t, type Language } from '../../i18n/translations';
-import { dateText } from '../../lib/format';
+import { dateText, localToday } from '../../lib/format';
+import { showLimitInStudentMode } from '../../config/studentMode';
 import { grossEquivalentNote, limitConsequence, limitName, limitSourceName, periodLabel } from '../../lib/limitText';
 
 export function LimitsPage({ language, profile }: { language: Language; profile: Profile }) {
@@ -27,7 +28,9 @@ export function LimitsPage({ language, profile }: { language: Language; profile:
   const isPrimary = (limit: Limit) =>
     active.some((item) => item.id === limit.id) && roleTier(profile.status, limit.id) === 'primary';
   const primaryLimits = shown.filter(isPrimary);
-  const otherLimits = shown.filter((limit) => !isPrimary(limit));
+  // Im Schüler-Modus fallen Grenzen weg, die für das Profil nicht gelten.
+  const studentMode = isStudentMode(profile, localToday());
+  const otherLimits = shown.filter((limit) => !isPrimary(limit) && showLimitInStudentMode(active.some((item) => item.id === limit.id), studentMode));
   const renderLimit = (limit: Limit) => (
     <article className="surface limit-card" key={limit.id + limit.validFrom}>
       <div className="limit-card-top">

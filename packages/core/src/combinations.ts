@@ -82,7 +82,12 @@ export type ComboCheck = {
   perJob?: { jobId: string; title: string; value: number }[];
 };
 
-export type ShortTermRisk = 'noMainJob' | 'highEarnings';
+/**
+ * - noMainJob / highEarnings: siehe shortTermProfessionalRisk
+ * - schoolLeaverToTraining: zwischen Schule und Ausbildung oder Freiwilligendienst – berufsmäßig
+ * - schoolLeaverUndecided: Schulabgang ohne Studienplan – kann berufsmäßig sein
+ */
+export type ShortTermRisk = 'noMainJob' | 'highEarnings' | 'schoolLeaverToTraining' | 'schoolLeaverUndecided';
 
 export type CombinationResult = {
   combos: JobCombination[];
@@ -205,6 +210,17 @@ export function shortTermProfessionalRisk(
   payments: OneTimePayment[] = [],
 ): ShortTermRisk | null {
   if (!jobsInYear(jobs, year).some((job) => job.type === 'short-term')) return null;
+  if (profile.status === 'School leaver') {
+    // Geringfügigkeits-Richtlinien: Wer zwischen Schule und Studium jobbt, ist nicht berufsmäßig
+    // beschäftigt. Zwischen Schule und Ausbildung oder Freiwilligendienst schon – das zählt aber
+    // erst, wenn der Verdienst über der Geringfügigkeitsgrenze liegt.
+    if (profile.afterSchool === 'study') return null;
+    const cap = usableLimitValue('miniJobMonthly', year);
+    if (cap === null || monthTotal(shifts, jobs, month, ['short-term'], payments) <= cap) return null;
+    return profile.afterSchool === 'apprenticeship' || profile.afterSchool === 'voluntaryService'
+      ? 'schoolLeaverToTraining'
+      : 'schoolLeaverUndecided';
+  }
   if (profile.status === 'Employee' && profile.hasMainJob === false) return 'noMainJob';
   if (profile.status === 'Mini-jobber' || profile.status === 'Employee') {
     const cap = usableLimitValue('miniJobMonthly', year);

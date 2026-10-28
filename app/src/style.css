@@ -850,6 +850,8 @@ input::placeholder {
 
 .limit-progress-list {
   display: grid;
+  /* Lange Wörter (z. B. Quellennamen) dürfen die Spalte nicht über den Rand schieben. */
+  grid-template-columns: minmax(0, 1fr);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -3612,4 +3614,175 @@ select:focus {
 .info-details > p.combo-info-note {
   color: var(--muted);
   font-size: 13px;
+}
+
+/* ── Schüler-Modus ───────────────────────────────────────────────────── */
+.result-close {
+  border-color: transparent;
+  background: var(--close-bg);
+}
+
+.youth-check {
+  display: grid;
+  gap: 10px;
+}
+
+.youth-check h3 {
+  margin: 4px 0 0;
+  font-size: 15px;
+}
+
+.youth-violations {
+  display: grid;
+  gap: 8px;
+}
+
+.youth-violation .row-explain {
+  margin-top: 4px;
+}
+
+.youth-violation .row-explain a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.youth-severity {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: 1px;
+}
+
+.youth-severity-error,
+.result-line .youth-severity-error {
+  background: var(--over);
+  color: #fff;
+}
+
+.youth-severity-warning,
+.result-line .youth-severity-warning {
+  background: var(--close);
+  color: #fff;
+}
+
+.youth-severity-info,
+.result-line .youth-severity-info {
+  background: var(--card);
+  color: var(--ink-soft);
+}
+
+.youth-profile {
+  display: grid;
+  gap: 12px;
+}
+
+.youth-list {
+  display: grid;
+  gap: 8px;
+}
+
+.youth-list-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.youth-list-row > .field:has(select) {
+  grid-column: 1 / -1;
+}
+
+.youth-list-row > .text-button {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+
+.week-shift.is-school-collision {
+  border-left-color: var(--over);
+}
+
+.week-shift-flag {
+  justify-self: start;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--over-bg);
+  color: var(--over);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.youth-wage {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.basic-income {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 18px;
+}
+
+.basic-income h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.basic-income p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.parents-page .settings-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.parents-page .settings-card h2 {
+  margin: 0;
+}
+
+.consent-job {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.wide-fieldset.consent-job legend {
+  float: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.consent-job > button {
+  justify-self: start;
+}
+
+.job-tags {
+  display: grid;
+  gap: 6px;
+}
+
+.transition-notice {
+  flex-direction: column;
+  gap: 10px;
+}
+
+.transition-notice p + p {
+  margin-top: 6px;
 }

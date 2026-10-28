@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from 'react';
 import { consentAgeRule, inputRules, validateDateRange, validateNumber, type Profile } from '@headroom/core';
 import { profileChoices } from '../../app/constants';
 import { RadioChoice } from '../../components/RadioChoice';
+import { bafoegRelevant } from '../../config/studentMode';
 import { t, type Language } from '../../i18n/translations';
 import { dateError, numberError } from '../../lib/inputErrors';
 import type { ExampleProfile } from '../../lib/storage';
@@ -74,7 +75,8 @@ export function Onboarding({
           {(draft.status === 'Student' ||
             draft.status === 'Working student' ||
             draft.status === 'Mini-jobber' ||
-            draft.status === 'Pupil') && (
+            draft.status === 'Pupil' ||
+            draft.status === 'School leaver') && (
             <fieldset className="toggle-field">
               <legend>{t(language, 'familyInsured')}</legend>
               <div className="segmented segmented-sliding" style={{ '--count': 2, '--index': draft.familyInsured ? 0 : 1 } as CSSProperties}>
@@ -98,9 +100,7 @@ export function Onboarding({
             </fieldset>
           )}
 
-          {(draft.status === 'Student' ||
-            draft.status === 'Working student' ||
-            draft.status === 'Pupil') && (
+          {bafoegRelevant(draft.status) && (
             <fieldset className="toggle-field">
               <legend>{t(language, 'bafoeg')}</legend>
               <div className="segmented segmented-sliding" style={{ '--count': 2, '--index': draft.bafoeg ? 0 : 1 } as CSSProperties}>

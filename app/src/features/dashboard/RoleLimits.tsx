@@ -1,11 +1,12 @@
-import { activeLimits, employeeMiniJobStatus, shortTermApplies, shortTermProfessionalRisk, usableLimitValue, hoursInWeek, isInLecturePeriod, roleLayouts, roleTier, statusFor, workingStudent26Weeks, workingStudentReferenceDate, type Limit, type ProfileStatus, type RiskStatus, type RoleItem } from '@headroom/core';
+import { activeLimits, checkYouthLabor, employeeMiniJobStatus, holidayJobDays, youthLaborApplies, shortTermApplies, shortTermProfessionalRisk, usableLimitValue, hoursInWeek, isInLecturePeriod, roleLayouts, roleTier, statusFor, workingStudent26Weeks, workingStudentReferenceDate, type Limit, type ProfileStatus, type RiskStatus, type RoleItem, type RuleViolation } from '@headroom/core';
 import { ProgressBar } from '../../components/ProgressBar';
 import { SourceStamp } from '../../components/SourceStamp';
 import { StatusBadge } from '../../components/StatusBadge';
 import { t, type Language } from '../../i18n/translations';
 import { dateText, money } from '../../lib/format';
-import { grossEquivalentNote, limitConsequence, limitName, limitUnavailable, monthlyAmountForLimit } from '../../lib/limitText';
+import { grossEquivalentNote, limitConsequence, limitName, limitUnavailable, monthlyAmountForLimit, shortTermRiskText } from '../../lib/limitText';
 import type { AppState } from '../../lib/storage';
+import { ViolationList } from '../youth/ViolationList';
 
 export type RoleRowData = {
   item: RoleItem;
@@ -24,6 +25,11 @@ export type RoleRowData = {
   caveat?: string;
   /** Für dieses Jahr ist kein Wert hinterlegt. */
   unavailable?: boolean;
+  /** Eigenes Statuswort (Jugendschutz: „Nicht erlaubt“, „Prüfen“, „Okay“). */
+  statusLabel?: string;
+  /** Jugendschutz-Meldungen des Monats (aufklappbar). */
+  violations?: RuleViolation[];
+  violationSummary?: string;
 };
 
 /** Baut die Zeilen für alle Rollen-Einträge, die für dieses Profil gelten. */
@@ -49,6 +55,16 @@ export function roleRows(
     : addedForCombos;
   for (const item of items) {
     const limit = find(item);
+    if (item === 'holidayJobDays') {
+      const usage = holidayJobDays(data.profile, data.shifts, data.jobs, year);
+      if (!usage.applies) continue;
+      rows.push({
+        item, title: t(language, 'holidayJobTitle'), ratio: usage.ratio, status: statusFor(usage.ratio),
+        amount: t(language, 'holidayJobRow', { used: usage.used, limit: usage.limit }),
+        caveat: t(language, 'holidayJobNote') + ' (' + usage.lawRef + ')',
+      });
+      continue;
+    }
     if (item === 'taxClassInfo') {
       rows.push({ item, title: t(language, 'taxClassTitle'), note: t(language, 'taxClassInfo') });
       continue;
@@ -56,7 +72,8 @@ export function roleRows(
     if (!limit) continue;
     if (item === 'shortTermEmployment' && hideShortTerm) continue;
     const title = limitName(limit, language);
-    if (limitUnavailable(limit)) {
+    // Jugendarbeitsschutz hat keinen Zahlenwert; die Prüfung läuft über die Regeln im Core.
+    if (limitUnavailable(limit) && item !== 'youthWorkProtection') {
       rows.push({ item, title, limit, unavailable: true, status: 'Unknown', note: t(language, 'limitUnavailable', { year }) });
       continue;
     }
@@ -103,12 +120,11 @@ export function roleRows(
         break;
       }
       case 'shortTermEmployment': {
-        const risk = adaptiveShortTerm ? shortTermProfessionalRisk(data.profile, data.jobs, data.shifts, month, year, data.payments) : null;
-        const riskNote = risk === 'noMainJob'
-          ? t(language, 'shortTermProfessionalNoMainJob')
-          : risk === 'highEarnings'
-            ? t(language, 'shortTermProfessionalHighEarnings', { cap: money(usableLimitValue('miniJobMonthly', year) ?? 0, language) })
-            : undefined;
+        // Schulabgänger:innen sehen den Hinweis immer, die anderen nur mit Jobkombis (Advanced).
+        const risk = adaptiveShortTerm || data.profile.status === 'School leaver'
+          ? shortTermProfessionalRisk(data.profile, data.jobs, data.shifts, month, year, data.payments)
+          : null;
+        const riskNote = risk ? shortTermRiskText(risk, language, money(usableLimitValue('miniJobMonthly', year) ?? 0, language)) : undefined;
         const extra = riskNote ? { note: riskNote, tone: 'amber' as const } : {};
         if (!verified || !limit.value) { rows.push({ item, title, limit, ...extra }); break; }
         const ratio = daysUsed / limit.value;
@@ -146,9 +162,25 @@ export function roleRows(
         });
         break;
       }
-      case 'youthWorkProtection':
-        rows.push({ item, title, limit, note: limitConsequence(limit, language), tone: 'amber' });
+      case 'youthWorkProtection': {
+        if (!youthLaborApplies(data.profile, today)) {
+          rows.push({ item, title, limit, note: limitConsequence(limit, language), tone: 'amber' });
+          break;
+        }
+        // Prüfung über den ganzen Monat: Ergebnis als Wort plus Farbe, Details auf Wunsch.
+        const violations = checkYouthLabor({ profile: data.profile, jobs: data.jobs, shifts: data.shifts, from: month + '-01', to: month + '-31' });
+        const errors = violations.filter((entry) => entry.severity === 'error').length;
+        const warnings = violations.filter((entry) => entry.severity === 'warning').length;
+        rows.push({
+          item, title, limit,
+          status: errors ? 'Over' : warnings ? 'Close' : 'Safe',
+          statusLabel: t(language, errors ? 'youthSeverityError' : warnings ? 'youthSeverityWarning' : 'youthStatusOk'),
+          violationSummary: t(language, 'youthRowSummary', { errors, warnings }),
+          note: errors || warnings ? undefined : t(language, 'youthRowNone'),
+          violations: violations.filter((entry) => entry.severity !== 'info'),
+        });
         break;
+      }
     }
   }
   return rows;
@@ -166,7 +198,7 @@ export function RoleRow({ row, language }: { row: RoleRowData; language: Languag
         <div className="limit-row-value">
           {row.amount && <span className="limit-amount">{row.amount}</span>}
           {row.qualifier && <span className="pill-subtle">{row.qualifier}</span>}
-          {row.status && !unverified && <StatusBadge status={row.status} language={language} />}
+          {row.status && !unverified && <StatusBadge status={row.status} language={language} label={row.statusLabel} />}
           {unverified && <span className="pill-unverified">{t(language, 'unverified')}</span>}
         </div>
       </div>
@@ -175,7 +207,13 @@ export function RoleRow({ row, language }: { row: RoleRowData; language: Languag
       )}
       {row.caveat && <p className="row-note">{row.caveat}</p>}
       {row.note && <p className={'row-note' + (row.tone === 'amber' ? ' row-note-amber' : '')}>{row.note}</p>}
-      {row.limit && !row.note && (
+      {row.violations && row.violations.length > 0 && (
+        <details className="row-explain">
+          <summary>{row.violationSummary ?? t(language, 'youthCheckTitle')}</summary>
+          <ViolationList violations={row.violations} language={language} />
+        </details>
+      )}
+      {row.limit && !row.note && !row.violations?.length && (
         <details className="row-explain">
           <summary>{t(language, 'whatDoesItMean')}</summary>
           <p>{limitConsequence(row.limit, language)}</p>

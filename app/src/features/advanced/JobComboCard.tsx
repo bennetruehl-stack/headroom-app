@@ -3,7 +3,7 @@ import { ProgressBar } from '../../components/ProgressBar';
 import { StatusBadge } from '../../components/StatusBadge';
 import { t, type Language, type MessageKey } from '../../i18n/translations';
 import { localToday, money } from '../../lib/format';
-import { employmentLabel } from '../../lib/limitText';
+import { employmentLabel, shortTermRiskText } from '../../lib/limitText';
 import type { AppState } from '../../lib/storage';
 
 const checkText: Record<ComboCheckId, { title: MessageKey; note: MessageKey }> = {
@@ -98,9 +98,7 @@ export function JobComboCard({ data, language }: { data: AppState; language: Lan
       </div>
       {result.shortTermRisk && (
         <p className="row-note row-note-amber job-combo-risk" role="status">
-          {result.shortTermRisk === 'noMainJob'
-            ? t(language, 'shortTermProfessionalNoMainJob')
-            : t(language, 'shortTermProfessionalHighEarnings', { cap: miniCap !== null ? money(miniCap, language) : t(language, 'miniJobCap') })}
+          {shortTermRiskText(result.shortTermRisk, language, miniCap !== null ? money(miniCap, language) : t(language, 'miniJobCap'))}
         </p>
       )}
       <p className="job-combo-source">

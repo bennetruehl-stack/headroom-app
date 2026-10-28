@@ -22,6 +22,8 @@ export function ShiftForm({
   const [hours, setHours] = useState(initial?.hours ? numberInputValue(initial.hours, language) : '');
   const [start, setStart] = useState(initial?.startTime ?? '');
   const [end, setEnd] = useState(initial?.endTime ?? '');
+  const [breakStart, setBreakStart] = useState(initial?.breaks?.[0]?.start ?? '');
+  const [breakEnd, setBreakEnd] = useState(initial?.breaks?.[0]?.end ?? '');
   const [planned, setPlanned] = useState(Boolean(initial?.planned));
   const [weekly, setWeekly] = useState(false);
   const [error, setError] = useState('');
@@ -32,6 +34,8 @@ export function ShiftForm({
     setHours(initial?.hours ? numberInputValue(initial.hours, language) : '');
     setStart(initial?.startTime ?? '');
     setEnd(initial?.endTime ?? '');
+    setBreakStart(initial?.breaks?.[0]?.start ?? '');
+    setBreakEnd(initial?.breaks?.[0]?.end ?? '');
     setPlanned(Boolean(initial?.planned));
   }, [initial, jobs]);
 
@@ -49,8 +53,11 @@ export function ShiftForm({
       return;
     }
     let duration: number;
+    const breaks = start && end && breakStart && breakEnd ? [{ start: breakStart, end: breakEnd }] : undefined;
     if (start && end) {
-      duration = hoursFromTimes(start, end);
+      // Die Pause zählt nicht als Arbeitszeit.
+      const pause = breaks ? hoursFromTimes(breakStart, breakEnd) : 0;
+      duration = hoursFromTimes(start, end) - (Number.isFinite(pause) && pause > 0 ? pause : 0);
       if (!Number.isFinite(duration) || duration <= 0) { setError(t(language, 'shiftValidation')); return; }
     } else {
       const parsed = validateNumber(hours, inputRules.shiftHours);
@@ -75,6 +82,7 @@ export function ShiftForm({
         hours: duration,
         startTime: start || undefined,
         endTime: end || undefined,
+        breaks,
         planned,
         days: job.type === 'short-term' ? 1 : undefined,
         surchargeAmount,
@@ -108,6 +116,19 @@ export function ShiftForm({
           <input type="time" value={end} onChange={(event) => setEnd(event.target.value)} />
         </label>
       </div>
+      {start && end && (
+        <div className="form-grid two-columns">
+          <label className="field">
+            <span>{t(language, 'breakStart')}</span>
+            <input type="time" value={breakStart} onChange={(event) => setBreakStart(event.target.value)} aria-describedby="shift-break-hint" />
+          </label>
+          <label className="field">
+            <span>{t(language, 'breakEnd')}</span>
+            <input type="time" value={breakEnd} onChange={(event) => setBreakEnd(event.target.value)} aria-describedby="shift-break-hint" />
+          </label>
+          <small id="shift-break-hint" className="field-hint wide-hint">{t(language, 'breakHint')}</small>
+        </div>
+      )}
       <label className="field">
         <span>{t(language, 'hoursWorked')}</span>
         <input

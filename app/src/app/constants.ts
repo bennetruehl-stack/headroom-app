@@ -8,6 +8,8 @@ export const profileChoices: { value: ProfileStatus; key: MessageKey }[] = [
   { value: 'Mini-jobber', key: 'profileMini' },
   { value: 'Employee', key: 'profileEmployee' },
   { value: 'Pupil', key: 'profilePupil' },
+  { value: 'School leaver', key: 'profileSchoolLeaver' },
+  { value: 'Apprentice', key: 'profileApprentice' },
 ];
 
 export const employmentTypes: { value: Job['type']; key: MessageKey }[] = [
