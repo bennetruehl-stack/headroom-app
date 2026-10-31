@@ -9,6 +9,8 @@ export * from './types';
 export * from './input';
 export * from './shiftImport';
 export * from './combinations';
+export * from './features/flags';
+export * from './features/registry';
 export * from './rules/legalConstants';
 export * from './rules/jobTags';
 export * from './rules/youthLabor';
@@ -18,7 +20,7 @@ export * from './rules/transitions';
 export { availableLimitYears, consentAgeRule, jobPresets, limits, limitsForYear, miniJobCapFormula, roleLayouts, roleTier };
 export type { RoleItem, RoleLayout, RoleTier } from '../data/roles';
 
-export function limitRecord(id: string, year = new Date().getFullYear()): Limit | undefined {
+export function limitRecord(id: string, year: number): Limit | undefined {
   return limitsForYear(year).find((limit) => limit.id === id);
 }
 
@@ -26,7 +28,7 @@ export function limitRecord(id: string, year = new Date().getFullYear()): Limit 
  * Grenzwert für ein Jahr. `null` heißt „nicht verfügbar“: Für dieses Jahr ist kein
  * Wert hinterlegt. Aufrufer dürfen daraus keine Warnung und keinen Restbetrag ableiten.
  */
-export function limitValue(id: string, year = new Date().getFullYear()): number | null {
+export function limitValue(id: string, year: number): number | null {
   return limitRecord(id, year)?.value ?? null;
 }
 
@@ -34,7 +36,7 @@ export function limitValue(id: string, year = new Date().getFullYear()): number 
  * Letzter bekannter Wert (aktuelles Jahr, sonst das jüngste Jahr mit Wert). Nur für
  * Voreinstellungen wie den Stundenlohn im Formular, nie für Warnungen.
  */
-export function latestKnownLimitValue(id: string, year = new Date().getFullYear()): number | null {
+export function latestKnownLimitValue(id: string, year: number): number | null {
   const current = limitValue(id, year);
   if (current !== null) return current;
   const candidates = limits
@@ -44,7 +46,7 @@ export function latestKnownLimitValue(id: string, year = new Date().getFullYear(
 }
 
 /** Grenzwert, der für Warnungen benutzt werden darf: vorhanden und geprüft. */
-export function usableLimitValue(id: string, year = new Date().getFullYear()): number | null {
+export function usableLimitValue(id: string, year: number): number | null {
   const limit = limitRecord(id, year);
   return limit && limit.verified && limit.value !== null ? limit.value : null;
 }
@@ -56,7 +58,7 @@ export function statusFor(ratio: number): RiskStatus {
   return 'Over';
 }
 
-export function activeLimits(profile: Profile, year = new Date().getFullYear()): Limit[] {
+export function activeLimits(profile: Profile, year: number): Limit[] {
   return limitsForYear(year).filter((limit) => {
     if (!limit.appliesTo.includes(profile.status)) return false;
     const ageBoundary = limit.condition?.match(/age\s*<\s*(\d+)/i)?.[1];
@@ -174,8 +176,8 @@ export function monthTotal(
 
 export function monthlySummary(
   total: number,
-  cap: number | null = usableLimitValue('miniJobMonthly'),
-  wage: number | null = usableLimitValue('minimumWage'),
+  cap: number | null,
+  wage: number | null = null,
 ) {
   if (cap === null || !Number.isFinite(cap)) {
     return { total, available: false as const, remaining: null, over: null, hours: null, ratio: null, status: 'Unknown' as RiskStatus };
@@ -422,7 +424,7 @@ export function shortDays(shifts: Shift[], year?: number): number {
   return explicitDays + distinctSingleDates.size;
 }
 
-export function shiftCheck(total: number, added: number, cap: number | null = usableLimitValue('miniJobMonthly')) {
+export function shiftCheck(total: number, added: number, cap: number | null) {
   const projected = total + added;
   if (cap === null) {
     return { projected, available: false as const, over: 0, remaining: null, status: 'Unknown' as RiskStatus };
@@ -439,7 +441,7 @@ export function shiftCheck(total: number, added: number, cap: number | null = us
 export function workingHoursCheck(
   hours: number,
   inLecturePeriod: boolean,
-  limit: number | null = usableLimitValue('workingStudentHours'),
+  limit: number | null,
 ) {
   return {
     hours,
@@ -538,7 +540,7 @@ export function isInLecturePeriod(date: string, profile: Profile): boolean {
   );
 }
 
-export function shortDayStatus(days: number, limit: number | null = usableLimitValue('shortTermEmployment')) {
+export function shortDayStatus(days: number, limit: number | null) {
   if (limit === null) return { days, available: false as const, remaining: null, over: false };
   return { days, available: true as const, remaining: Math.max(0, limit - days), over: days > limit };
 }
@@ -551,7 +553,7 @@ export function miniJobCap2027(wage = limitValue('minimumWage', 2027) ?? 0): num
   return Math.ceil((wage * miniJobCapFormula.minimumWageMultiplier) / miniJobCapFormula.divisor);
 }
 
-export function wageBelowMinimum(wage: number, min: number | null = usableLimitValue('minimumWage')): boolean {
+export function wageBelowMinimum(wage: number, min: number | null): boolean {
   return min !== null && wage < min;
 }
 

@@ -3,7 +3,7 @@ import { latestKnownLimitValue } from '@headroom/core';
 
 const cities = ['Frankfurt', 'Berlin', 'Hamburg', 'München'];
 const titles = ['Eventaufbau', 'Café-Service', 'Lager / Kommissionierung', 'Einzelhandel'];
-const minimumWage: number = latestKnownLimitValue('minimumWage') ?? 0;
+const minimumWage: number = latestKnownLimitValue('minimumWage', new Date().getFullYear()) ?? 0;
 const dateAfter = (days: number) => {
   const date = new Date();
   date.setHours(12, 0, 0, 0);

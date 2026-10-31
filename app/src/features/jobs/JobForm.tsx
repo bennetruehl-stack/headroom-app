@@ -35,7 +35,7 @@ export function JobForm({
   const preset = jobPresets.find((item) => item.id === presetId);
   const [title, setTitle] = useState(initial?.title ?? (language === 'de' ? preset?.title_de ?? '' : preset?.title_en ?? ''));
   const [type, setType] = useState<Job['type']>(initial?.type ?? 'mini-job');
-  const [wage, setWage] = useState(numberInputValue(initial?.wage ?? latestKnownLimitValue('minimumWage'), language));
+  const [wage, setWage] = useState(numberInputValue(initial?.wage ?? latestKnownLimitValue('minimumWage', Number(localToday().slice(0, 4))), language));
   const [startDate, setStartDate] = useState(initial?.startDate ?? localToday());
   const [endDate, setEndDate] = useState(initial?.endDate ?? '');
   const [company, setCompany] = useState(initial?.company ?? '');

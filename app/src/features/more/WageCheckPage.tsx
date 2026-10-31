@@ -12,8 +12,9 @@ export function WageCheckPage({
   data: AppState;
   language: Language;
 }) {
-  const wageLimit = usableLimitValue('minimumWage');
-  const minimumWageRecord = limitsForYear(new Date().getFullYear()).find((limit) => limit.id === 'minimumWage');
+  const year = Number(localToday().slice(0, 4));
+  const wageLimit = usableLimitValue('minimumWage', year);
+  const minimumWageRecord = limitsForYear(year).find((limit) => limit.id === 'minimumWage');
   return (
     <section className="page-enter">
       <PageHeading kicker={t(language, 'referenceKicker')} title={t(language, 'wageCheckTitle')} />

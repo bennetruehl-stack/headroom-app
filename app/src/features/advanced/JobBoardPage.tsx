@@ -20,7 +20,7 @@ export function JobBoardPage({
   const [city, setCity] = useState('Frankfurt');
   const [date, setDate] = useState(localToday());
   const [hours, setHours] = useState('4');
-  const [wage, setWage] = useState(String(latestKnownLimitValue('minimumWage') ?? ''));
+  const [wage, setWage] = useState(String(latestKnownLimitValue('minimumWage', Number(localToday().slice(0, 4))) ?? ''));
   const [posted, setPosted] = useState<Listing[]>([]);
   const [serverListings, setServerListings] = useState<Listing[] | null>(null);
   const [serverError, setServerError] = useState(false);
@@ -135,7 +135,7 @@ export function JobBoardPage({
           const workingStudentNeedsDates = data.profile.status === 'Working student' && !hasLectureDates;
           const workingStudentOverHours = data.profile.status === 'Working student' && hasLectureDates &&
             isInLecturePeriod(listing.date, data.profile) &&
-            workingHoursCheck(hoursInWeek(data.shifts, listing.date) + listing.hours, true).over;
+            workingHoursCheck(hoursInWeek(data.shifts, listing.date) + listing.hours, true, usableLimitValue('workingStudentHours', listingYear)).over;
           const monthlyExceeded = headroom !== null && Boolean(monthLimitRecord?.verified) && earnings > headroom;
           const unknownCoreLimit = headroom === null || !monthLimitRecord?.verified || !yearLimitRecord?.verified;
           const unverifiedProfileLimit = activeProfileLimits.some((limit) =>

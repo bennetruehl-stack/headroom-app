@@ -61,7 +61,7 @@ export function ShiftCheckDialog({
   const lecture = data.profile.status === 'Working student' && isInLecturePeriod(date, data.profile);
   const existingWeeklyHours = hoursInWeek(data.shifts, date);
   const weeklyResult = data.profile.status === 'Working student'
-    ? workingHoursCheck(existingWeeklyHours + duration, lecture)
+    ? workingHoursCheck(existingWeeklyHours + duration, lecture, usableLimitValue('workingStudentHours', year))
     : null;
   const hasLectureDates = (data.profile.semesterPeriods ?? []).some((period) => period.start && period.end);
   const annualMiniRecord = limitsForYear(year).find((limit) => limit.id === 'miniJobYearly');

@@ -65,7 +65,7 @@ const listingCount = (database.prepare('SELECT COUNT(*) AS count FROM listings')
 if (listingCount === 0) {
   const cities = ['Frankfurt', 'Berlin', 'Hamburg', 'München'];
   const titles = ['Eventaufbau', 'Café-Service', 'Lager / Kommissionierung', 'Einzelhandel'];
-  const minimumWage = limitValue('minimumWage');
+  const minimumWage = limitValue('minimumWage', new Date().getFullYear());
   if (minimumWage !== null) {
     const insert = database.prepare(`
       INSERT INTO listings (id, title, city, shift_date, hours, hourly_wage, created_at, demo)

@@ -48,7 +48,7 @@ export type ComboProfileNote = 'familyTotal' | 'bafoeg' | 'youth';
 export type PossibleCombination = { combo: JobCombination; notes: ComboProfileNote[] };
 
 /** Kombis, die für dieses Profil grundsätzlich in Frage kommen, mit Hinweisen aus dem Profil. */
-export function possibleCombinations(profile: Profile, year = new Date().getFullYear()): PossibleCombination[] {
+export function possibleCombinations(profile: Profile, year: number): PossibleCombination[] {
   const active = activeLimits(profile, year).map((limit) => limit.id);
   const notes: ComboProfileNote[] = [];
   if (active.includes('familyInsurance')) notes.push('familyTotal');
