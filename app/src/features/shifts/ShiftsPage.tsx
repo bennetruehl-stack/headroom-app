@@ -34,7 +34,6 @@ export function ShiftsPage({
   onPayments: (payments: OneTimePayment[]) => void;
   onImport: () => void;
   showCalendar?: boolean;
-  /** Schichten in der Schulzeit im Wochenkalender rot markieren (Schüler-Modus). */
   markSchoolTime?: boolean;
 }) {
   const [editing, setEditing] = useState<string | null>(null);

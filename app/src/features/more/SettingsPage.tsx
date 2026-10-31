@@ -3,7 +3,7 @@ import { inputRules, isStudentMode, validateDateRange, validateNumber, type Prof
 import { profileChoices } from '../../app/constants';
 import type { Screen } from '../../app/types';
 import { PageHeading } from '../../components/PageHeading';
-import { sanitizeFeatures, type FeatureName } from '../../config/features';
+import { sanitizeFeatures, type FeatureName } from '@headroom/core';
 import { t, type Language } from '../../i18n/translations';
 import { dateError, numberError } from '../../lib/inputErrors';
 import { localToday } from '../../lib/format';

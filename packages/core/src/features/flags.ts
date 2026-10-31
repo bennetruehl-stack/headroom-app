@@ -1,6 +1,3 @@
-// Optionale Demo-Funktionen. Sie sind nur über den Advanced-Modus erreichbar und standardmäßig aus.
-// Wochenkalender und Job-Kombinationen sind keine Flags mehr: Sie dienen dem Schutz und gelten immer,
-// wenn ihre fachliche Bedingung zutrifft (siehe registry.ts).
 export type FeatureName = 'jobBoard' | 'partnerRecommendations' | 'premium' | 'peerStats' | 'osmCompanyCheck';
 
 export const featureNames: FeatureName[] = ['jobBoard', 'partnerRecommendations', 'premium', 'peerStats', 'osmCompanyCheck'];
@@ -13,7 +10,6 @@ export const defaultFeatures: Record<FeatureName, boolean> = {
   osmCompanyCheck: false,
 };
 
-/** Was beim ersten Einschalten des Advanced-Modus aktiv wird: Jobbörse mit Partner-Jobbörsen und Partnerhinweise. */
 export const advancedDefaults: Record<FeatureName, boolean> = {
   ...defaultFeatures,
   jobBoard: true,

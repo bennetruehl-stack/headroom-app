@@ -1,6 +1,4 @@
-// Eine Stelle entscheidet, welche Funktion für wen aktiv ist. Menü, Routen und Karten fragen nur hier nach.
 // Jeder Eintrag entspricht einer Zeile in docs/Funktionskatalog.md (Spalte „Aktiv wenn“).
-// Reine Funktionen: Das Datum wird übergeben.
 import { consentAgeRule } from '../../data/privacy';
 import { detectedCombinations } from '../combinations';
 import { ageOn, fullTimeSchoolObligated, isStudentMode, youthLaborApplies } from '../rules/youthLabor/profile';
@@ -29,7 +27,6 @@ type Entry = {
   /** Nummer der Zeile im Funktionskatalog. */
   catalog: string;
   priority: FeaturePriority;
-  /** Noch nicht gebaute Funktionen sind nie aktiv, egal was die Bedingung sagt. */
   built: boolean;
   activeWhen: (ctx: Derived) => boolean;
 };
@@ -37,11 +34,9 @@ type Entry = {
 const always = () => true;
 const never = () => false;
 
-/** Ein Demo-Flag gilt nur mit Advanced-Modus, ab 16 und außerhalb des Schüler-Modus. */
 const demoFlag = (name: FeatureName) => (ctx: Derived) => ctx.demo[name] && ctx.consent;
 
 export const featureRegistry = [
-  // P0 Fundament
   { id: 'onboarding', catalog: 'F01', priority: 'P0', built: true, activeWhen: always },
   { id: 'jobs', catalog: 'F02', priority: 'P0', built: true, activeWhen: always },
   { id: 'shifts', catalog: 'F03', priority: 'P0', built: true, activeWhen: always },
@@ -53,7 +48,6 @@ export const featureRegistry = [
   { id: 'featureRegistry', catalog: 'F09', priority: 'P0', built: true, activeWhen: always },
   { id: 'examples', catalog: 'F10', priority: 'P0', built: true, activeWhen: always },
   { id: 'legalPages', catalog: 'F11', priority: 'P0', built: true, activeWhen: always },
-  // P1 Kern
   { id: 'account', catalog: 'F20', priority: 'P1', built: false, activeWhen: (ctx) => ctx.hasAccount || accountPossible(ctx) },
   { id: 'sync', catalog: 'F21', priority: 'P1', built: false, activeWhen: (ctx) => ctx.hasAccount },
   { id: 'recoveryCode', catalog: 'F22', priority: 'P1', built: false, activeWhen: (ctx) => ctx.hasAccount },
@@ -67,7 +61,6 @@ export const featureRegistry = [
   { id: 'minorJobHints', catalog: 'F30', priority: 'P1', built: true, activeWhen: (ctx) => youthLaborApplies(ctx.profile, ctx.date) },
   { id: 'mainJobMiniJob', catalog: 'F31', priority: 'P1', built: true, activeWhen: (ctx) => ctx.profile.status === 'Employee' && ctx.profile.hasMainJob !== false },
   { id: 'multipleMiniJobs', catalog: 'F32', priority: 'P1', built: true, activeWhen: (ctx) => ctx.jobs.filter((job) => job.type === 'mini-job').length >= 2 },
-  // P2 Komfort
   { id: 'icsImport', catalog: 'F40', priority: 'P2', built: true, activeWhen: always },
   { id: 'calendarSubscription', catalog: 'F41', priority: 'P2', built: true, activeWhen: always },
   { id: 'photoImport', catalog: 'F42', priority: 'P2', built: true, activeWhen: always },
@@ -82,7 +75,6 @@ export const featureRegistry = [
   { id: 'jobCombinations', catalog: 'F51', priority: 'P2', built: true, activeWhen: (ctx) => detectedCombinations(ctx.profile, ctx.jobs, Number(ctx.date.slice(0, 4))).length > 0 },
   { id: 'darkMode', catalog: 'F52', priority: 'P2', built: true, activeWhen: always },
   { id: 'desktopApp', catalog: 'F53', priority: 'P2', built: true, activeWhen: always },
-  // P3 Erweiterungen (Advanced, standardmäßig aus)
   { id: 'premium', catalog: 'F60', priority: 'P3', built: true, activeWhen: (ctx) => ctx.demo.premium },
   { id: 'peerStats', catalog: 'F61', priority: 'P3', built: true, activeWhen: demoFlag('peerStats') },
   { id: 'jobBoard', catalog: 'F62', priority: 'P3', built: true, activeWhen: demoFlag('jobBoard') },

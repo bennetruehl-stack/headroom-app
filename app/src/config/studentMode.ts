@@ -4,7 +4,6 @@
 import { limits, type Job, type ProfileStatus } from '@headroom/core';
 import type { JobPreset } from '@headroom/core/data/jobPresets';
 
-// Welche Funktionen im Schüler-Modus aus sind, entscheidet die Feature-Registry im Core.
 export const studentModeHidden = {
   /** Beschäftigungsarten, die es neben der Schule nicht gibt. */
   employmentTypes: ['working student'] as Job['type'][],

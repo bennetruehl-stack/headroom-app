@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { activeLimits, annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, referenceHourlyWage, roleTier, shortDays, usableLimitValue, type Limit, type MonthlyLimitCheck, type Profile, type Shift } from '@headroom/core';
+import { activeLimits, annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, referenceHourlyWage, roleTier, shortDays, usableLimitValue, type ActiveFeatures, type Limit, type MonthlyLimitCheck, type Profile, type Shift } from '@headroom/core';
 import type { DashboardPeriod, Screen } from '../../app/types';
-import type { ActiveFeatures } from '@headroom/core';
 import { t, type Language, type MessageKey } from '../../i18n/translations';
 import { dateText, localToday } from '../../lib/format';
 import { calculateAnnualProjection, getAgeBoundary, monthlyAmountForLimit } from '../../lib/limitText';

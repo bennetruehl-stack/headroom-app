@@ -1,4 +1,4 @@
-import { advancedDefaults, defaultFeatures, sanitizeFeatures, type FeatureName } from '../config/features';
+import { advancedDefaults, defaultFeatures, sanitizeFeatures, type FeatureName } from '@headroom/core';
 
 export function getFeatureFlags(): Record<FeatureName, boolean> {
   try {

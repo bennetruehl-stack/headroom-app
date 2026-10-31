@@ -5,7 +5,7 @@ import type { Screen } from './app/types';
 import { AppFooter, AppHeader } from './components/AppChrome';
 import { Navigation } from './components/Navigation';
 import { ErrorBoundary } from './app/ErrorBoundary';
-import { advancedDefaults, defaultFeatures, type FeatureName } from './config/features';
+import { advancedDefaults, defaultFeatures, type FeatureName } from '@headroom/core';
 import { PartnerPanel } from './features/advanced/PartnerPanel';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { JobsPage } from './features/jobs/JobsPage';
@@ -41,7 +41,6 @@ function App() {
   const [advancedMode, setAdvancedMode] = useState(false);
   const [featureReady, setFeatureReady] = useState(false);
   const [syncNotice, setSyncNotice] = useState('');
-  // Was für dieses Profil aktiv ist, entscheidet allein die Feature-Registry im Core.
   const features = resolveFeatures({
     profile: data.profile,
     jobs: data.jobs,
@@ -163,7 +162,6 @@ function App() {
 
   const languageChanged = useCallback((value: Language) => update({ language: value }), [update]);
   const currentPage = allowedScreen(page === 'Onboarding' && !data.onboarded ? 'Onboarding' : page, features);
-  const morePage = <MorePage language={language} features={features} onNavigate={setPage} />;
   const content = (() => {
     switch (currentPage) {
       case 'Onboarding':
@@ -207,7 +205,7 @@ function App() {
       case 'Limits':
         return <LimitsPage language={language} profile={data.profile} />;
       case 'More':
-        return morePage;
+        return <MorePage language={language} features={features} onNavigate={setPage} />;
       case 'Settings':
         return (
           <SettingsPage

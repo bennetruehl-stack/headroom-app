@@ -1,6 +1,6 @@
 import { featureLabels } from '../../app/constants';
 import { PageHeading } from '../../components/PageHeading';
-import { defaultFeatures, type FeatureName } from '../../config/features';
+import { defaultFeatures, type FeatureName } from '@headroom/core';
 import { t, type Language } from '../../i18n/translations';
 
 export function DeveloperPage({

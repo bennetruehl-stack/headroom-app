@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { JobTagFindings } from '../youth/JobTagFindings';
-import { employeeMiniJobStatus, type Job } from '@headroom/core';
+import { employeeMiniJobStatus, type ActiveFeatures, type Job } from '@headroom/core';
 import { PageHeading } from '../../components/PageHeading';
-import type { ActiveFeatures } from '@headroom/core';
 import { t, type Language } from '../../i18n/translations';
 import { localToday, preciseMoney } from '../../lib/format';
 import { employmentLabel } from '../../lib/limitText';

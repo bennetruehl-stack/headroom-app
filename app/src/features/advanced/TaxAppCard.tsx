@@ -30,7 +30,6 @@ export function TaxAppCard({ data, language, partners = true }: { data: AppState
   const refund = taxRefundHint(data.jobs, data.shifts, data.payments, year, today);
   if (refund?.likelyRefund) return <TaxRefundCard language={language} projected={refund.projected} allowance={refund.basicAllowance} years={refund.yearsBack} />;
 
-  // `partners` kommt aus der Feature-Registry und gilt nur ab 16 und außerhalb des Schüler-Modus.
   if (!partners || hiddenFor === month) return null;
 
   const monthlyLimit = limitsForYear(year).find((limit) => limit.id === 'miniJobMonthly');

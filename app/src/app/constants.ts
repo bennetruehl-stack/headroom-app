@@ -1,5 +1,5 @@
 import type { Job, ProfileStatus } from '@headroom/core';
-import type { FeatureName } from '../config/features';
+import type { FeatureName } from '@headroom/core';
 import type { MessageKey } from '../i18n/translations';
 
 export const profileChoices: { value: ProfileStatus; key: MessageKey }[] = [
