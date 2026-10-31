@@ -27,10 +27,12 @@ export function WeekCalendar({
   data,
   language,
   onSaveEdit,
+  markSchoolTime = false,
 }: {
   data: AppState;
   language: Language;
   onSaveEdit: (shiftId: string, values: Shift[]) => void;
+  markSchoolTime?: boolean;
 }) {
   const today = localToday();
   const [monday, setMonday] = useState(() => mondayOf(today));
@@ -120,7 +122,7 @@ export function WeekCalendar({
                   const job = jobById.get(shift.jobId);
                   const id = shiftKey(shift);
                   // Schulzeit-Kollision nach Stundenplan und Ferien aus dem Profil.
-                  const duringSchool = schoolCollision(data.profile, shift) === 'during';
+                  const duringSchool = markSchoolTime && schoolCollision(data.profile, shift) === 'during';
                   return (
                     <button
                       key={id}

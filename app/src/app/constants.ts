@@ -25,6 +25,4 @@ export const featureLabels: Record<FeatureName, MessageKey> = {
   premium: 'featurePremium',
   peerStats: 'featurePeers',
   osmCompanyCheck: 'featureOsm',
-  weekCalendar: 'featureWeekCalendar',
-  jobCombinations: 'featureJobCombos',
 };

@@ -1,22 +1,19 @@
 import type { Screen } from '../../app/types';
 import { PageHeading } from '../../components/PageHeading';
-import type { FeatureName } from '../../config/features';
+import type { ActiveFeatures } from '@headroom/core';
 import { t, type Language, type MessageKey } from '../../i18n/translations';
 
 export function MorePage({
   language,
   features,
   onNavigate,
-  studentMode = false,
 }: {
   language: Language;
-  features: Record<FeatureName, boolean>;
+  features: ActiveFeatures;
   onNavigate: (screen: Screen) => void;
-  /** Schüler-Modus: Eltern-Bereich oben anzeigen. */
-  studentMode?: boolean;
 }) {
   const entries: { screen: Screen; title: MessageKey; description: MessageKey; visible?: boolean }[] = [
-    { screen: 'Parents', title: 'parentsTitle', description: 'descParents', visible: studentMode },
+    { screen: 'Parents', title: 'parentsTitle', description: 'descParents', visible: features.parents },
     { screen: 'Import', title: 'importTitle', description: 'descImport' },
     { screen: 'Trends', title: 'trends', description: 'descTrends' },
     { screen: 'WageCheck', title: 'wageCheck', description: 'descWage' },

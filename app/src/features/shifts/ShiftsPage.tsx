@@ -26,6 +26,7 @@ export function ShiftsPage({
   onPayments,
   onImport,
   showCalendar = false,
+  markSchoolTime = false,
 }: {
   data: AppState;
   language: Language;
@@ -33,6 +34,8 @@ export function ShiftsPage({
   onPayments: (payments: OneTimePayment[]) => void;
   onImport: () => void;
   showCalendar?: boolean;
+  /** Schichten in der Schulzeit im Wochenkalender rot markieren (Schüler-Modus). */
+  markSchoolTime?: boolean;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [view, setView] = useState<ShiftView>(storedView);
@@ -85,7 +88,7 @@ export function ShiftsPage({
         </div>
       )}
       {activeView === 'week' ? (
-        <WeekCalendar data={data} language={language} onSaveEdit={saveEdit} />
+        <WeekCalendar data={data} language={language} onSaveEdit={saveEdit} markSchoolTime={markSchoolTime} />
       ) : (
       <>
       {ordered.length === 0 && <div className="empty-panel">{t(language, 'emptyState')}</div>}

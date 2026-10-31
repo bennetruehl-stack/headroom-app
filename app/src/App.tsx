@@ -1,11 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { consentAgeRule, isStudentMode, type Shift } from '@headroom/core';
+import { resolveFeatures, type Shift } from '@headroom/core';
+import { allowedScreen } from './app/screenGate';
 import type { Screen } from './app/types';
 import { AppFooter, AppHeader } from './components/AppChrome';
 import { Navigation } from './components/Navigation';
 import { ErrorBoundary } from './app/ErrorBoundary';
-import { advancedDefaults, defaultFeatures, effectiveFeatures, type FeatureName } from './config/features';
-import { studentModeFeatures } from './config/studentMode';
+import { advancedDefaults, defaultFeatures, type FeatureName } from './config/features';
 import { PartnerPanel } from './features/advanced/PartnerPanel';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { JobsPage } from './features/jobs/JobsPage';
@@ -41,10 +41,16 @@ function App() {
   const [advancedMode, setAdvancedMode] = useState(false);
   const [featureReady, setFeatureReady] = useState(false);
   const [syncNotice, setSyncNotice] = useState('');
-  // Komponenten sehen nur die wirksamen Flags: ohne Advanced-Modus ist jede Demo-Funktion aus.
-  // Im Schüler-Modus sind Werbung, Datenweitergabe und die ungeprüfte Jobbörse aus (config/studentMode.ts).
-  const studentMode = isStudentMode(data.profile, localToday());
-  const features = studentModeFeatures(effectiveFeatures(advancedMode, flags), studentMode);
+  // Was für dieses Profil aktiv ist, entscheidet allein die Feature-Registry im Core.
+  const features = resolveFeatures({
+    profile: data.profile,
+    jobs: data.jobs,
+    date: localToday(),
+    advancedMode,
+    flags,
+    isExample: Boolean(data.example),
+    hasAccount: false,
+  });
   const [checkOpen, setCheckOpen] = useState(false);
   const language = data.language;
 
@@ -156,9 +162,8 @@ function App() {
   }, []);
 
   const languageChanged = useCallback((value: Language) => update({ language: value }), [update]);
-  const currentPage = page === 'Onboarding' && !data.onboarded
-    ? 'Onboarding'
-    : page;
+  const currentPage = allowedScreen(page === 'Onboarding' && !data.onboarded ? 'Onboarding' : page, features);
+  const morePage = <MorePage language={language} features={features} onNavigate={setPage} />;
   const content = (() => {
     switch (currentPage) {
       case 'Onboarding':
@@ -194,7 +199,7 @@ function App() {
           />
         );
       case 'Shifts':
-        return <ShiftsPage data={data} language={language} onUpdate={(shifts) => update({ shifts })} onPayments={(payments) => update({ payments })} onImport={() => setPage('Import')} showCalendar={features.weekCalendar} />;
+        return <ShiftsPage data={data} language={language} onUpdate={(shifts) => update({ shifts })} onPayments={(payments) => update({ payments })} onImport={() => setPage('Import')} showCalendar={features.weekCalendar} markSchoolTime={features.schoolTimeMarking} />;
       case 'Import':
         return <ImportPage data={data} language={language} onUpdate={update} onDone={() => setPage('Shifts')} />;
       case 'Jobs':
@@ -202,7 +207,7 @@ function App() {
       case 'Limits':
         return <LimitsPage language={language} profile={data.profile} />;
       case 'More':
-        return <MorePage language={language} features={features} onNavigate={setPage} studentMode={studentMode} />;
+        return morePage;
       case 'Settings':
         return (
           <SettingsPage
@@ -257,17 +262,11 @@ function App() {
       case 'WageCheck':
         return <WageCheckPage data={data} language={language} />;
       case 'Developer':
-        return advancedMode
-          ? <DeveloperPage language={language} features={flags} onChange={setFeatures} />
-          : <MorePage language={language} features={features} onNavigate={setPage} studentMode={studentMode} />;
+        return <DeveloperPage language={language} features={flags} onChange={setFeatures} />;
       case 'JobBoard':
-        return features.jobBoard
-          ? <JobBoardPage data={data} language={language} />
-          : <MorePage language={language} features={features} onNavigate={setPage} studentMode={studentMode} />;
+        return <JobBoardPage data={data} language={language} />;
       case 'PeerStats':
-        return features.peerStats
-          ? <PeerStatsPage data={data} language={language} onUpdate={update} />
-          : <MorePage language={language} features={features} onNavigate={setPage} studentMode={studentMode} />;
+        return <PeerStatsPage data={data} language={language} onUpdate={update} />;
       case 'Privacy':
         return <PrivacyPage language={language} onNavigate={setPage} backTo={data.onboarded ? 'More' : 'Onboarding'} />;
       case 'Imprint':
@@ -275,9 +274,7 @@ function App() {
       case 'Parents':
         return <ParentsPage data={data} language={language} onProfile={(profile) => update({ profile })} />;
       case 'Premium':
-        return features.premium
-          ? <PremiumPage data={data} language={language} onUpdate={update} />
-          : <MorePage language={language} features={features} onNavigate={setPage} studentMode={studentMode} />;
+        return <PremiumPage data={data} language={language} onUpdate={update} />;
     }
   })();
 
@@ -296,7 +293,7 @@ function App() {
           <ErrorBoundary language={language} resetKey={currentPage}>
             <Suspense fallback={<div className="loading-shell" role="status">{t(language, 'loadingView')}</div>}>
               {content}
-              {currentPage === 'Dashboard' && data.profile.age >= consentAgeRule.minimumAge && features.partnerRecommendations && <div className="partner-wrap"><PartnerPanel data={data} language={language} onUpdate={update} /></div>}
+              {currentPage === 'Dashboard' && features.partnerRecommendations && <div className="partner-wrap"><PartnerPanel data={data} language={language} onUpdate={update} /></div>}
             </Suspense>
           </ErrorBoundary>
         )}

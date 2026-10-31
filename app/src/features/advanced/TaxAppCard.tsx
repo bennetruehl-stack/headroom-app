@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { annualMiniProjection, consentAgeRule, limitsForYear, monthlyLimitCheck, taxRefundHint, usableLimitValue } from '@headroom/core';
+import { annualMiniProjection, limitsForYear, monthlyLimitCheck, taxRefundHint, usableLimitValue } from '@headroom/core';
 import { t, type Language } from '../../i18n/translations';
 import { localToday, money } from '../../lib/format';
 import type { AppState } from '../../lib/storage';
@@ -30,7 +30,8 @@ export function TaxAppCard({ data, language, partners = true }: { data: AppState
   const refund = taxRefundHint(data.jobs, data.shifts, data.payments, year, today);
   if (refund?.likelyRefund) return <TaxRefundCard language={language} projected={refund.projected} allowance={refund.basicAllowance} years={refund.yearsBack} />;
 
-  if (!partners || data.profile.age < consentAgeRule.minimumAge || hiddenFor === month) return null;
+  // `partners` kommt aus der Feature-Registry und gilt nur ab 16 und außerhalb des Schüler-Modus.
+  if (!partners || hiddenFor === month) return null;
 
   const monthlyLimit = limitsForYear(year).find((limit) => limit.id === 'miniJobMonthly');
   const monthly = monthlyLimit ? monthlyLimitCheck(monthlyLimit, data.shifts, data.jobs, month, year, data.payments) : null;

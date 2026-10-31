@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { activeLimits, annualProjectionBreakdown, limitsForYear, monthlyIncomeForLimit, monthlySummary, referenceHourlyWage, roleTier, shortDays, usableLimitValue, type Limit, type MonthlyLimitCheck, type Profile, type Shift } from '@headroom/core';
 import type { DashboardPeriod, Screen } from '../../app/types';
-import type { FeatureName } from '../../config/features';
+import type { ActiveFeatures } from '@headroom/core';
 import { t, type Language, type MessageKey } from '../../i18n/translations';
 import { dateText, localToday } from '../../lib/format';
 import { calculateAnnualProjection, getAgeBoundary, monthlyAmountForLimit } from '../../lib/limitText';
@@ -25,7 +25,7 @@ export function Dashboard({
   onNavigate: (screen: Screen) => void;
   onAddShift: (shifts: Shift[]) => void;
   onShiftCheck: () => void;
-  features: Record<FeatureName, boolean>;
+  features: ActiveFeatures;
   syncNotice: string;
   onDismissSync: () => void;
   onProfile: (profile: Profile) => void;

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { consentAgeRule, peerMedian, peerWagePosition, parseLocaleNumber } from '@headroom/core';
+import { peerMedian, peerWagePosition, parseLocaleNumber } from '@headroom/core';
 import { jobPresets } from '@headroom/core/data/jobPresets';
 import { PageHeading } from '../../components/PageHeading';
 import { t, type Language } from '../../i18n/translations';
@@ -26,7 +26,6 @@ export function PeerStatsPage({
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
   const [aggregate, setAggregate] = useState<PeerAggregate | null>(null);
-  const peerAllowed = data.profile.age >= consentAgeRule.minimumAge;
   const selectedPreset = jobPresets.find((preset) => preset.title_de === selectedJob?.title || preset.title_en === selectedJob?.title);
   const presetId = selectedPreset?.id ?? jobPresets.find((preset) => preset.title_de === 'Sonstiger Job')?.id ?? 'preset-31';
   const demoGroup = demoPeerRows.filter(
@@ -54,7 +53,7 @@ export function PeerStatsPage({
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
-    if (!peerAllowed || !consent || !selectedJob || !city.trim() || !Number.isFinite((parseLocaleNumber(hourlyWage) ?? Number.NaN)) || !Number.isFinite((parseLocaleNumber(expectedWage) ?? Number.NaN)) || data.peerOptIn) return;
+    if (!consent || !selectedJob || !city.trim() || !Number.isFinite((parseLocaleNumber(hourlyWage) ?? Number.NaN)) || !Number.isFinite((parseLocaleNumber(expectedWage) ?? Number.NaN)) || data.peerOptIn) return;
     const token = data.peerToken ?? id();
     if (!data.peerToken) onUpdate({ peerToken: token });
     const row = {
@@ -104,10 +103,7 @@ export function PeerStatsPage({
     <section className="page-enter">
       <PageHeading kicker={t(language, 'voluntaryKicker')} title={t(language, 'peerTitle')} trailing={<span className="badge-demo">{t(language, 'demoBadge')}</span>} />
       <p className="page-intro">{t(language, 'peerIntro')}</p>
-      {!peerAllowed ? (
-        <div className="notice notice-amber">{t(language, 'optInsBlocked')}</div>
-      ) : (
-        <>
+      <>
           <section className="surface settings-card">
             <h2>{t(language, 'demoComparison')}</h2>
             <p className="muted">{t(language, 'demoBadge')}: {demoPeerRows.length} {t(language, 'peerDataRowsNote')}</p>
@@ -175,8 +171,7 @@ export function PeerStatsPage({
               {error && <p role="alert" className="form-error">{error}</p>}
             </section>
           )}
-        </>
-      )}
+      </>
     </section>
   );
 }

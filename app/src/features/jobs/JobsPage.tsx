@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { JobTagFindings } from '../youth/JobTagFindings';
-import { consentAgeRule, employeeMiniJobStatus, type Job } from '@headroom/core';
+import { employeeMiniJobStatus, type Job } from '@headroom/core';
 import { PageHeading } from '../../components/PageHeading';
-import type { FeatureName } from '../../config/features';
+import type { ActiveFeatures } from '@headroom/core';
 import { t, type Language } from '../../i18n/translations';
 import { localToday, preciseMoney } from '../../lib/format';
 import { employmentLabel } from '../../lib/limitText';
@@ -19,7 +19,7 @@ export function JobsPage({
 }: {
   data: AppState;
   language: Language;
-  features: Record<FeatureName, boolean>;
+  features: ActiveFeatures;
   onUpdate: (jobs: Job[]) => void;
 }) {
   const [editing, setEditing] = useState<string | 'new' | null>(null);
@@ -47,7 +47,7 @@ export function JobsPage({
     : null;
 
   const checkCompanyInOsm = async (job: Job) => {
-    if (!job.company || !job.city || data.profile.age < consentAgeRule.minimumAge) return;
+    if (!job.company || !job.city || !features.osmCompanyCheck) return;
     setOsmLookup((current) => ({ ...current, [job.id]: { status: 'loading' } }));
     try {
       const delay = Math.max(0, 1_000 - (Date.now() - lastOsmLookupAt));
@@ -135,13 +135,9 @@ export function JobsPage({
                 <details className="osm-lookup">
                   <summary>{t(language, 'osmTitle')}</summary>
                   <p>{t(language, 'osmExplain')}</p>
-                  {data.profile.age < consentAgeRule.minimumAge ? (
-                    <p className="notice notice-amber">{t(language, 'optInsBlocked')}</p>
-                  ) : (
-                    <button className="button button-quiet" type="button" disabled={osmLookup[job.id]?.status === 'loading'} onClick={() => void checkCompanyInOsm(job)}>
-                      {osmLookup[job.id]?.status === 'loading' ? t(language, 'osmLoading') : t(language, 'osmCheck')}
-                    </button>
-                  )}
+                  <button className="button button-quiet" type="button" disabled={osmLookup[job.id]?.status === 'loading'} onClick={() => void checkCompanyInOsm(job)}>
+                    {osmLookup[job.id]?.status === 'loading' ? t(language, 'osmLoading') : t(language, 'osmCheck')}
+                  </button>
                   {osmLookup[job.id]?.status === 'found' && <p className="notice notice-neutral">{t(language, 'osmFound', { name: osmLookup[job.id].result ?? '' })} · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a></p>}
                   {osmLookup[job.id]?.status === 'empty' && <p className="notice notice-neutral">{t(language, 'osmNoMatch')}</p>}
                   {osmLookup[job.id]?.status === 'error' && <p role="alert" className="notice notice-amber">{t(language, 'osmError')}</p>}

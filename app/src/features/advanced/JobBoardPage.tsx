@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { activeLimits, annualMiniProjection, consentAgeRule, hoursInWeek, isInLecturePeriod, latestKnownLimitValue, parseLocaleNumber, limitsForYear, monthlyIncomeForLimit, usableLimitValue, workingHoursCheck, type Job, type MonthlyLimitCheck, type Shift } from '@headroom/core';
+import { activeLimits, annualMiniProjection, hoursInWeek, isInLecturePeriod, latestKnownLimitValue, parseLocaleNumber, limitsForYear, monthlyIncomeForLimit, usableLimitValue, workingHoursCheck, type Job, type MonthlyLimitCheck, type Shift } from '@headroom/core';
 import { PageHeading } from '../../components/PageHeading';
 import { t, type Language } from '../../i18n/translations';
 import { dateText, id, localToday, money, preciseMoney } from '../../lib/format';
@@ -25,7 +25,6 @@ export function JobBoardPage({
   const [serverListings, setServerListings] = useState<Listing[] | null>(null);
   const [serverError, setServerError] = useState(false);
   useEffect(() => {
-    if (data.profile.age < consentAgeRule.minimumAge) return;
     let cancelled = false;
     void fetch('/api/listings')
       .then(async (response) => {
@@ -71,12 +70,8 @@ export function JobBoardPage({
           ))}
         </div>
       </section>
-      {data.profile.age < consentAgeRule.minimumAge ? (
-        <p className="notice notice-amber">{t(language, 'optInsBlocked')}</p>
-      ) : (
-        <button className="button button-primary" type="button" onClick={() => setShowPost((current) => !current)}>{t(language, 'postShift')} <span aria-hidden="true">+</span></button>
-      )}
-      {showPost && data.profile.age >= consentAgeRule.minimumAge && (
+      <button className="button button-primary" type="button" onClick={() => setShowPost((current) => !current)}>{t(language, 'postShift')} <span aria-hidden="true">+</span></button>
+      {showPost && (
         <form className="surface form-surface form-grid" onSubmit={(event) => {
           event.preventDefault();
           const listing = { title: title.trim(), city: city.trim(), date, hours: parseLocaleNumber(hours) ?? Number.NaN, hourlyWage: parseLocaleNumber(wage) ?? Number.NaN };

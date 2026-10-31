@@ -39,6 +39,13 @@ test('deaktivierte Flags blenden Jobbörse und Partnerkarte aus', async ({ page 
   await expect(page.getByText('Partner · Demodaten')).toHaveCount(0);
 });
 
+test('Wochenkalender ist ohne Advanced-Modus erreichbar', async ({ page }) => {
+  await finishOnboarding(page);
+  await page.getByRole('button', { name: /Schichten/ }).last().click();
+  await page.getByRole('button', { name: 'Woche', exact: true }).click();
+  await expect(page.locator('.week-calendar')).toBeVisible();
+});
+
 test('Dashboard bleibt auf 375 Pixeln ohne horizontales Scrollen nutzbar', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await finishOnboarding(page);

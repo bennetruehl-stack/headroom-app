@@ -1,5 +1,5 @@
 import { detectedCombinations, possibleCombinations, usableLimitValue, type JobCombinationId } from '@headroom/core';
-import type { FeatureName } from '../../config/features';
+import type { ActiveFeatures } from '@headroom/core';
 import { t, type Language, type MessageKey } from '../../i18n/translations';
 import { money } from '../../lib/format';
 import type { AppState } from '../../lib/storage';
@@ -58,7 +58,7 @@ export function InformationCards({
 }: {
   data: AppState;
   language: Language;
-  features: Record<FeatureName, boolean>;
+  features: ActiveFeatures;
   year: number;
   familyAge: number | null;
   /** Brutto-Orientierung liegt über dem Vergleichswert (nur mit geprüftem Wert). */

@@ -5,7 +5,7 @@ import { AnimatedMoney } from '../../components/AnimatedMoney';
 import { ProgressBar } from '../../components/ProgressBar';
 import { SourceStamp } from '../../components/SourceStamp';
 import { StatusBadge } from '../../components/StatusBadge';
-import type { FeatureName } from '../../config/features';
+import type { ActiveFeatures } from '@headroom/core';
 import { t, type Language } from '../../i18n/translations';
 import { localToday, money, preciseMoney } from '../../lib/format';
 import { employmentLabel, limitName } from '../../lib/limitText';
@@ -53,7 +53,7 @@ export function DashboardMetrics({
   annualRegular: number;
   taxLimit: number | null;
   daysUsed: number;
-  features: Record<FeatureName, boolean>;
+  features: ActiveFeatures;
   onShiftCheck: () => void;
   onAddShift: (shifts: Shift[]) => void;
   onNavigate: (screen: Screen) => void;
