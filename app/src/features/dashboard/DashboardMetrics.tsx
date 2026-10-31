@@ -206,7 +206,7 @@ export function DashboardMetrics({
           {actions}
 
           <RoleLimits
-            rows={roleRows(data, language, month, year, localToday(), daysUsed, annualRegular, features.jobCombinations)}
+            rows={roleRows(data, language, month, year, localToday(), daysUsed, annualRegular, features.combinationPlanning)}
             status={data.profile.status}
             language={language}
           />

@@ -1,4 +1,5 @@
-// Was im Schüler-Modus ausgeblendet wird. Eine Stelle für alles; Komponenten fragen nur hier.
+// Was im Schüler-Modus bei Beschäftigungsarten, Vorlagen und Grenzen ausgeblendet wird.
+// Welche Funktionen aktiv sind, entscheidet die Feature-Registry im Core (packages/core/src/features).
 // Der Modus selbst wird aus Alter und Status abgeleitet (isStudentMode im Core). Nach dem
 // bestätigten Wechsel am 18. Geburtstag ist alles automatisch wieder sichtbar.
 import { limits, type Job, type ProfileStatus } from '@headroom/core';

@@ -77,8 +77,7 @@ describe('Advanced-Funktionen', () => {
     expect(active.developer).toBe(true);
   });
 
-  it('verlangen das Einwilligungsalter auch außerhalb des Schüler-Modus', () => {
-    // 18 laut Alter, aber laut Geburtsdatum 15: zählt als unter 16 (und Schüler-Modus).
+  it('rechnen mit dem Geburtsdatum: 18 laut Alter, aber 15 laut Geburtsdatum bleibt gesperrt', () => {
     const profile = { ...student, age: 18, birthDate: '2011-05-01' };
     expect(resolveFeatures(ctx({ profile, advancedMode: true, flags: { ...defaultFeatures, partnerRecommendations: true } })).partnerRecommendations).toBe(false);
   });
@@ -97,6 +96,41 @@ describe('Schutzfunktionen ohne Advanced-Modus', () => {
   it('Job-Kombinationen, sobald eine Kombination erkannt ist', () => {
     expect(resolveFeatures(ctx({ jobs: [miniJob] })).jobCombinations).toBe(false);
     expect(resolveFeatures(ctx({ jobs: [miniJob, shortTerm] })).jobCombinations).toBe(true);
+  });
+});
+
+describe('Grenzen der Altersregeln (Stichtag 2026-10-31)', () => {
+  const pupilBorn = (birthDate: string): Profile => ({ ...pupil, birthDate, isFullTimeSchoolObligated: true });
+
+  it('Ferienjob-Zähler ab 15: knapp unter, genau auf, über der Grenze', () => {
+    expect(resolveFeatures(ctx({ profile: pupilBorn('2011-11-01') })).holidayJobCounter).toBe(false);
+    expect(resolveFeatures(ctx({ profile: pupilBorn('2011-10-31') })).holidayJobCounter).toBe(true);
+    expect(resolveFeatures(ctx({ profile: pupilBorn('2010-10-31') })).holidayJobCounter).toBe(true);
+  });
+
+  it('Jugendarbeitsschutz und Job-Hinweise unter 18: knapp unter, genau auf, über der Grenze', () => {
+    const born = (birthDate: string) => resolveFeatures(ctx({ profile: { ...student, age: 0, birthDate } }));
+    expect(born('2008-11-01').youthLaborCheck).toBe(true);
+    expect(born('2008-11-01').minorJobHints).toBe(true);
+    expect(born('2008-10-31').youthLaborCheck).toBe(false);
+    expect(born('2008-10-31').minorJobHints).toBe(false);
+    expect(born('2007-10-31').youthLaborCheck).toBe(false);
+  });
+
+  it('Warnung für mehrere Minijobs ab zwei Minijobs', () => {
+    const second: Job = { ...miniJob, id: 'c' };
+    const third: Job = { ...miniJob, id: 'd' };
+    expect(resolveFeatures(ctx({ jobs: [miniJob] })).multipleMiniJobs).toBe(false);
+    expect(resolveFeatures(ctx({ jobs: [miniJob, second] })).multipleMiniJobs).toBe(true);
+    expect(resolveFeatures(ctx({ jobs: [miniJob, second, third] })).multipleMiniJobs).toBe(true);
+  });
+});
+
+describe('Job-Kombinationen zur Planung', () => {
+  it('zeigt mögliche Kombinationen schon mit einem Job, die eigene Kombi erst mit zweien', () => {
+    const one = resolveFeatures(ctx({ jobs: [miniJob] }));
+    expect(one.combinationPlanning).toBe(true);
+    expect(one.jobCombinations).toBe(false);
   });
 });
 

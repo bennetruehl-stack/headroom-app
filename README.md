@@ -41,7 +41,7 @@ Nach Änderungen am Code `desktop:build` und `desktop:install` erneut ausführen
 
 ```text
 app/                         React, TypeScript, Vite, PWA und deutsch/englische UI
-  src/config/features.ts     Advanced-Modus und optionale Demo-Funktionen; standardmäßig aus
+  src/app/screenGate.ts      sperrt Bildschirme, die die Feature-Registry nicht freigibt
   src/import/ImportPage.tsx  Schichten aus Kalender (.ics/iCal-Link) und Foto übernehmen
   src/lib/shiftImport.ts     Import anwenden, Kalender abgleichen
   src/lib/storage.ts         IndexedDB, localStorage-Fallback und Datenmigration
@@ -50,6 +50,8 @@ app/                         React, TypeScript, Vite, PWA und deutsch/englische 
        ├── verwendet
        ▼
 packages/core/               reine TypeScript-Typen und Berechnungen
+  src/features/registry.ts   entscheidet für jede Funktion, für wen sie aktiv ist (Profil, Alter, Advanced-Modus)
+  src/features/flags.ts      Demo-Flags des Advanced-Modus; standardmäßig aus
   src/shiftImport.ts         iCalendar-Parser, Dienstplan-Textparser, Jobzuordnung, Dublettenprüfung
   data/limits.ts             datierte Grenzwerte mit Quelle und Prüfstatus
   data/jobPresets.ts         durchsuchbare Job-Presets

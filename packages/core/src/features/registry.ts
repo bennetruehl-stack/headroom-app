@@ -1,6 +1,6 @@
 // Jeder Eintrag entspricht einer Zeile in docs/Funktionskatalog.md (Spalte „Aktiv wenn“).
 import { consentAgeRule } from '../../data/privacy';
-import { detectedCombinations } from '../combinations';
+import { detectedCombinations, possibleCombinations } from '../combinations';
 import { ageOn, fullTimeSchoolObligated, isStudentMode, youthLaborApplies } from '../rules/youthLabor/profile';
 import type { Job, Profile } from '../types';
 import { effectiveFeatures, studentModeHiddenFeatures, type FeatureName } from './flags';
@@ -34,6 +34,8 @@ type Entry = {
 const always = () => true;
 const never = () => false;
 
+// Unter 16 greift heute schon der Schüler-Modus. Die Altersprüfung bleibt als zweite Sicherung,
+// falls sich der Schüler-Modus ändert: Diese Funktionen schicken Daten vom Gerät weg oder zeigen Werbung.
 const demoFlag = (name: FeatureName) => (ctx: Derived) => ctx.demo[name] && ctx.consent;
 
 export const featureRegistry = [
@@ -75,7 +77,7 @@ export const featureRegistry = [
   { id: 'jobCombinations', catalog: 'F51', priority: 'P2', built: true, activeWhen: (ctx) => detectedCombinations(ctx.profile, ctx.jobs, Number(ctx.date.slice(0, 4))).length > 0 },
   { id: 'darkMode', catalog: 'F52', priority: 'P2', built: true, activeWhen: always },
   { id: 'desktopApp', catalog: 'F53', priority: 'P2', built: true, activeWhen: always },
-  { id: 'premium', catalog: 'F60', priority: 'P3', built: true, activeWhen: (ctx) => ctx.demo.premium },
+  { id: 'premium', catalog: 'F60', priority: 'P3', built: true, activeWhen: demoFlag('premium') },
   { id: 'peerStats', catalog: 'F61', priority: 'P3', built: true, activeWhen: demoFlag('peerStats') },
   { id: 'jobBoard', catalog: 'F62', priority: 'P3', built: true, activeWhen: demoFlag('jobBoard') },
   { id: 'partnerRecommendations', catalog: 'F63', priority: 'P3', built: true, activeWhen: demoFlag('partnerRecommendations') },
@@ -95,6 +97,7 @@ const subFeatures = {
   schoolTimeMarking: (ctx: Derived) => ctx.studentMode,
   /** Stunden- und 26-Wochen-Regel für Werkstudent:innen. */
   workingStudentRules: (ctx: Derived) => ctx.profile.status === 'Working student',
+  combinationPlanning: (ctx: Derived) => possibleCombinations(ctx.profile, Number(ctx.date.slice(0, 4))).length > 0,
 } satisfies Record<string, (ctx: Derived) => boolean>;
 
 export type FeatureId = (typeof featureRegistry)[number]['id'] | keyof typeof subFeatures;

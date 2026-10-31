@@ -245,7 +245,7 @@ Die Anbindung spezifischer Job-Apps (z. B. Schichtplan-Software von Arbeitgebern
 
 ## 7. Advanced-Modus (Demo-Funktionen)
 
-Ein einzelner Schalter in den Einstellungen, **standardmäßig aus**. Ohne Advanced-Modus sind alle Demo-Funktionen aus, egal wie die Einzel-Flags stehen; die reguläre App bleibt unverändert. Beim ersten Einschalten werden Jobbörse und Partnerhinweise aktiviert; die Einzel-Flags sind dann im Entwicklerbereich schaltbar.
+Ein einzelner Schalter in den Einstellungen, **standardmäßig aus**. Ohne Advanced-Modus sind alle Demo-Funktionen aus, egal wie die Einzel-Flags stehen; die reguläre App bleibt unverändert. Beim ersten Einschalten werden Jobbörse und Partnerhinweise aktiviert; die Einzel-Flags sind dann im Entwicklerbereich schaltbar. Wochenkalender und Job-Kombinationen sind seit 31.10.2026 keine Advanced-Funktionen mehr: Sie gelten immer, wenn ihre fachliche Bedingung zutrifft. Welche Funktion für wen aktiv ist, entscheidet zentral die Feature-Registry in `packages/core/src/features/registry.ts`.
 
 | Funktion | Beschreibung |
 |---|---|
@@ -313,7 +313,7 @@ app/                 React-PWA (TypeScript, Vite)
   src/import/ImportPage.tsx  Schicht-Import (Kalender, Foto, Prüfschritt)
   src/lib/storage.ts        IndexedDB, localStorage-Fallback, Migration, Demo-Profile
   src/lib/shiftImport.ts    Import anwenden, Kalender abgleichen
-  src/config/features.ts    Advanced-Modus und Demo-Flags
+  src/app/screenGate.ts     sperrt Bildschirme ohne Freigabe der Feature-Registry
   src/i18n/translations.ts  Deutsch und Englisch
   src/mock/data.ts          gekennzeichnete Demodaten
   src/style.css             Design-Tokens und Komponenten

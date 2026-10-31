@@ -84,7 +84,7 @@ export function InformationCards({
         </summary>
         <p>{t(language, 'employmentInfo')}</p>
       </details>
-      {features.jobCombinations && <CombinationInfo data={data} language={language} year={year} />}
+      {features.combinationPlanning && <CombinationInfo data={data} language={language} year={year} />}
     </section>
   );
 }
