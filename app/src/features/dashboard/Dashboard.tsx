@@ -29,7 +29,6 @@ export function Dashboard({
   features: ActiveFeatures;
   syncNotice: string;
   onDismissSync: () => void;
-  /** Anzahl aussortierter Einträge, solange der Hinweis nicht ausgeblendet ist. */
   quarantineNotice: number;
   onDismissQuarantine: () => void;
   onProfile: (profile: Profile) => void;

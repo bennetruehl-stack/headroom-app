@@ -1,6 +1,7 @@
 import type { Job, OneTimePayment, Profile, QuarantinedRecord, Shift, ShiftCandidate } from '@headroom/core';
 import { latestKnownLimitValue } from '@headroom/core';
-import { indexedDbBackend, localStorageBackend, memoryBackend, RecordStore } from './db/recordStore';
+import { blankProfile } from './db/migrateV1';
+import { indexedDbBackend, localStorageBackend, memoryBackend, RecordStore, type LoadResult } from './db/recordStore';
 import type { Language } from '../i18n/translations';
 
 export type AppState = {
@@ -35,7 +36,6 @@ export type CalendarSource = {
 };
 
 export type ExampleProfile = 'standard' | 'lena' | 'mia';
-
 
 function today(): string {
   const date = new Date();
@@ -389,7 +389,7 @@ export function createMiaState(): AppState {
 /** Leerer Zustand nach „Auf diesem Gerät löschen“: kein Beispielprofil, Onboarding beginnt neu. */
 export function createEmptyState(): AppState {
   return {
-    profile: { status: 'Student', age: 0, familyInsured: false, bafoeg: false, hasMainJob: false, semesterPeriods: [] },
+    profile: blankProfile(),
     jobs: [],
     shifts: [],
     payments: [],
@@ -417,20 +417,19 @@ export function createBackup(state: AppState, quarantine: QuarantinedRecord[], f
 let store: RecordStore | null = null;
 
 /** IndexedDB, sonst localStorage, sonst nur Arbeitsspeicher. */
-async function openStore(): Promise<{ records: RecordStore; loaded: Awaited<ReturnType<RecordStore['load']>> }> {
+async function openStore(): Promise<{ records: RecordStore; loaded: LoadResult }> {
   for (const backend of [indexedDbBackend, localStorageBackend]) {
     try {
       const records = new RecordStore(backend());
       return { records, loaded: await records.load() };
     } catch {
-      // Nächsten Speicher versuchen.
     }
   }
   const records = new RecordStore(memoryBackend());
   return { records, loaded: await records.load() };
 }
 
-export async function loadState(): Promise<{ state: AppState; quarantine: QuarantinedRecord[] }> {
+export async function loadState(): Promise<LoadResult & { state: AppState }> {
   const { records, loaded } = await openStore();
   store = records;
   if (loaded.state) return { state: loaded.state, quarantine: loaded.quarantine };
@@ -451,7 +450,7 @@ export async function addToQuarantine(items: QuarantinedRecord[]): Promise<void>
   try {
     await store?.addQuarantine(items);
   } catch {
-    // Siehe saveState.
+    // Ein Browser kann das Speichern blockieren.
   }
 }
 

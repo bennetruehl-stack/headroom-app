@@ -1,4 +1,4 @@
-import { sameValue } from './equal';
+import { asMap, sameValue } from './equal';
 import type { HlcStamp } from './hlc';
 import { mapFields, RECORD_SCHEMA_VERSION, recordKinds, type RecordKind, type StoredRecord } from './schema';
 
@@ -7,8 +7,6 @@ type Fields = Record<string, unknown>;
 function withoutUndefined(values: Fields): Fields {
   return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
 }
-
-const asMap = (value: unknown): Fields => (value && typeof value === 'object' && !Array.isArray(value) ? (value as Fields) : {});
 
 /**
  * Schreibt neue Feldwerte in einen Datensatz und setzt nur für geänderte Felder eine neue Zeitmarke.

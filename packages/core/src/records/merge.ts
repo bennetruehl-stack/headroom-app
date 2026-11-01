@@ -1,3 +1,4 @@
+import { asMap } from './equal';
 import { compareStamps, type HlcStamp } from './hlc';
 import { mapFields, RECORD_SCHEMA_VERSION, setFields, type StoredRecord } from './schema';
 
@@ -9,9 +10,6 @@ export type RecordConflict =
 
 const newest = (stamps: (HlcStamp | undefined)[]) =>
   stamps.reduce<HlcStamp | undefined>((best, stamp) => (compareStamps(stamp, best) > 0 ? stamp : best), undefined);
-
-const asMap = (value: unknown): Record<string, unknown> =>
-  value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 
 /** Führt die Felder zweier Stände zusammen: Je Feld gewinnt die jüngere Zeitmarke. */
 function mergeFields(a: StoredRecord, b: StoredRecord): Pick<StoredRecord, 'fields' | 'fieldClock'> {

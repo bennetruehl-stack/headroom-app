@@ -1,3 +1,6 @@
+export const asMap = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+
 /** Vergleicht zwei JSON-artige Werte unabhängig von der Reihenfolge der Schlüssel. */
 export function sameValue(a: unknown, b: unknown): boolean {
   if (a === b) return true;

@@ -64,7 +64,6 @@ export const recordKinds: Record<RecordKind, KindInfo> = {
   payment: { synced: true, knownFields: paymentFields },
   calendarSource: { synced: true, knownFields: ['id', 'name', 'kind', 'url', 'lastSync', 'lastError'] },
   settings: { synced: true, knownFields: ['language', 'darkMode'] },
-  // Beispielprofile, Premium-Demo, Lohnstatistik-Token und offene Importe bleiben auf dem Gerät.
   deviceState: {
     synced: false,
     knownFields: ['example', 'isPremium', 'peerToken', 'pendingImports', 'onboarded', 'dismissedRecommendations', 'peerOptIn'],

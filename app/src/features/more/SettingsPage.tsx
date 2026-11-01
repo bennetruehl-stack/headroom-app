@@ -52,7 +52,6 @@ export function SettingsPage({
     if (!file) return;
     try {
       const parsed = JSON.parse(await file.text()) as { state?: unknown; featureFlags?: unknown };
-      // Jeder Eintrag wird einzeln geprüft: Ungültige werden aussortiert und aufbewahrt, der Rest übernommen.
       const imported = parseBackup(parsed?.state ?? parsed);
       if (!imported) throw new Error('Invalid backup');
       onUpdate({ ...imported.state, onboarded: true });

@@ -1,6 +1,3 @@
-// Speicher je Datensatz. Die App hält den Zustand weiter als einen Block im Speicher;
-// geschrieben werden nur geänderte Datensätze. Ein alter Block aus Version 1 wird beim Start übernommen
-// und erst beim nächsten erfolgreichen Start entfernt, nachdem jeder seiner Datensätze geprüft angekommen ist.
 import {
   createClock,
   deleteRecord,
@@ -11,6 +8,7 @@ import {
   type QuarantinedRecord,
   type StoredRecord,
 } from '@headroom/core';
+import { id as newId } from '../format';
 import type { AppState } from '../storage';
 import { inputsToState, splitLegacyState, stateToInputs } from './migrateV1';
 
@@ -22,6 +20,14 @@ export type Meta = { node: string; clock: Clock; migratedV1: boolean };
 export type Snapshot = { rows: Row[]; quarantine: QuarantinedRecord[]; meta: Meta | null; legacy: unknown };
 
 export type Commit = { put: Row[]; quarantine?: QuarantinedRecord[]; meta: Meta };
+
+/** `state` ist `null`, wenn auf diesem Gerät noch nichts gespeichert ist. */
+export type LoadResult = { state: AppState | null; quarantine: QuarantinedRecord[] };
+
+/** Je Kennung bleibt der letzte Eintrag, in der Reihenfolge des ersten Auftretens. */
+export function uniqueById<T extends { id: string }>(items: readonly T[]): T[] {
+  return [...new Map(items.map((item) => [item.id, item])).values()];
+}
 
 export interface RecordBackend {
   load(): Promise<Snapshot>;
@@ -38,6 +44,10 @@ const LEGACY_STORE = 'app-state';
 const LEGACY_KEY = 'main';
 const LEGACY_FALLBACK_KEY = 'headroom-data';
 const RECORDS_FALLBACK_KEY = 'headroom-records';
+const RECORDS = 'records';
+const QUARANTINE = 'quarantine';
+const META = 'meta';
+const META_KEY = 'main';
 
 function readLegacyFallback(): unknown {
   try {
@@ -48,9 +58,9 @@ function readLegacyFallback(): unknown {
   }
 }
 
-function removeLegacyFallback() {
+function removeFallback(key: string) {
   try {
-    localStorage.removeItem(LEGACY_FALLBACK_KEY);
+    localStorage.removeItem(key);
   } catch {
     // localStorage kann gesperrt sein.
   }
@@ -127,14 +137,14 @@ export function localStorageBackend(): RecordBackend {
       write({ rows: [...target.rows.values()], quarantine: [...target.quarantine.values()], meta: change.meta });
     },
     async removeLegacy() {
-      removeLegacyFallback();
+      removeFallback(LEGACY_FALLBACK_KEY);
     },
     async clearQuarantine() {
       write({ ...read(), quarantine: [] });
     },
     async clearAll() {
-      localStorage.removeItem(RECORDS_FALLBACK_KEY);
-      removeLegacyFallback();
+      removeFallback(RECORDS_FALLBACK_KEY);
+      removeFallback(LEGACY_FALLBACK_KEY);
     },
   };
 }
@@ -165,7 +175,7 @@ export function indexedDbBackend(): RecordBackend {
       const opening = indexedDB.open(DATABASE, 2);
       opening.onupgradeneeded = () => {
         const db = opening.result;
-        for (const name of [LEGACY_STORE, 'records', 'quarantine', 'meta']) {
+        for (const name of [LEGACY_STORE, RECORDS, QUARANTINE, META]) {
           if (!db.objectStoreNames.contains(name)) db.createObjectStore(name);
         }
       };
@@ -183,21 +193,21 @@ export function indexedDbBackend(): RecordBackend {
   return {
     load: () =>
       withDb(async (db) => {
-        const transaction = db.transaction(['records', 'quarantine', 'meta', LEGACY_STORE], 'readonly');
+        const transaction = db.transaction([RECORDS, QUARANTINE, META, LEGACY_STORE], 'readonly');
         const [rows, quarantine, meta, legacy] = await Promise.all([
-          request(transaction.objectStore('records').getAll() as IDBRequest<Row[]>),
-          request(transaction.objectStore('quarantine').getAll() as IDBRequest<QuarantinedRecord[]>),
-          request(transaction.objectStore('meta').get('main') as IDBRequest<Meta | undefined>),
+          request(transaction.objectStore(RECORDS).getAll() as IDBRequest<Row[]>),
+          request(transaction.objectStore(QUARANTINE).getAll() as IDBRequest<QuarantinedRecord[]>),
+          request(transaction.objectStore(META).get(META_KEY) as IDBRequest<Meta | undefined>),
           request(transaction.objectStore(LEGACY_STORE).get(LEGACY_KEY)),
         ]);
         return { rows, quarantine, meta: meta ?? null, legacy: legacy ?? readLegacyFallback() };
       }),
     commit: (change) =>
       withDb((db) => {
-        const transaction = db.transaction(['records', 'quarantine', 'meta'], 'readwrite');
-        for (const row of change.put) transaction.objectStore('records').put(row, row.record.id);
-        for (const item of change.quarantine ?? []) transaction.objectStore('quarantine').put(item, item.id);
-        transaction.objectStore('meta').put(change.meta, 'main');
+        const transaction = db.transaction([RECORDS, QUARANTINE, META], 'readwrite');
+        for (const row of change.put) transaction.objectStore(RECORDS).put(row, row.record.id);
+        for (const item of change.quarantine ?? []) transaction.objectStore(QUARANTINE).put(item, item.id);
+        transaction.objectStore(META).put(change.meta, META_KEY);
         return done(transaction);
       }),
     removeLegacy: async () => {
@@ -206,26 +216,23 @@ export function indexedDbBackend(): RecordBackend {
         transaction.objectStore(LEGACY_STORE).delete(LEGACY_KEY);
         return done(transaction);
       });
-      removeLegacyFallback();
+      removeFallback(LEGACY_FALLBACK_KEY);
     },
     clearQuarantine: () =>
       withDb((db) => {
-        const transaction = db.transaction('quarantine', 'readwrite');
-        transaction.objectStore('quarantine').clear();
+        const transaction = db.transaction(QUARANTINE, 'readwrite');
+        transaction.objectStore(QUARANTINE).clear();
         return done(transaction);
       }),
     clearAll: async () => {
       await withDb((db) => {
-        const transaction = db.transaction(['records', 'quarantine', 'meta', LEGACY_STORE], 'readwrite');
-        for (const name of ['records', 'quarantine', 'meta', LEGACY_STORE]) transaction.objectStore(name).clear();
+        const stores = [RECORDS, QUARANTINE, META, LEGACY_STORE];
+        const transaction = db.transaction(stores, 'readwrite');
+        for (const name of stores) transaction.objectStore(name).clear();
         return done(transaction);
       });
-      removeLegacyFallback();
-      try {
-        localStorage.removeItem(RECORDS_FALLBACK_KEY);
-      } catch {
-        // localStorage kann gesperrt sein.
-      }
+      removeFallback(LEGACY_FALLBACK_KEY);
+      removeFallback(RECORDS_FALLBACK_KEY);
     },
   };
 }
@@ -236,11 +243,13 @@ export class RecordStore {
   private readOnly = new Set<string>();
   private meta: Meta | null = null;
   private queue: Promise<unknown> = Promise.resolve();
+  private pendingState: AppState | undefined;
+  private pendingSave: Promise<void> | undefined;
 
   constructor(
     private readonly backend: RecordBackend,
     private readonly now: () => number = () => Date.now(),
-    private readonly newNode: () => string = () => crypto.randomUUID(),
+    private readonly newNode: () => string = newId,
   ) {}
 
   private freshMeta(): Meta {
@@ -254,8 +263,7 @@ export class RecordStore {
     return next.stamp;
   }
 
-  /** Liest alle Datensätze. `state` ist `null`, wenn auf diesem Gerät noch nichts gespeichert ist. */
-  async load(): Promise<{ state: AppState | null; quarantine: QuarantinedRecord[] }> {
+  async load(): Promise<LoadResult> {
     const snapshot = await this.backend.load();
     this.meta = snapshot.meta ?? this.freshMeta();
     let rows = snapshot.rows;
@@ -271,10 +279,9 @@ export class RecordStore {
       const meta = { ...this.meta, migratedV1: true };
       await this.backend.commit({ put, quarantine: split?.quarantine ?? [], meta });
       this.meta = meta;
-      const byId = new Map(rows.map((row) => [row.record.id, row]));
-      for (const row of put) byId.set(row.record.id, row);
-      rows = [...byId.values()];
-      quarantine = [...new Map([...quarantine, ...(split?.quarantine ?? [])].map((item) => [item.id, item])).values()];
+      const replaced = new Set(put.map((row) => row.record.id));
+      rows = [...rows.filter((row) => !replaced.has(row.record.id)), ...put];
+      quarantine = uniqueById([...quarantine, ...(split?.quarantine ?? [])]);
     } else if (legacy !== null) {
       const split = splitLegacyState(legacy);
       const kept = new Set([...rows.map((row) => row.record.id), ...quarantine.map((item) => item.id)]);
@@ -293,36 +300,49 @@ export class RecordStore {
     return { state: alive.length ? inputsToState(alive.map((row) => row.record)) : null, quarantine };
   }
 
-  /** Speichert nur Datensätze, die sich geändert haben. Entfernte Einträge bekommen einen Löschvermerk. */
+  /**
+   * Speichert nur Datensätze, die sich geändert haben. Entfernte Einträge bekommen einen Löschvermerk.
+   * Kommen mehrere Stände schnell hintereinander, wird nur der jeweils letzte geschrieben.
+   */
   save(state: AppState): Promise<void> {
-    return this.enqueue(async () => {
-      if (!this.meta) this.meta = this.freshMeta();
-      const before = this.meta;
-      const stamp = this.stamp();
-      const put: Row[] = [];
-      const seen = new Set<string>();
-      stateToInputs(state).forEach((input, position) => {
-        seen.add(input.id);
-        if (this.readOnly.has(input.id)) return;
-        const previous = this.rows.get(input.id);
-        const updated = updateRecord(previous?.record, input.kind, input.id, input.fields, stamp);
-        if (updated || previous?.position !== position) put.push({ record: updated ?? previous!.record, position });
-      });
-      for (const [id, row] of this.rows) {
-        if (!seen.has(id) && !row.record.deleted && !this.readOnly.has(id)) put.push({ ...row, record: deleteRecord(row.record, stamp) });
-      }
-      if (!put.length) {
-        this.meta = before;
-        return;
-      }
-      try {
-        await this.backend.commit({ put, meta: this.meta });
-      } catch (error) {
-        this.meta = before;
-        throw error;
-      }
-      for (const row of put) this.rows.set(row.record.id, row);
+    const waiting = this.pendingState !== undefined;
+    this.pendingState = state;
+    if (waiting) return this.pendingSave!;
+    this.pendingSave = this.enqueue(async () => {
+      const latest = this.pendingState!;
+      this.pendingState = undefined;
+      await this.write(latest);
     });
+    return this.pendingSave;
+  }
+
+  private async write(state: AppState): Promise<void> {
+    if (!this.meta) this.meta = this.freshMeta();
+    const before = this.meta;
+    const stamp = this.stamp();
+    const put: Row[] = [];
+    const seen = new Set<string>();
+    stateToInputs(state).forEach((input, position) => {
+      seen.add(input.id);
+      if (this.readOnly.has(input.id)) return;
+      const previous = this.rows.get(input.id);
+      const updated = updateRecord(previous?.record, input.kind, input.id, input.fields, stamp);
+      if (updated || previous?.position !== position) put.push({ record: updated ?? previous!.record, position });
+    });
+    for (const [id, row] of this.rows) {
+      if (!seen.has(id) && !row.record.deleted && !this.readOnly.has(id)) put.push({ ...row, record: deleteRecord(row.record, stamp) });
+    }
+    if (!put.length) {
+      this.meta = before;
+      return;
+    }
+    try {
+      await this.backend.commit({ put, meta: this.meta });
+    } catch (error) {
+      this.meta = before;
+      throw error;
+    }
+    for (const row of put) this.rows.set(row.record.id, row);
   }
 
   addQuarantine(items: QuarantinedRecord[]): Promise<void> {

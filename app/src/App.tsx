@@ -19,6 +19,7 @@ import { t, type Language } from './i18n/translations';
 import { getAdvancedMode, getFeatureFlags } from './lib/flags';
 import { CalendarFeedError, fetchCalendarFeed, syncDue, syncFromIcs } from './lib/shiftImport';
 import { localToday } from './lib/format';
+import { uniqueById } from './lib/db/recordStore';
 import { addToQuarantine, clearLocalState, createDemoState, createEmptyState, createLenaState, createMiaState, discardQuarantine, loadState, saveState, type AppState } from './lib/storage';
 
 // Seltener genutzte Bereiche werden erst beim Öffnen geladen.
@@ -233,14 +234,13 @@ function App() {
             quarantine={quarantine}
             onImportQuarantine={(items) => {
               void addToQuarantine(items);
-              setQuarantine((current) => [...new Map([...current, ...items].map((item) => [item.id, item])).values()]);
+              setQuarantine((current) => uniqueById([...current, ...items]));
             }}
             onDiscardQuarantine={() => {
               void discardQuarantine();
               setQuarantine([]);
             }}
             onDelete={async () => {
-              // Auf diesem Gerät löschen: kein Beispielprofil mehr, keine Löschvermerke im Speicher.
               const fresh = createEmptyState();
               if (data.peerToken) {
                 try {

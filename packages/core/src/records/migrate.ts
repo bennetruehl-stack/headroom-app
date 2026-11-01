@@ -3,7 +3,7 @@ import { RECORD_SCHEMA_VERSION, type StoredRecord } from './schema';
 /** Hebt die Felder eines Datensatzes von Version n auf n + 1. */
 export type FieldMigration = (fields: Record<string, unknown>) => Record<string, unknown>;
 
-/** Schritte je Ausgangsversion. Heute gibt es nur Version 1, deshalb ist die Liste leer. */
+/** Schritte je Ausgangsversion. */
 export const recordMigrations: Readonly<Record<number, FieldMigration>> = {};
 
 /**

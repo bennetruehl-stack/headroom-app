@@ -1,6 +1,3 @@
-// Übersetzt zwischen dem App-Zustand (ein Block) und einzelnen Datensätzen.
-// Der Block aus Version 1 und Sicherungsdateien werden je Datensatz geprüft:
-// Ein ungültiger Eintrag wird aussortiert und aufbewahrt, der Rest bleibt nutzbar.
 import {
   recordId,
   singletonIds,
@@ -19,9 +16,9 @@ export type RecordInput = { id: string; kind: RecordKind; fields: Record<string,
 
 type Fields = Record<string, unknown>;
 
-const blankProfile = (): Profile => ({ status: 'Student', age: 0, familyInsured: false, bafoeg: false, hasMainJob: false, semesterPeriods: [] });
+export const blankProfile = (): Profile => ({ status: 'Student', age: 0, familyInsured: false, bafoeg: false, hasMainJob: false, semesterPeriods: [] });
 
-/** Schichten ohne Kennung bekommen eine feste Kennung aus Job, Datum und Reihenfolge. */
+/** Feste Kennung aus Job, Datum und Reihenfolge für Schichten ohne Kennung. */
 function shiftIds(shifts: readonly Partial<Shift>[]): string[] {
   const seen = new Map<string, number>();
   return shifts.map((shift) => {
@@ -33,11 +30,14 @@ function shiftIds(shifts: readonly Partial<Shift>[]): string[] {
   });
 }
 
-function settingsFields(source: Partial<AppState>): Fields {
+type SettingsFields = Pick<AppState, 'language' | 'darkMode'>;
+type DeviceFields = Pick<AppState, 'onboarded' | 'isPremium' | 'dismissedRecommendations' | 'peerOptIn' | 'peerToken' | 'example' | 'pendingImports'>;
+
+function settingsFields(source: Partial<AppState>): SettingsFields {
   return { language: source.language === 'en' ? 'en' : 'de', darkMode: Boolean(source.darkMode) };
 }
 
-function deviceFields(source: Partial<AppState>): Fields {
+function deviceFields(source: Partial<AppState>): DeviceFields {
   const example: ExampleProfile | undefined =
     source.example === 'standard' || source.example === 'lena' || source.example === 'mia' ? source.example : undefined;
   return {
@@ -82,9 +82,8 @@ export function inputsToState(records: readonly { kind: RecordKind; fields: Fiel
     shifts: of('shift') as Shift[],
     payments: of('payment') as OneTimePayment[],
     calendars: of('calendarSource') as CalendarSource[],
-    language: settings.language as AppState['language'],
-    darkMode: settings.darkMode as boolean,
-    ...(device as Pick<AppState, 'onboarded' | 'isPremium' | 'dismissedRecommendations' | 'peerOptIn' | 'peerToken' | 'example' | 'pendingImports'>),
+    ...settings,
+    ...device,
     onboarded: Boolean(profile) && Boolean(device.onboarded),
   };
 }
