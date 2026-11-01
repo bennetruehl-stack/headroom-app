@@ -76,7 +76,7 @@ server/                      optionaler lokaler Express-Demo-Server
 
 ## Datenschutz und Datenfluss
 
-Im Grundbetrieb werden Profil, Jobs, Schichten, Zahlungen, Kalender und Einstellungen als einzelne Datensätze in IndexedDB auf dem Gerät gespeichert. Falls IndexedDB nicht verfügbar ist, verwendet die App localStorage. Ungültige Einträge werden aussortiert und aufbewahrt, bis du sie in den Einstellungen verwirfst; sie gehen mit in den Export. „Auf diesem Gerät löschen“ entfernt alle Daten dieses Geräts. Die gebündelten Schriftdateien vermeiden automatische Anfragen an einen externen Schriftanbieter. Die optionalen Funktionen sind in einer frischen Installation ausgeschaltet.
+Im Grundbetrieb werden Profil, Jobs, Schichten, Zahlungen, Kalender und Einstellungen als einzelne Datensätze in IndexedDB auf dem Gerät gespeichert. Falls IndexedDB nicht verfügbar ist, verwendet die App localStorage. Ungültige Einträge werden aussortiert und aufbewahrt, bis du sie in den Einstellungen verwirfst; sie gehen mit in den Export. „Auf diesem Gerät löschen“ entfernt alle Daten dieses Geräts. Gelöschte Einträge hinterlassen auf dem Gerät einen Löschvermerk mit ihren letzten Werten: Er wird für den späteren Abgleich zwischen Geräten gebraucht, bleibt bis „Auf diesem Gerät löschen“ und verlässt das Gerät heute nicht. Eine Aufbewahrungsfrist kommt mit dem Abgleich. Die gebündelten Schriftdateien vermeiden automatische Anfragen an einen externen Schriftanbieter. Die optionalen Funktionen sind in einer frischen Installation ausgeschaltet.
 
 Wenn optionale Funktionen manuell eingeschaltet und verwendet werden, gelten diese Datenflüsse:
 
