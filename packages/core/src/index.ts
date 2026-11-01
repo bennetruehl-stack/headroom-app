@@ -11,6 +11,7 @@ export * from './shiftImport';
 export * from './combinations';
 export * from './features/flags';
 export * from './features/registry';
+export * from './records';
 export * from './rules/legalConstants';
 export * from './rules/jobTags';
 export * from './rules/youthLabor';
