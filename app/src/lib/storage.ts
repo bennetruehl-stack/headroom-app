@@ -1,5 +1,6 @@
-import type { Job, OneTimePayment, Profile, ProfileStatus, Shift, ShiftCandidate } from '@headroom/core';
-import { isValidIsoDate, latestKnownLimitValue, ONE_TIME_PAYMENT_KINDS, PROFILE_STATUSES } from '@headroom/core';
+import type { Job, OneTimePayment, Profile, QuarantinedRecord, Shift, ShiftCandidate } from '@headroom/core';
+import { latestKnownLimitValue } from '@headroom/core';
+import { indexedDbBackend, localStorageBackend, memoryBackend, RecordStore } from './db/recordStore';
 import type { Language } from '../i18n/translations';
 
 export type AppState = {
@@ -35,10 +36,6 @@ export type CalendarSource = {
 
 export type ExampleProfile = 'standard' | 'lena' | 'mia';
 
-const DATABASE = 'headroom-local';
-const STORE = 'app-state';
-const KEY = 'main';
-const FALLBACK_KEY = 'headroom-data';
 
 function today(): string {
   const date = new Date();
@@ -389,114 +386,21 @@ export function createMiaState(): AppState {
   };
 }
 
-function openDatabase(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    if (!('indexedDB' in globalThis)) {
-      reject(new Error('IndexedDB is not available'));
-      return;
-    }
-    const request = indexedDB.open(DATABASE, 1);
-    request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains(STORE)) {
-        request.result.createObjectStore(STORE);
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error ?? new Error('Could not open IndexedDB'));
-  });
-}
-
-function readFromIndexedDb(): Promise<AppState | null> {
-  return openDatabase().then(
-    (db) =>
-      new Promise((resolve, reject) => {
-        const request = db.transaction(STORE, 'readonly').objectStore(STORE).get(KEY);
-        request.onsuccess = () => {
-          db.close();
-          resolve((request.result as AppState | undefined) ?? null);
-        };
-        request.onerror = () => {
-          db.close();
-          reject(request.error ?? new Error('Could not read IndexedDB'));
-        };
-      }),
-  );
-}
-
-function writeToIndexedDb(state: AppState): Promise<void> {
-  return openDatabase().then(
-    (db) =>
-      new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE, 'readwrite');
-        transaction.objectStore(STORE).put(state, KEY);
-        transaction.oncomplete = () => {
-          db.close();
-          resolve();
-        };
-        transaction.onerror = () => {
-          db.close();
-          reject(transaction.error ?? new Error('Could not write IndexedDB'));
-        };
-        transaction.onabort = () => {
-          db.close();
-          reject(transaction.error ?? new Error('IndexedDB transaction aborted'));
-        };
-      }),
-  );
-}
-
-const profileStatuses: readonly ProfileStatus[] = PROFILE_STATUSES;
-const employmentTypeValues: Job['type'][] = ['mini-job', 'short-term', 'working student', 'regular'];
-
-export function normalizeState(value: unknown): AppState | null {
-  if (!value || typeof value !== 'object') return null;
-  const candidate = value as Partial<AppState>;
-  const profile = candidate.profile as Profile | undefined;
-  if (
-    !profile ||
-    !profileStatuses.includes(profile.status) ||
-    !Number.isFinite(profile.age) || profile.age < 0 || profile.age > 120 ||
-    typeof profile.familyInsured !== 'boolean' || typeof profile.bafoeg !== 'boolean' ||
-    !Array.isArray(candidate.jobs) || !Array.isArray(candidate.shifts) ||
-    (candidate.language !== 'de' && candidate.language !== 'en')
-  ) return null;
-  const jobs = candidate.jobs as Job[];
-  if (!jobs.every((job) => job && typeof job.id === 'string' && typeof job.title === 'string' &&
-    employmentTypeValues.includes(job.type) && Number.isFinite(job.wage) && job.wage >= 0 &&
-    isValidIsoDate(job.startDate) && (!job.endDate || isValidIsoDate(job.endDate)))) return null;
-  const jobIds = new Set(jobs.map((job) => job.id));
-  const shifts = candidate.shifts as Shift[];
-  if (!shifts.every((shift) => shift && jobIds.has(shift.jobId) && isValidIsoDate(shift.date) &&
-    Number.isFinite(shift.hours) && shift.hours >= 0 && shift.hours <= 24 * 366)) return null;
-  // Einmalzahlungen: ungültige Einträge werden verworfen statt den ganzen Stand abzulehnen.
-  const payments = Array.isArray(candidate.payments)
-    ? (candidate.payments as OneTimePayment[]).filter((payment) =>
-      Boolean(payment) && typeof payment.id === 'string' && jobIds.has(payment.jobId) && isValidIsoDate(payment.date) &&
-      Number.isFinite(payment.amount) && payment.amount > 0 && ONE_TIME_PAYMENT_KINDS.includes(payment.kind))
-    : [];
+/** Leerer Zustand nach „Auf diesem Gerät löschen“: kein Beispielprofil, Onboarding beginnt neu. */
+export function createEmptyState(): AppState {
   return {
-    profile: { ...profile, semesterPeriods: Array.isArray(profile.semesterPeriods) ? profile.semesterPeriods : [] },
-    jobs,
-    shifts,
-    payments,
-    onboarded: Boolean(candidate.onboarded),
-    language: candidate.language,
-    darkMode: Boolean(candidate.darkMode),
-    isPremium: Boolean(candidate.isPremium),
-    dismissedRecommendations: Array.isArray(candidate.dismissedRecommendations)
-      ? candidate.dismissedRecommendations.filter((level): level is number => Number.isInteger(level) && level >= 1 && level <= 4)
-      : [],
-    peerOptIn: Boolean(candidate.peerOptIn),
-    peerToken: typeof candidate.peerToken === 'string' ? candidate.peerToken : undefined,
-    example: candidate.example === 'standard' || candidate.example === 'lena' || candidate.example === 'mia' ? candidate.example : undefined,
-    calendars: Array.isArray(candidate.calendars)
-      ? candidate.calendars.filter((item): item is CalendarSource =>
-        Boolean(item) && typeof item.id === 'string' && typeof item.name === 'string' && (item.kind === 'url' || item.kind === 'file'))
-      : [],
-    pendingImports: Array.isArray(candidate.pendingImports)
-      ? candidate.pendingImports.filter((item): item is ShiftCandidate =>
-        Boolean(item) && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && Number.isFinite(item.hours) && (item.source === 'calendar' || item.source === 'photo'))
-      : [],
+    profile: { status: 'Student', age: 0, familyInsured: false, bafoeg: false, hasMainJob: false, semesterPeriods: [] },
+    jobs: [],
+    shifts: [],
+    payments: [],
+    onboarded: false,
+    language: 'de',
+    darkMode: false,
+    isPremium: false,
+    dismissedRecommendations: [],
+    peerOptIn: false,
+    calendars: [],
+    pendingImports: [],
   };
 }
 
@@ -505,57 +409,57 @@ export function stateForExport(state: AppState): AppState {
   return { ...state, calendars: state.calendars.map(({ url: _url, ...calendar }) => calendar) };
 }
 
-export async function loadState(): Promise<AppState> {
-  let state: AppState | null = null;
-  try {
-    state = normalizeState(await readFromIndexedDb());
-  } catch {
-    // Continue to the localStorage fallback and attempt migration.
+/** Inhalt der Sicherungsdatei. Aussortierte Datensätze gehen mit, damit nichts verloren geht. */
+export function createBackup(state: AppState, quarantine: QuarantinedRecord[], featureFlags: Record<string, boolean>) {
+  return { version: 1, state: stateForExport(state), quarantine, featureFlags };
+}
+
+let store: RecordStore | null = null;
+
+/** IndexedDB, sonst localStorage, sonst nur Arbeitsspeicher. */
+async function openStore(): Promise<{ records: RecordStore; loaded: Awaited<ReturnType<RecordStore['load']>> }> {
+  for (const backend of [indexedDbBackend, localStorageBackend]) {
+    try {
+      const records = new RecordStore(backend());
+      return { records, loaded: await records.load() };
+    } catch {
+      // Nächsten Speicher versuchen.
+    }
   }
-  if (state) return state;
-  try {
-    const raw = localStorage.getItem(FALLBACK_KEY);
-    if (raw) state = normalizeState(JSON.parse(raw));
-  } catch {
-    // Start from the demo state if local persistence is unavailable or invalid.
-  }
-  if (state) {
-    await saveState(state);
-    return state;
-  }
+  const records = new RecordStore(memoryBackend());
+  return { records, loaded: await records.load() };
+}
+
+export async function loadState(): Promise<{ state: AppState; quarantine: QuarantinedRecord[] }> {
+  const { records, loaded } = await openStore();
+  store = records;
+  if (loaded.state) return { state: loaded.state, quarantine: loaded.quarantine };
   const fresh = createDemoState();
   await saveState(fresh);
-  return fresh;
+  return { state: fresh, quarantine: loaded.quarantine };
 }
 
 export async function saveState(state: AppState): Promise<void> {
   try {
-    await writeToIndexedDb(state);
+    await store?.save(state);
   } catch {
-    try {
-      localStorage.setItem(FALLBACK_KEY, JSON.stringify(state));
-    } catch {
-      // A browser may block both storage mechanisms; the app remains usable in memory.
-    }
+    // Ein Browser kann das Speichern blockieren; die App bleibt im Arbeitsspeicher nutzbar.
   }
 }
 
+export async function addToQuarantine(items: QuarantinedRecord[]): Promise<void> {
+  try {
+    await store?.addQuarantine(items);
+  } catch {
+    // Siehe saveState.
+  }
+}
+
+export async function discardQuarantine(): Promise<void> {
+  await store?.discardQuarantine();
+}
+
+/** „Auf diesem Gerät löschen“: entfernt alle Daten dieses Geräts, ohne Löschvermerke. */
 export async function clearLocalState(): Promise<void> {
-  try {
-    const db = await openDatabase();
-    await new Promise<void>((resolve) => {
-      const request = db.transaction(STORE, 'readwrite').objectStore(STORE).delete(KEY);
-      request.onsuccess = request.onerror = () => {
-        db.close();
-        resolve();
-      };
-    });
-  } catch {
-    // Ignore unavailable IndexedDB and continue with the fallback store.
-  }
-  try {
-    localStorage.removeItem(FALLBACK_KEY);
-  } catch {
-    // Ignore unavailable localStorage.
-  }
+  await store?.clearDevice();
 }

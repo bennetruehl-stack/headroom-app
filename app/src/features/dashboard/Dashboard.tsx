@@ -17,6 +17,8 @@ export function Dashboard({
   features,
   syncNotice,
   onDismissSync,
+  quarantineNotice,
+  onDismissQuarantine,
   onProfile,
 }: {
   data: AppState;
@@ -27,6 +29,9 @@ export function Dashboard({
   features: ActiveFeatures;
   syncNotice: string;
   onDismissSync: () => void;
+  /** Anzahl aussortierter Einträge, solange der Hinweis nicht ausgeblendet ist. */
+  quarantineNotice: number;
+  onDismissQuarantine: () => void;
   onProfile: (profile: Profile) => void;
 }) {
   const today = localToday();
@@ -101,6 +106,19 @@ export function Dashboard({
       </section>
 
       <TransitionNotices profile={data.profile} today={today} language={language} onProfile={onProfile} />
+
+      {quarantineNotice > 0 && (
+        <section className="notice notice-amber" role="status">
+          <p>
+            <span className="status-badge status-close"><span className="status-dot" aria-hidden="true" />{t(language, 'quarantineStatus')}</span>{' '}
+            {t(language, 'quarantineNotice', { count: quarantineNotice })}
+          </p>
+          <div className="card-actions">
+            <button className="text-button" type="button" onClick={() => onNavigate('Settings')}>{t(language, 'quarantineOpenSettings')}</button>
+            <button className="text-button" type="button" onClick={onDismissQuarantine}>{t(language, 'dismiss')}</button>
+          </div>
+        </section>
+      )}
 
       {(syncNotice || data.pendingImports.length > 0) && (
         <section className={'notice import-pending ' + (data.pendingImports.length ? 'notice-amber' : 'notice-lime')} role="status">

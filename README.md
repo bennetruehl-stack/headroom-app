@@ -44,7 +44,8 @@ app/                         React, TypeScript, Vite, PWA und deutsch/englische 
   src/app/screenGate.ts      sperrt Bildschirme, die die Feature-Registry nicht freigibt
   src/import/ImportPage.tsx  Schichten aus Kalender (.ics/iCal-Link) und Foto übernehmen
   src/lib/shiftImport.ts     Import anwenden, Kalender abgleichen
-  src/lib/storage.ts         IndexedDB, localStorage-Fallback und Datenmigration
+  src/lib/storage.ts         Laden, Speichern, Löschen, Beispielprofile
+  src/lib/db/                Speicher je Datensatz (IndexedDB, localStorage-Fallback), Übernahme alter Daten
   src/mock/data.ts           sichtbar gekennzeichnete Beispieldaten
        │
        ├── verwendet
@@ -75,7 +76,7 @@ server/                      optionaler lokaler Express-Demo-Server
 
 ## Datenschutz und Datenfluss
 
-Im Grundbetrieb werden Profil, Jobs und Schichten in IndexedDB auf dem Gerät gespeichert. Falls IndexedDB nicht verfügbar ist, verwendet die App localStorage. Die gebündelten Schriftdateien vermeiden automatische Anfragen an einen externen Schriftanbieter. Die optionalen Funktionen sind in einer frischen Installation ausgeschaltet.
+Im Grundbetrieb werden Profil, Jobs, Schichten, Zahlungen, Kalender und Einstellungen als einzelne Datensätze in IndexedDB auf dem Gerät gespeichert. Falls IndexedDB nicht verfügbar ist, verwendet die App localStorage. Ungültige Einträge werden aussortiert und aufbewahrt, bis du sie in den Einstellungen verwirfst; sie gehen mit in den Export. „Auf diesem Gerät löschen“ entfernt alle Daten dieses Geräts. Die gebündelten Schriftdateien vermeiden automatische Anfragen an einen externen Schriftanbieter. Die optionalen Funktionen sind in einer frischen Installation ausgeschaltet.
 
 Wenn optionale Funktionen manuell eingeschaltet und verwendet werden, gelten diese Datenflüsse:
 

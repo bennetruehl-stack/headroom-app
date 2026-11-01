@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { annualMiniProjection, monthTotal } from '@headroom/core';
-import { createDemoState, normalizeState } from './storage';
+import { createBackup, createDemoState, stateForExport } from './storage';
+import { parseBackup } from './db/migrateV1';
 
 describe('demo state', () => {
   const state = createDemoState();
@@ -30,22 +31,24 @@ describe('demo state', () => {
 
 describe('state migration', () => {
   it('adds empty calendar fields to older saved states and drops invalid entries', async () => {
-    const { normalizeState, stateForExport } = await import('./storage');
     const old = createDemoState() as Partial<ReturnType<typeof createDemoState>>;
     delete old.calendars;
     delete old.pendingImports;
-    const migrated = normalizeState(old);
+    const migrated = parseBackup(old)?.state;
     expect(migrated?.calendars).toEqual([]);
     expect(migrated?.pendingImports).toEqual([]);
 
-    const withCalendar = normalizeState({
+    const imported = parseBackup({
       ...createDemoState(),
       calendars: [{ id: 'c', name: 'Arbeit', kind: 'url', url: 'https://calendar.google.com/secret.ics' }, { id: 1 }],
       pendingImports: [{ date: '2026-10-20', hours: 4, source: 'calendar' }, { date: 'x', hours: 1, source: 'calendar' }],
     });
-    expect(withCalendar?.calendars).toHaveLength(1);
-    expect(withCalendar?.pendingImports).toHaveLength(1);
-    expect(stateForExport(withCalendar!).calendars[0]).toEqual({ id: 'c', name: 'Arbeit', kind: 'url' });
+    const withCalendar = imported!.state;
+    expect(withCalendar.calendars).toHaveLength(1);
+    // Der ungültige Kalender wird aussortiert und aufbewahrt, nicht verworfen.
+    expect(imported!.quarantine).toEqual([{ id: 'calendarSource:#1', kind: 'calendarSource', raw: { id: 1 }, reason: 'invalid' }]);
+    expect(withCalendar.pendingImports).toHaveLength(1);
+    expect(stateForExport(withCalendar).calendars[0]).toEqual({ id: 'c', name: 'Arbeit', kind: 'url' });
   });
 });
 
@@ -55,7 +58,7 @@ describe('Beispielprofil Mia, 16', () => {
     const { ageOn, checkYouthLabor, isStudentMode } = await import('@headroom/core');
     const mia = createMiaState();
     const today = new Date().toISOString().slice(0, 10);
-    expect(normalizeState(JSON.parse(JSON.stringify(mia)))?.example).toBe('mia');
+    expect(parseBackup(JSON.parse(JSON.stringify(mia)))?.state.example).toBe('mia');
     expect(ageOn(mia.profile, today)).toBe(16);
     expect(isStudentMode(mia.profile, today)).toBe(true);
     const month = today.slice(0, 7);
@@ -73,5 +76,15 @@ describe('Beispielprofil Mia, 16', () => {
     const ruleIds = errors.map((item) => item.ruleId);
     expect(ruleIds).toContain('nightRest');
     expect(ruleIds.filter((id) => id.startsWith('child'))).toEqual([]);
+  });
+});
+
+describe('Sicherungsdatei', () => {
+  it('enthält aussortierte Einträge, aber keine privaten Kalender-Links', () => {
+    const state = { ...createDemoState(), calendars: [{ id: 'c', name: 'Arbeit', kind: 'url' as const, url: 'https://example.org/geheim.ics' }] };
+    const quarantine = [{ id: 'shift:kaputt', kind: 'shift' as const, raw: { hours: -1 }, reason: 'invalid' as const }];
+    const backup = createBackup(state, quarantine, { advancedMode: false });
+    expect(backup.quarantine).toEqual(quarantine);
+    expect(JSON.stringify(backup)).not.toContain('geheim.ics');
   });
 });

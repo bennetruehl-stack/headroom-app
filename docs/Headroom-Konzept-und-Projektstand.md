@@ -311,7 +311,8 @@ Monorepo mit npm-Workspaces:
 app/                 React-PWA (TypeScript, Vite)
   src/App.tsx              Bildschirme und Komponenten
   src/import/ImportPage.tsx  Schicht-Import (Kalender, Foto, Prüfschritt)
-  src/lib/storage.ts        IndexedDB, localStorage-Fallback, Migration, Demo-Profile
+  src/lib/storage.ts        Laden, Speichern, Löschen, Demo-Profile
+  src/lib/db/               Speicher je Datensatz, Übernahme des alten Blocks
   src/lib/shiftImport.ts    Import anwenden, Kalender abgleichen
   src/app/screenGate.ts     sperrt Bildschirme ohne Freigabe der Feature-Registry
   src/i18n/translations.ts  Deutsch und Englisch
@@ -343,8 +344,12 @@ Wichtige Funktionen: `activeLimits` (Profilfilter), `monthTotal`, `monthlySummar
 
 ### 10.4 Datenhaltung in der App
 
-- Primär **IndexedDB** (`headroom-local`), Fallback **localStorage**.
-- `normalizeState` validiert gespeicherte und importierte Daten und migriert ältere Stände (z. B. ergänzt `calendars` und `pendingImports`).
+- Primär **IndexedDB** (`headroom-local`, Version 2), Fallback **localStorage**, notfalls nur Arbeitsspeicher.
+- Gespeichert wird **je Datensatz** (Profil, Job, Schicht, Zahlung, Kalender, Einstellungen, Gerätezustand). Jedes Feld trägt eine Zeitmarke (hybride logische Uhr aus `packages/core/src/records`), damit Geräte später feldweise zusammenführen können. Gelöschte Einträge bleiben als Löschvermerk stehen.
+- Der Gerätezustand (Beispielprofil, Premium-Demo, Lohnstatistik-Token, offene Importe, Onboarding) wird nie abgeglichen.
+- Der alte Block aus Version 1 wird beim ersten Start je Datensatz geprüft und übernommen. Er bleibt bis zum nächsten erfolgreichen Start liegen und wird erst entfernt, wenn jeder seiner Einträge im neuen Speicher steht.
+- Ungültige Einträge (aus dem alten Block oder einer Sicherungsdatei) werden einzeln **aussortiert und aufbewahrt**. Die App meldet sie, sie gehen mit in den Export und lassen sich in den Einstellungen verwerfen.
+- „Auf diesem Gerät löschen“ leert den Speicher vollständig, ohne Löschvermerke, und entfernt die Kennzeichnung als Beispielprofil.
 - Feature-Flags und Advanced-Modus liegen getrennt in localStorage.
 - JSON-Export enthält Daten und Flags, aber **keine** privaten Kalender-Links.
 

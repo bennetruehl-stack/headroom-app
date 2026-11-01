@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { resolveFeatures, type Shift } from '@headroom/core';
+import { resolveFeatures, type QuarantinedRecord, type Shift } from '@headroom/core';
 import { allowedScreen } from './app/screenGate';
 import type { Screen } from './app/types';
 import { AppFooter, AppHeader } from './components/AppChrome';
@@ -19,7 +19,7 @@ import { t, type Language } from './i18n/translations';
 import { getAdvancedMode, getFeatureFlags } from './lib/flags';
 import { CalendarFeedError, fetchCalendarFeed, syncDue, syncFromIcs } from './lib/shiftImport';
 import { localToday } from './lib/format';
-import { clearLocalState, createDemoState, createLenaState, createMiaState, loadState, saveState, type AppState } from './lib/storage';
+import { addToQuarantine, clearLocalState, createDemoState, createEmptyState, createLenaState, createMiaState, discardQuarantine, loadState, saveState, type AppState } from './lib/storage';
 
 // Seltener genutzte Bereiche werden erst beim Öffnen geladen.
 const JobBoardPage = lazy(() => import('./features/advanced/JobBoardPage').then((module) => ({ default: module.JobBoardPage })));
@@ -41,6 +41,9 @@ function App() {
   const [advancedMode, setAdvancedMode] = useState(false);
   const [featureReady, setFeatureReady] = useState(false);
   const [syncNotice, setSyncNotice] = useState('');
+  // Aussortierte Datensätze: bleiben aufbewahrt und gehen mit in den Export, bis die Person sie verwirft.
+  const [quarantine, setQuarantine] = useState<QuarantinedRecord[]>([]);
+  const [quarantineNoticeOpen, setQuarantineNoticeOpen] = useState(false);
   const features = resolveFeatures({
     profile: data.profile,
     jobs: data.jobs,
@@ -55,9 +58,11 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-    void loadState().then((stored) => {
+    void loadState().then(({ state: stored, quarantine: kept }) => {
       if (cancelled) return;
       setData(stored);
+      setQuarantine(kept);
+      setQuarantineNoticeOpen(kept.length > 0);
       setPage(stored.onboarded ? 'Dashboard' : 'Onboarding');
       setReady(true);
     });
@@ -193,6 +198,8 @@ function App() {
             features={features}
             syncNotice={syncNotice}
             onDismissSync={() => setSyncNotice('')}
+            quarantineNotice={quarantineNoticeOpen ? quarantine.length : 0}
+            onDismissQuarantine={() => setQuarantineNoticeOpen(false)}
             onProfile={(profile) => update({ profile })}
           />
         );
@@ -223,17 +230,18 @@ function App() {
               setData(fresh);
               setPage('Onboarding');
             }}
+            quarantine={quarantine}
+            onImportQuarantine={(items) => {
+              void addToQuarantine(items);
+              setQuarantine((current) => [...new Map([...current, ...items].map((item) => [item.id, item])).values()]);
+            }}
+            onDiscardQuarantine={() => {
+              void discardQuarantine();
+              setQuarantine([]);
+            }}
             onDelete={async () => {
-              const fresh = createDemoState();
-              fresh.profile = { status: 'Student', age: 0, familyInsured: false, bafoeg: false, hasMainJob: false, semesterPeriods: [] };
-              fresh.jobs = [];
-              fresh.shifts = [];
-              fresh.payments = [];
-              fresh.dismissedRecommendations = [];
-              fresh.peerOptIn = false;
-              fresh.peerToken = undefined;
-              fresh.isPremium = false;
-              fresh.onboarded = false;
+              // Auf diesem Gerät löschen: kein Beispielprofil mehr, keine Löschvermerke im Speicher.
+              const fresh = createEmptyState();
               if (data.peerToken) {
                 try {
                   await fetch('/api/peer-opt-in/' + encodeURIComponent(data.peerToken), { method: 'DELETE' });
@@ -250,6 +258,7 @@ function App() {
                 // Optional demo flags must not block local data deletion.
               }
               await clearLocalState();
+              setQuarantine([]);
               setData(fresh);
               setPage('Onboarding');
             }}

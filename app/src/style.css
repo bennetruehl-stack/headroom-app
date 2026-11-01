@@ -3791,3 +3791,21 @@ select:focus {
   display: block;
   flex: 0 0 auto;
 }
+
+/* Aussortierte Datensätze in den Einstellungen */
+.quarantine-box {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.quarantine-box p {
+  margin: 0;
+}
+
+.quarantine-box .status-badge {
+  padding: 2px 8px;
+  margin-right: 6px;
+}

@@ -139,3 +139,96 @@ test('Advanced-Modus schaltet Partner-Jobbörsen ein und wieder aus', async ({ p
   await page.getByRole('button', { name: 'Mehr' }).click();
   await expect(page.getByRole('button', { name: /Offene Schichten/ })).toHaveCount(0);
 });
+
+test('übernimmt gespeicherte Daten aus Version 1 und sortiert eine kaputte Schicht aus', async ({ page }) => {
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      const removal = indexedDB.deleteDatabase('headroom-local');
+      removal.onsuccess = removal.onerror = removal.onblocked = () => resolve();
+    });
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const opening = indexedDB.open('headroom-local', 1);
+      opening.onupgradeneeded = () => opening.result.createObjectStore('app-state');
+      opening.onsuccess = () => resolve(opening.result);
+      opening.onerror = () => reject(opening.error);
+    });
+    const block = {
+      profile: { status: 'Student', age: 21, familyInsured: true, bafoeg: false, hasMainJob: false, semesterPeriods: [] },
+      jobs: [{ id: 'kino', title: 'Kino Lichtspiel', type: 'mini-job', wage: 14, startDate: '2026-01-01' }],
+      shifts: [
+        { id: 'a', jobId: 'kino', date: '2026-11-02', hours: 4 },
+        { id: 'kaputt', jobId: 'kino', date: 'kein Datum', hours: 4 },
+      ],
+      payments: [],
+      onboarded: true,
+      language: 'de',
+      darkMode: false,
+      isPremium: false,
+      dismissedRecommendations: [],
+      peerOptIn: false,
+      calendars: [],
+      pendingImports: [],
+    };
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction('app-state', 'readwrite');
+      transaction.objectStore('app-state').put(block, 'main');
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  await expect(page.getByText(/Ungültige gespeicherte Einträge: 1/)).toBeVisible();
+  await page.getByRole('button', { name: /Jobs/ }).last().click();
+  await expect(page.getByText('Kino Lichtspiel')).toBeVisible();
+
+  // Nach einem weiteren Start ist der alte Block entfernt, die Daten bleiben.
+  await page.reload();
+  await page.getByRole('button', { name: /Jobs/ }).last().click();
+  await expect(page.getByText('Kino Lichtspiel')).toBeVisible();
+  const stored = await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const opening = indexedDB.open('headroom-local');
+      opening.onsuccess = () => resolve(opening.result);
+      opening.onerror = () => reject(opening.error);
+    });
+    const read = (store: string, query: 'all' | 'main') => new Promise<unknown>((resolve) => {
+      const objects = db.transaction(store, 'readonly').objectStore(store);
+      const request = query === 'all' ? objects.getAll() : objects.get('main');
+      request.onsuccess = () => resolve(request.result);
+    });
+    const result = { legacy: await read('app-state', 'main'), records: (await read('records', 'all')) as unknown[], quarantine: (await read('quarantine', 'all')) as unknown[] };
+    db.close();
+    return { legacy: result.legacy ?? null, records: result.records.length, quarantine: result.quarantine.length };
+  });
+  expect(stored).toEqual({ legacy: null, records: 5, quarantine: 1 });
+});
+
+test('Auf diesem Gerät löschen entfernt das Beispielprofil', async ({ page }) => {
+  await finishOnboarding(page);
+  await page.getByRole('button', { name: 'Mehr' }).click();
+  await page.getByRole('button', { name: /Einstellungen/ }).first().click();
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByRole('button', { name: 'Auf diesem Gerät löschen' }).click();
+  await expect(page.getByRole('button', { name: 'Student:in', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Student:in', exact: true })).toBeVisible();
+  const stored = await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const opening = indexedDB.open('headroom-local');
+      opening.onsuccess = () => resolve(opening.result);
+      opening.onerror = () => reject(opening.error);
+    });
+    const rows = await new Promise<{ record: { id: string; deleted: boolean; fields: Record<string, unknown> } }[]>((resolve) => {
+      const request = db.transaction('records', 'readonly').objectStore('records').getAll();
+      request.onsuccess = () => resolve(request.result);
+    });
+    db.close();
+    return {
+      example: rows.find((row) => row.record.id === 'device')?.record.fields.example ?? null,
+      deleted: rows.filter((row) => row.record.deleted).length,
+      jobs: rows.filter((row) => row.record.id.startsWith('job:')).length,
+    };
+  });
+  expect(stored).toEqual({ example: null, deleted: 0, jobs: 0 });
+});

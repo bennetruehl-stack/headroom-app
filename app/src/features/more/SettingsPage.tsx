@@ -9,7 +9,9 @@ import { dateError, numberError } from '../../lib/inputErrors';
 import { localToday } from '../../lib/format';
 import { YouthProfileFields } from '../youth/YouthProfileFields';
 import { bafoegRelevant } from '../../config/studentMode';
-import { normalizeState, stateForExport, type AppState } from '../../lib/storage';
+import { createBackup, type AppState } from '../../lib/storage';
+import { parseBackup } from '../../lib/db/migrateV1';
+import type { QuarantinedRecord } from '@headroom/core';
 
 export function SettingsPage({
   data,
@@ -22,6 +24,9 @@ export function SettingsPage({
   onNavigate,
   onReset,
   onDelete,
+  quarantine,
+  onImportQuarantine,
+  onDiscardQuarantine,
 }: {
   data: AppState;
   language: Language;
@@ -33,6 +38,9 @@ export function SettingsPage({
   onNavigate: (screen: Screen) => void;
   onReset: () => void;
   onDelete: () => void;
+  quarantine: QuarantinedRecord[];
+  onImportQuarantine: (items: QuarantinedRecord[]) => void;
+  onDiscardQuarantine: () => void;
 }) {
   const [ageText, setAgeText] = useState(String(data.profile.age));
   const ageMessage = numberError(validateNumber(ageText, inputRules.age), t(language, 'age'), language);
@@ -44,22 +52,26 @@ export function SettingsPage({
     if (!file) return;
     try {
       const parsed = JSON.parse(await file.text()) as { state?: unknown; featureFlags?: unknown };
-      const imported = normalizeState(parsed?.state ?? parsed);
+      // Jeder Eintrag wird einzeln geprüft: Ungültige werden aussortiert und aufbewahrt, der Rest übernommen.
+      const imported = parseBackup(parsed?.state ?? parsed);
       if (!imported) throw new Error('Invalid backup');
-      onUpdate({ ...imported, onboarded: true });
+      onUpdate({ ...imported.state, onboarded: true });
+      onImportQuarantine(imported.quarantine);
       if (parsed.featureFlags && typeof parsed.featureFlags === 'object') {
         onFeatureUpdate(sanitizeFeatures(parsed.featureFlags));
         const advanced = (parsed.featureFlags as { advancedMode?: unknown }).advancedMode;
         if (typeof advanced === 'boolean') onAdvanced(advanced);
       }
-      window.alert(t(language, 'importSuccess'));
+      window.alert(imported.quarantine.length
+        ? t(language, 'importPartial', { count: imported.quarantine.length })
+        : t(language, 'importSuccess'));
     } catch {
       window.alert(t(language, 'importError'));
     }
   };
 
   const exportData = () => {
-    const blob = new Blob([JSON.stringify({ version: 1, state: stateForExport(data), featureFlags: { ...features, advancedMode } }, null, 2)], {
+    const blob = new Blob([JSON.stringify(createBackup(data, quarantine, { ...features, advancedMode }), null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
@@ -153,6 +165,15 @@ export function SettingsPage({
               <p className="muted">{t(language, 'developerIntro')}</p>
               <button className="button button-quiet" type="button" onClick={() => onNavigate('Developer')}>{t(language, 'openDeveloper')}</button>
             </details>
+          )}
+          {quarantine.length > 0 && (
+            <div className="quarantine-box">
+              <p><span className="status-badge status-close"><span className="status-dot" aria-hidden="true" />{t(language, 'quarantineStatus')}</span> {t(language, 'quarantineCount', { count: quarantine.length })}</p>
+              <p className="muted">{t(language, 'quarantineHint')}</p>
+              <button className="button button-quiet" type="button" onClick={() => {
+                if (window.confirm(t(language, 'confirmQuarantineDiscard'))) onDiscardQuarantine();
+              }}>{t(language, 'quarantineDiscard')}</button>
+            </div>
           )}
           <button className="button button-quiet" type="button" onClick={() => onReset()}>{t(language, 'resetDemo')}</button>
           <button className="button button-danger" type="button" onClick={() => {
