@@ -1,5 +1,6 @@
 import {
   recordId,
+  recordKinds,
   singletonIds,
   validateFields,
   type Job,
@@ -135,9 +136,25 @@ export function splitLegacyState(value: unknown): { inputs: RecordInput[]; quara
   return { inputs, quarantine };
 }
 
-/** Prüft eine Sicherungsdatei je Datensatz und baut daraus den App-Zustand. */
-export function parseBackup(value: unknown): { state: AppState; quarantine: QuarantinedRecord[] } | null {
+const quarantineReasons: readonly QuarantinedRecord['reason'][] = ['invalid', 'missingJob'];
+
+/** Aussortierte Einträge aus einer Sicherungsdatei. Nur vollständige Einträge werden übernommen. */
+function backupQuarantine(value: unknown): QuarantinedRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is QuarantinedRecord =>
+    Boolean(item) && typeof item === 'object' && typeof item.id === 'string' && item.kind in recordKinds &&
+    quarantineReasons.includes(item.reason) && 'raw' in item);
+}
+
+/**
+ * Prüft eine Sicherungsdatei je Datensatz und baut daraus den App-Zustand.
+ * `savedQuarantine` sind die in der Datei mitgesicherten aussortierten Einträge.
+ */
+export function parseBackup(value: unknown, savedQuarantine?: unknown): { state: AppState; quarantine: QuarantinedRecord[] } | null {
   const split = splitLegacyState(value);
   if (!split || !split.inputs.some((input) => input.kind === 'profile')) return null;
-  return { state: inputsToState(split.inputs), quarantine: split.quarantine };
+  return {
+    state: inputsToState(split.inputs),
+    quarantine: [...new Map([...backupQuarantine(savedQuarantine), ...split.quarantine].map((item) => [item.id, item])).values()],
+  };
 }

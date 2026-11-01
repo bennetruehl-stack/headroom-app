@@ -51,8 +51,8 @@ export function SettingsPage({
   const importFile = async (file?: File) => {
     if (!file) return;
     try {
-      const parsed = JSON.parse(await file.text()) as { state?: unknown; featureFlags?: unknown };
-      const imported = parseBackup(parsed?.state ?? parsed);
+      const parsed = JSON.parse(await file.text()) as { state?: unknown; quarantine?: unknown; featureFlags?: unknown };
+      const imported = parseBackup(parsed?.state ?? parsed, parsed?.quarantine);
       if (!imported) throw new Error('Invalid backup');
       onUpdate({ ...imported.state, onboarded: true });
       onImportQuarantine(imported.quarantine);

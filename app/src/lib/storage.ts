@@ -409,20 +409,33 @@ export function stateForExport(state: AppState): AppState {
   return { ...state, calendars: state.calendars.map(({ url: _url, ...calendar }) => calendar) };
 }
 
+/** Aussortierte Kalender ohne privaten Link: Er ist wie ein Passwort und wird nie exportiert. */
+function quarantineForExport(quarantine: QuarantinedRecord[]): QuarantinedRecord[] {
+  return quarantine.map((item) => {
+    if (item.kind !== 'calendarSource' || !item.raw || typeof item.raw !== 'object') return item;
+    const { url: _url, ...raw } = item.raw as Record<string, unknown>;
+    return { ...item, raw };
+  });
+}
+
 /** Inhalt der Sicherungsdatei. Aussortierte Datensätze gehen mit, damit nichts verloren geht. */
 export function createBackup(state: AppState, quarantine: QuarantinedRecord[], featureFlags: Record<string, boolean>) {
-  return { version: 1, state: stateForExport(state), quarantine, featureFlags };
+  return { version: 1, state: stateForExport(state), quarantine: quarantineForExport(quarantine), featureFlags };
 }
 
 let store: RecordStore | null = null;
+let storeUsesIndexedDb = false;
 
 /** IndexedDB, sonst localStorage, sonst nur Arbeitsspeicher. */
 async function openStore(): Promise<{ records: RecordStore; loaded: LoadResult }> {
   for (const backend of [indexedDbBackend, localStorageBackend]) {
     try {
       const records = new RecordStore(backend());
-      return { records, loaded: await records.load() };
+      const loaded = await records.load();
+      storeUsesIndexedDb = backend === indexedDbBackend;
+      return { records, loaded };
     } catch {
+      // Speicher nicht lesbar: nächsten versuchen.
     }
   }
   const records = new RecordStore(memoryBackend());
@@ -455,10 +468,31 @@ export async function addToQuarantine(items: QuarantinedRecord[]): Promise<void>
 }
 
 export async function discardQuarantine(): Promise<void> {
-  await store?.discardQuarantine();
+  try {
+    await store?.discardQuarantine();
+  } catch {
+    // Ein Browser kann das Speichern blockieren.
+  }
 }
 
-/** „Auf diesem Gerät löschen“: entfernt alle Daten dieses Geräts, ohne Löschvermerke. */
-export async function clearLocalState(): Promise<void> {
-  await store?.clearDevice();
+/**
+ * „Auf diesem Gerät löschen“: entfernt alle Daten dieses Geräts, ohne Löschvermerke.
+ * Läuft die App gerade auf einem Rückfallspeicher, wird IndexedDB trotzdem mit geleert.
+ * Liefert `false`, wenn nicht sicher alles entfernt werden konnte.
+ */
+export async function clearLocalState(): Promise<boolean> {
+  let complete = true;
+  try {
+    await store?.clearDevice();
+  } catch {
+    complete = false;
+  }
+  if (!storeUsesIndexedDb) {
+    try {
+      await indexedDbBackend().clearAll();
+    } catch {
+      // Ohne IndexedDB gibt es dort nichts zu löschen.
+    }
+  }
+  return complete;
 }

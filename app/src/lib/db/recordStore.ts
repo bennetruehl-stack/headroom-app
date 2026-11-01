@@ -15,9 +15,18 @@ import { inputsToState, splitLegacyState, stateToInputs } from './migrateV1';
 /** Ein gespeicherter Datensatz plus seine Stelle in der Liste (nur auf diesem Gerät). */
 export type Row = { record: StoredRecord; position: number };
 
-export type Meta = { node: string; clock: Clock; migratedV1: boolean };
+/** Wo der alte Block aus Version 1 lag. */
+export type LegacySource = 'indexedDb' | 'localStorage' | 'memory';
 
-export type Snapshot = { rows: Row[]; quarantine: QuarantinedRecord[]; meta: Meta | null; legacy: unknown };
+export type Meta = {
+  node: string;
+  clock: Clock;
+  migratedV1: boolean;
+  /** Quelle des übernommenen alten Blocks. Nur diese Quelle wird später entfernt. */
+  legacySource?: LegacySource;
+};
+
+export type Snapshot = { rows: Row[]; quarantine: QuarantinedRecord[]; meta: Meta | null; legacy: unknown; legacySource: LegacySource | null };
 
 export type Commit = { put: Row[]; quarantine?: QuarantinedRecord[]; meta: Meta };
 
@@ -33,7 +42,7 @@ export interface RecordBackend {
   load(): Promise<Snapshot>;
   /** Schreibt alles in einem Schritt oder gar nicht. */
   commit(change: Commit): Promise<void>;
-  removeLegacy(): Promise<void>;
+  removeLegacy(source: LegacySource): Promise<void>;
   clearQuarantine(): Promise<void>;
   /** Entfernt alles auf diesem Gerät, auch den alten Block. */
   clearAll(): Promise<void>;
@@ -82,7 +91,7 @@ export function memoryBackend(initial: { legacy?: unknown; failCommits?: number 
   let last: Row[] = [];
   const backend: RecordBackend = {
     async load() {
-      return { rows: [...rows.values()], quarantine: [...quarantine.values()], meta, legacy };
+      return { rows: [...rows.values()], quarantine: [...quarantine.values()], meta, legacy, legacySource: legacy === null ? null : 'memory' };
     },
     async commit(change) {
       if (failures > 0) {
@@ -128,7 +137,8 @@ export function localStorageBackend(): RecordBackend {
   const write = (value: Stored) => localStorage.setItem(RECORDS_FALLBACK_KEY, JSON.stringify(value));
   return {
     async load() {
-      return { ...read(), legacy: readLegacyFallback() };
+      const legacy = readLegacyFallback();
+      return { ...read(), legacy, legacySource: legacy === null ? null : 'localStorage' };
     },
     async commit(change) {
       const current = read();
@@ -200,7 +210,9 @@ export function indexedDbBackend(): RecordBackend {
           request(transaction.objectStore(META).get(META_KEY) as IDBRequest<Meta | undefined>),
           request(transaction.objectStore(LEGACY_STORE).get(LEGACY_KEY)),
         ]);
-        return { rows, quarantine, meta: meta ?? null, legacy: legacy ?? readLegacyFallback() };
+        if (legacy !== undefined) return { rows, quarantine, meta: meta ?? null, legacy, legacySource: 'indexedDb' };
+        const fallback = readLegacyFallback();
+        return { rows, quarantine, meta: meta ?? null, legacy: fallback, legacySource: fallback === null ? null : 'localStorage' };
       }),
     commit: (change) =>
       withDb((db) => {
@@ -210,13 +222,18 @@ export function indexedDbBackend(): RecordBackend {
         transaction.objectStore(META).put(change.meta, META_KEY);
         return done(transaction);
       }),
-    removeLegacy: async () => {
+    removeLegacy: async (source) => {
+      // Ein Tab mit dem alten App-Stand schreibt nach dem Update in localStorage weiter.
+      // Diese Daten wurden nie übernommen und dürfen deshalb nicht mit entfernt werden.
+      if (source === 'localStorage') {
+        removeFallback(LEGACY_FALLBACK_KEY);
+        return;
+      }
       await withDb((db) => {
         const transaction = db.transaction(LEGACY_STORE, 'readwrite');
         transaction.objectStore(LEGACY_STORE).delete(LEGACY_KEY);
         return done(transaction);
       });
-      removeFallback(LEGACY_FALLBACK_KEY);
     },
     clearQuarantine: () =>
       withDb((db) => {
@@ -245,6 +262,8 @@ export class RecordStore {
   private queue: Promise<unknown> = Promise.resolve();
   private pendingState: AppState | undefined;
   private pendingSave: Promise<void> | undefined;
+  /** Übernahme aus Version 1, deren Schreiben beim Start fehlgeschlagen ist. Wird mit dem nächsten Speichern nachgeholt. */
+  private pendingMigration: { put: Row[]; quarantine: QuarantinedRecord[]; legacySource: LegacySource | undefined } | undefined;
 
   constructor(
     private readonly backend: RecordBackend,
@@ -276,9 +295,15 @@ export class RecordStore {
         record: updateRecord(undefined, input.kind, input.id, input.fields, stamp)!,
         position,
       }));
-      const meta = { ...this.meta, migratedV1: true };
-      await this.backend.commit({ put, quarantine: split?.quarantine ?? [], meta });
-      this.meta = meta;
+      const legacySource = snapshot.legacySource ?? undefined;
+      const meta: Meta = { ...this.meta, migratedV1: true, legacySource };
+      try {
+        await this.backend.commit({ put, quarantine: split?.quarantine ?? [], meta });
+        this.meta = meta;
+      } catch {
+        // Der alte Block bleibt unberührt; die Daten werden trotzdem angezeigt und beim nächsten Speichern geschrieben.
+        this.pendingMigration = { put, quarantine: split?.quarantine ?? [], legacySource };
+      }
       const replaced = new Set(put.map((row) => row.record.id));
       rows = [...rows.filter((row) => !replaced.has(row.record.id)), ...put];
       quarantine = uniqueById([...quarantine, ...(split?.quarantine ?? [])]);
@@ -286,7 +311,8 @@ export class RecordStore {
       const split = splitLegacyState(legacy);
       const kept = new Set([...rows.map((row) => row.record.id), ...quarantine.map((item) => item.id)]);
       const complete = !split || [...split.inputs, ...split.quarantine].every((item) => kept.has(item.id));
-      if (complete) await this.backend.removeLegacy();
+      const sameSource = snapshot.legacySource !== null && snapshot.legacySource === this.meta.legacySource;
+      if (complete && sameSource) await this.removeLegacyQuietly(snapshot.legacySource!);
     }
 
     this.rows = new Map();
@@ -332,17 +358,33 @@ export class RecordStore {
     for (const [id, row] of this.rows) {
       if (!seen.has(id) && !row.record.deleted && !this.readOnly.has(id)) put.push({ ...row, record: deleteRecord(row.record, stamp) });
     }
-    if (!put.length) {
+    const migration = this.pendingMigration;
+    if (migration) {
+      const written = new Set(put.map((row) => row.record.id));
+      put.unshift(...migration.put.filter((row) => !written.has(row.record.id) && this.rows.get(row.record.id)?.record === row.record));
+      this.meta = { ...this.meta, migratedV1: true, legacySource: migration.legacySource };
+    }
+    if (!put.length && !migration) {
       this.meta = before;
       return;
     }
     try {
-      await this.backend.commit({ put, meta: this.meta });
+      await this.backend.commit({ put, quarantine: migration?.quarantine, meta: this.meta });
     } catch (error) {
       this.meta = before;
       throw error;
     }
+    this.pendingMigration = undefined;
     for (const row of put) this.rows.set(row.record.id, row);
+  }
+
+  /** Aufräumen des alten Blocks ist Nebensache: Scheitert es, wird es beim nächsten Start wiederholt. */
+  private async removeLegacyQuietly(source: LegacySource): Promise<void> {
+    try {
+      await this.backend.removeLegacy(source);
+    } catch {
+      // Nächster Start versucht es erneut.
+    }
   }
 
   addQuarantine(items: QuarantinedRecord[]): Promise<void> {
@@ -353,8 +395,12 @@ export class RecordStore {
     });
   }
 
+  /** Verwerfen gilt auch für die Kopie im alten Block: Die gültigen Daten sind zu diesem Zeitpunkt schon übernommen. */
   discardQuarantine(): Promise<void> {
-    return this.enqueue(() => this.backend.clearQuarantine());
+    return this.enqueue(async () => {
+      await this.backend.clearQuarantine();
+      if (this.meta?.migratedV1 && this.meta.legacySource) await this.removeLegacyQuietly(this.meta.legacySource);
+    });
   }
 
   /** „Auf diesem Gerät löschen“: alles entfernen, ohne Löschvermerke. */

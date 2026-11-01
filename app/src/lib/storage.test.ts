@@ -87,4 +87,16 @@ describe('Sicherungsdatei', () => {
     expect(backup.quarantine).toEqual(quarantine);
     expect(JSON.stringify(backup)).not.toContain('geheim.ics');
   });
+
+  it('entfernt den Kalender-Link auch aus aussortierten Kalendern und stellt Aussortiertes beim Import wieder her', () => {
+    const quarantine = [
+      { id: 'calendarSource:#0', kind: 'calendarSource' as const, raw: { id: 0, url: 'https://example.org/geheim.ics' }, reason: 'invalid' as const },
+      { id: 'shift:kaputt', kind: 'shift' as const, raw: { hours: -1 }, reason: 'invalid' as const },
+    ];
+    const backup = JSON.parse(JSON.stringify(createBackup(createDemoState(), quarantine, { advancedMode: false })));
+    expect(JSON.stringify(backup)).not.toContain('geheim.ics');
+    const restored = parseBackup(backup.state, backup.quarantine);
+    expect(restored?.quarantine.map((item) => item.id)).toEqual(['calendarSource:#0', 'shift:kaputt']);
+    expect(parseBackup(backup.state, [{ id: 'x', kind: 'unbekannt', raw: 1, reason: 'invalid' }])?.quarantine).toEqual([]);
+  });
 });

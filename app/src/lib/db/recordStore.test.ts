@@ -87,10 +87,12 @@ describe('Übernahme aus Version 1', () => {
     expect(quarantine[0].reason).toBe('missingJob');
   });
 
-  it('läuft nach einem Abbruch erneut, ohne doppelte Datensätze', async () => {
+  it('zeigt die Daten auch, wenn das Schreiben der Übernahme scheitert, und läuft beim nächsten Start erneut', async () => {
     const backend = memoryBackend({ legacy: legacyBlock(), failCommits: 1 });
-    await expect(store(backend).load()).rejects.toThrow();
+    const first = await store(backend).load();
+    expect(first.state?.shifts).toHaveLength(30);
     expect(backend.rows()).toHaveLength(0);
+    expect(backend.legacy()).not.toBeNull();
     const { state } = await store(backend, 1).load();
     expect(backend.rows()).toHaveLength(37);
     expect(state?.shifts).toHaveLength(30);
@@ -189,5 +191,55 @@ describe('Auf diesem Gerät löschen', () => {
     expect(backend.quarantine()).toHaveLength(1);
     await records.discardQuarantine();
     expect(backend.quarantine()).toHaveLength(0);
+    // Die verworfenen Einträge stecken auch im alten Block; der verschwindet mit.
+    expect(backend.legacy()).toBeNull();
+  });
+});
+
+describe('Ausfälle beim Speichern', () => {
+  it('holt eine gescheiterte Übernahme mit dem nächsten Speichern nach', async () => {
+    const backend = memoryBackend({ legacy: legacyBlock(), failCommits: 1 });
+    const records = store(backend);
+    const { state } = await records.load();
+    await records.save({ ...state!, darkMode: false });
+    expect(backend.rows()).toHaveLength(37);
+    const reloaded = await store(backend, 5).load();
+    expect(reloaded.state?.shifts).toHaveLength(30);
+    expect(reloaded.state?.darkMode).toBe(false);
+  });
+
+  it('startet normal, auch wenn das Entfernen des alten Blocks scheitert', async () => {
+    const backend = memoryBackend({ legacy: legacyBlock() });
+    await store(backend).load();
+    const failing: RecordBackend = { ...backend, removeLegacy: async () => { throw new Error('blockiert'); } };
+    const { state } = await store(failing, 1).load();
+    expect(state?.shifts).toHaveLength(30);
+    expect(backend.legacy()).not.toBeNull();
+  });
+
+  it('entfernt nur die Quelle, die übernommen wurde, nicht später geschriebene Daten eines alten Tabs', async () => {
+    const backend = memoryBackend({ legacy: legacyBlock() });
+    await store(backend).load();
+    const removed: string[] = [];
+    const staleTab: RecordBackend = {
+      ...backend,
+      load: async () => ({ ...(await backend.load()), legacySource: 'localStorage' }),
+      removeLegacy: async (source) => { removed.push(source); },
+    };
+    await store(staleTab, 1).load();
+    expect(removed).toEqual([]);
+    await store(backend, 2).load();
+    expect(backend.legacy()).toBeNull();
+  });
+
+  it('schreibt bei schnell aufeinanderfolgenden Änderungen den letzten Stand', async () => {
+    const backend = memoryBackend({ legacy: legacyBlock() });
+    const records = store(backend);
+    const { state } = await records.load();
+    const writes = backend.commits();
+    await Promise.all([1, 2, 3].map((hours) =>
+      records.save({ ...state!, shifts: state!.shifts.map((shift) => shift.id === 'shift-0' ? { ...shift, hours } : shift) })));
+    expect(backend.commits() - writes).toBeLessThanOrEqual(2);
+    expect(backend.rows().find((row) => row.record.id === 'shift:shift-0')!.record.fields.hours).toBe(3);
   });
 });

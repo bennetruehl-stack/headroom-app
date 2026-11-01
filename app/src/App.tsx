@@ -257,7 +257,8 @@ function App() {
               } catch {
                 // Optional demo flags must not block local data deletion.
               }
-              await clearLocalState();
+              const cleared = await clearLocalState();
+              if (!cleared) window.alert(t(language, 'deleteDeviceIncomplete'));
               setQuarantine([]);
               setData(fresh);
               setPage('Onboarding');
