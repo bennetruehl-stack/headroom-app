@@ -62,14 +62,14 @@ Unter den Nutzer:innen sind Minderjährige. Deshalb muss jede Datenübertragung 
 **Lokale Daten**
 
 - R5. Bestehende lokale Daten aus Version 1 werden beim ersten Start ohne Verlust in das neue Format übernommen.
-- R6. Ein ungültiger Datensatz wird einzeln aussortiert und gemeldet. Die übrigen Daten bleiben erhalten.
-- R7. Wird ein Job gelöscht, werden seine Schichten und Einmalzahlungen mitgelöscht.
+- R6. Ein ungültiger Datensatz wird einzeln aussortiert und gemeldet. Die übrigen Daten bleiben erhalten. Aussortierte Datensätze werden unverändert in einem eigenen Bereich aufbewahrt und mit exportiert, bis die Person sie verwirft.
+- R7. Wird ein Job gelöscht, werden seine Schichten und Einmalzahlungen mitgelöscht. Löscht ein Gerät einen Job, während ein anderes offline eine Schicht oder Zahlung dafür anlegt oder ändert, wird nichts still verworfen: Der betroffene Datensatz bleibt erhalten, und die App meldet einen Konflikt (Job wiederherstellen oder Datensatz mitlöschen). Dasselbe gilt, wenn ein Gerät einen Datensatz löscht und ein anderes ihn danach ändert.
 - R8. Es gibt drei getrennte Löschaktionen:
   - „auf diesem Gerät löschen“,
   - „Konto löschen“,
   - „alles löschen“ (Gerät und Konto).
-  Jede sagt vorher in Klartext, was danach weg ist.
-- R9. „Alle Daten löschen“ entfernt auch die Kennzeichnung als Beispielprofil.
+  Jede sagt vorher in Klartext, was danach weg ist. Der bestehende Knopf „Alle Daten löschen“ wird zu „auf diesem Gerät löschen“. Er meldet zuerst ab (mit der Warnung aus R19), entfernt die lokalen Daten ohne Löschvermerke und lässt das Konto unverändert. Andere Geräte behalten alle Daten.
+- R9. „Auf diesem Gerät löschen“ entfernt auch die Kennzeichnung als Beispielprofil.
 
 **Konto**
 
@@ -344,8 +344,9 @@ Waits on: PR1, nur Merge-Reihenfolge.
 - **Approach:**
   1. Arten von Datensätzen: `profile`, `job`, `shift`, `payment`, `calendarSource`, `settings` (nur Sprache und Dunkelmodus) und `deviceState`. Jede Art legt fest, ob sie synchronisiert wird (R15). `deviceState` wird nie synchronisiert und hält `example`, `isPremium`, `peerToken`, `pendingImports`, `onboarded`, `dismissedRecommendations` und `peerOptIn`.
   2. Das Zusammenführen arbeitet je Feld nach Zeitmarke (KTD7). Unbekannte Felder werden übernommen.
-  3. Das Löschen eines Jobs liefert die Löschvermerke für alle seine Schichten und Zahlungen mit.
-  4. `normalizeState` aus `app/src/lib/storage.ts` liefert die Regeln, mit denen jeder Datensatz einzeln geprüft wird.
+  3. Das Löschen eines Jobs liefert die Löschvermerke für alle seine Schichten und Zahlungen mit. Trifft beim Zusammenführen ein Löschvermerk auf eine spätere Änderung, oder verweist eine lebende Schicht oder Zahlung auf einen gelöschten Job, meldet der Core einen Konflikt und verwirft nichts (R7).
+  4. `normalizeState` aus `app/src/lib/storage.ts` liefert die Regeln, mit denen jeder Datensatz einzeln geprüft wird. Ein ungültiger Datensatz kommt unverändert in einen eigenen Bereich (`quarantine`), statt verworfen zu werden (R6).
+  5. Feste IDs für Einzel-Datensätze (`profile`, `settings`, `device`). Dass der Server daran die Art erkennen könnte, löst PR6 beim Verschlüsseln (KTD5).
 - **Execution note:** zuerst Tests für die Zusammenführung und die Uhr, dann die Umsetzung.
 - **Test scenarios:**
   - Zwei Geräte ändern offline verschiedene Felder derselben Schicht: Beide Änderungen bleiben.
@@ -355,7 +356,9 @@ Waits on: PR1, nur Merge-Reihenfolge.
   - Datensatz mit `schemaVersion` 3 auf einem Gerät, das 2 kennt: wird angezeigt, aber nicht geschrieben.
   - Ein Gerät, das `schemaVersion` 3 kennt, führt einen Datensatz mit unbekanntem Feld `neuesFeld` zusammen: Das Feld bleibt unverändert.
   - Job mit 3 Schichten und 1 Zahlung löschen: 5 Löschvermerke.
-  - Schicht verweist auf einen fehlenden Job: einzeln aussortiert, die übrigen 20 Schichten bleiben.
+  - Schicht verweist auf einen fehlenden Job: einzeln aussortiert und aufbewahrt, die übrigen 20 Schichten bleiben.
+  - Gerät A löscht einen Job, Gerät B legt danach offline eine Schicht dafür an: Die Schicht bleibt, ein Konflikt wird gemeldet.
+  - Gerät A löscht eine Schicht, Gerät B ändert sie danach: Die Schicht bleibt, ein Konflikt wird gemeldet. Ändert B sie vorher, gewinnt das Löschen.
 - **Verification:** Die Tests im Core laufen. Es gibt keinen Aufruf von `new Date()` in `records/`.
 
 ### U4. Datensatz-Speicher in der App und Migration von Version 1
@@ -370,14 +373,16 @@ Waits on: PR1, nur Merge-Reihenfolge.
   1. IndexedDB `headroom-local` auf Version 2 heben, mit einem Store `records`.
   2. `App.tsx` behält `AppState` als Ansicht im Speicher. Gespeichert werden nur die geänderten Datensätze, nicht mehr der ganze Block.
   3. Export und Import bleiben im bisherigen Format (`stateForExport`). Ein Import wird pro Datensatz übernommen.
-  4. „Alle Daten löschen“ setzt `example` zurück (R9). Die drei Löschaktionen (R8) werden vorbereitet; „Konto löschen“ erscheint erst mit U8.
+  4. „Alle Daten löschen“ heißt jetzt „auf diesem Gerät löschen“, leert den Speicher ohne Löschvermerke und setzt `example` zurück (R8, R9). „Konto löschen“ und „alles löschen“ erscheinen erst mit U8.
+  5. Aussortierte Datensätze erscheinen in den Einstellungen mit Anzahl, werden mit exportiert und lassen sich verwerfen (R6).
 - **Patterns to follow:** `app/src/lib/storage.ts` (Rückfall auf localStorage, `normalizeState`).
 - **Test scenarios:**
   - Ein Block aus Version 1 mit 2 Jobs, 30 Schichten und 1 Zahlung: Danach stehen 33 Datensätze (2 Jobs, 30 Schichten, 1 Zahlung) plus Profil, Einstellungen und Gerätezustand im Speicher. Der alte Block bleibt bis zum nächsten erfolgreichen Start.
   - Jedes Feld der obersten Ebene von `AppState` aus dem Block steht danach in genau einem Datensatz.
   - Ein Block aus Version 1 mit einer kaputten Schicht: 29 Schichten übernommen, ein Hinweis erscheint.
   - Die Migration bricht mittendrin ab: Beim nächsten Start läuft sie erneut, ohne doppelte Datensätze.
-  - „Alle Daten löschen“ bei aktivem Beispiel Lena: `example` ist danach leer, und das Onboarding erscheint.
+  - „Auf diesem Gerät löschen“ bei aktivem Beispiel Lena: `example` ist danach leer, das Onboarding erscheint, und der Speicher enthält keine Löschvermerke.
+  - Export bei einer aussortierten Schicht: Die Datei enthält sie unter `quarantine`.
   - Daten nur in localStorage (Fallback): werden übernommen.
 - **Verification:** `npm test` und `npm run test:e2e` laufen durch. Ein echtes Profil aus dem Browser bleibt nach dem Update vollständig.
 
@@ -603,14 +608,11 @@ Waits on: PR4, muss gemergt sein, bevor die Arbeit beginnt.
 
 ## Deferred / Open Questions
 
-Diese Einträge sind offene Punkte aus der Prüfung des Plans für Bennet. Sie ändern den Product Contract und brauchen deshalb sein Okay. PR1 hängt an keinem davon; die Punkte 1, 5 und 6 müssen vor PR2 entschieden sein, die übrigen vor PR5 bzw. PR6.
+Diese Einträge sind offene Punkte aus der Prüfung des Plans für Bennet. Sie ändern den Product Contract und brauchen deshalb sein Okay. Die übrigen Punkte müssen vor PR5 bzw. PR6 entschieden sein.
+
+**Entschieden am 2026-11-01 (Bennet: „Empfehlungen nehmen“):** lokales Löschen ohne Löschvermerke (jetzt in R8/R9), aussortierte Datensätze aufbewahren (jetzt in R6), Löschen gegen Änderung als Konflikt melden (jetzt in R7).
 
 ### From 2026-10-31 review
-
-- **„Auf diesem Gerät löschen“ könnte über den Sync alle Geräte leeren** — R8, drei Löschaktionen (P1, adversarial, coherence, confidence 75)
-
-  Erzeugt das lokale Löschen im angemeldeten Zustand Löschvermerke, verschwinden die Daten beim nächsten Abgleich aus dem Konto und von allen Geräten. Außerdem ist offen, ob der bestehende Knopf „Alle Daten löschen“ das lokale oder das vollständige Löschen ist.
-  Change: R8/R9 so fassen: Der bestehende Knopf „Alle Daten löschen“ ist „auf diesem Gerät löschen“. Er meldet zuerst ab (mit der Warnung aus R19), entfernt die lokalen Daten ohne Löschvermerke und setzt die Kennzeichnung als Beispielprofil zurück. Das Konto bleibt unverändert. Test: Gerät B zeigt danach weiter alle Daten.
 
 - **Ein Konto unter 16 würde weiter Daten hochladen** — R14, Alter sinkt unter 16 (P1, adversarial, confidence 75)
 
@@ -626,15 +628,6 @@ Diese Einträge sind offene Punkte aus der Prüfung des Plans für Bennet. Sie �
 
   Wer die Datenbank hat, kann Passwörter offline durchprobieren. Kurze Passwörter fallen trotz Argon2id schnell.
   Change: Neue Anforderung unter „Konto“: Bei Registrierung und Passwortwechsel mindestens 12 Zeichen und Abgleich mit häufigen Passwörtern auf dem Gerät. Fehlgeschlagene Anmeldungen werden zusätzlich je Konto gebremst. Texte über den Schutz sagen, dass er von der Passwortstärke abhängt.
-
-- **„Aussortiert“ in R6 widerspricht der Abbruchregel zu Datenverlust** — R5/R6 und Goal Capsule (P2, adversarial, confidence 75)
-
-  Wird ein ungültiger Datensatz bei der Migration aussortiert und der alte Block danach entfernt, ist er endgültig weg.
-  Change: R6 ergänzen: Aussortierte Datensätze werden unverändert in einem eigenen Bereich aufbewahrt und mit exportiert, bis die Person sie verwirft.
-
-- **Löschen auf einem Gerät gegen Ändern auf einem anderen: was gewinnt?** — R7/R16 (P1, adversarial, confidence 75)
-
-  Löscht Gerät A offline einen Job und legt Gerät B offline eine Schicht dafür an, geht die Schicht still verloren. Das widerspricht R16. Entscheidung nötig: Gewinnt das Löschen, die Änderung, oder wird gefragt? Empfehlung: Nichts wird still verworfen, der betroffene Datensatz bleibt und die App meldet einen Konflikt (Job wiederherstellen oder Schicht mitlöschen).
 
 - **Passwort und Code verloren: Wie lässt sich das Konto dann löschen?** — R13 und KD4 (P2, adversarial, confidence 75)
 
