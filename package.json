@@ -5,19 +5,21 @@
   "workspaces": [
     "app",
     "packages/core",
+    "packages/contracts",
     "server",
     "desktop"
   ],
   "scripts": {
     "dev": "npm --workspace app run dev",
     "build": "npm --workspace app run build",
-    "test": "npm --workspace packages/core run test && npm --workspace app run test",
+    "test": "npm --workspace packages/core run test && npm --workspace packages/contracts run test && npm --workspace app run test",
     "dev:all": "npm run dev:server & npm run dev",
     "dev:server": "npm --workspace server run dev",
     "test:e2e": "npm --workspace app run test:e2e",
     "desktop": "npm run build && npm --workspace desktop run start",
     "desktop:build": "npm run build && npm --workspace desktop run dist",
-    "desktop:install": "rm -rf ~/Applications/Headroom.app && ditto desktop/dist/mac-arm64/Headroom.app ~/Applications/Headroom.app && echo Headroom liegt jetzt in ~/Applications"
+    "desktop:install": "rm -rf ~/Applications/Headroom.app && ditto desktop/dist/mac-arm64/Headroom.app ~/Applications/Headroom.app && echo Headroom liegt jetzt in ~/Applications",
+    "typecheck": "npm --workspace packages/core run typecheck && npm --workspace packages/contracts run typecheck && tsc --noEmit -p app/tsconfig.json && tsc --noEmit -p server/tsconfig.json"
   },
   "engines": {
     "node": ">=22.12"

@@ -15,11 +15,13 @@ npm run dev:all             # PWA plus lokalen Demo-Server auf 127.0.0.1:8787
 Der Server ist optional. Ohne ihn funktionieren Kernfunktionen und lokale Demodaten. Für Qualitätssicherung:
 
 ```sh
-npm test                    # Vitest: Core- und App-Tests
+npm test                    # Vitest: Core-, Schnittstellen- und App-Tests
 npm run test:e2e            # Playwright-Smoketests; Chromium muss verfügbar sein
-npx tsc --noEmit -p server/tsconfig.json
+npm run typecheck           # Typprüfung aller Workspaces (Core, Schnittstellen, App, Demo-Server)
 npm run build
 ```
+
+Dieselben Prüfungen außer den Playwright-Tests laufen bei jedem Push in GitHub Actions (`.github/workflows/ci.yml`).
 
 Fehlermeldung `Cannot find native binding` (Rolldown): Vite 8 und Vitest laden eine native Rolldown-Bibliothek. Sie fehlt, wenn `node_modules` auf einem anderen Rechner oder mit einer abgeschotteten Node-Laufzeit (z. B. aus einer Desktop-App) installiert wurde. Abhilfe: `rm -rf node_modules && npm ci` mit einem regulären Node.js.
 
@@ -54,6 +56,8 @@ packages/core/               reine TypeScript-Typen und Berechnungen
   data/limits.ts             datierte Grenzwerte mit Quelle und Prüfstatus
   data/jobPresets.ts         durchsuchbare Job-Presets
   data/references.ts         externe Informationsquellen
+       │
+packages/contracts/          Zod-Schemas der künftigen Backend-Schnittstelle (Konto, Abgleich), geteilt von App und Backend
        │
        └── verwendet
        ▼

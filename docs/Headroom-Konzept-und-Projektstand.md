@@ -323,6 +323,7 @@ packages/core/       reine TypeScript-Logik ohne Browser- oder Netzwerkzugriff
   data/jobPresets.ts        32 Job-Presets
   src/index.ts              Berechnungen
   src/shiftImport.ts        iCal-Parser, Dienstplan-Parser, Jobzuordnung, Dubletten
+packages/contracts/  Zod-Schemas der künftigen Backend-Schnittstelle (Konto, Abgleich)
 server/              optionaler lokaler Demo-Server (Express, SQLite)
 design-system/headroom/MASTER.md   Gestaltungsregeln
 ```

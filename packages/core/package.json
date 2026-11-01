@@ -12,7 +12,8 @@
     "./data/combinations": "./data/combinations.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
     "vitest": "^5.0.5",
