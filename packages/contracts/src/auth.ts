@@ -1,5 +1,7 @@
 // Konto und Schlüssel. Das Passwort verlässt das Gerät nie: Die App leitet daraus mit Argon2id und HKDF
 // einen `authKey` (für den Server) und einen `masterKey` (bleibt auf dem Gerät) ab.
+// Anfragen sind streng (unbekannte Felder werden abgelehnt). Antworten lassen zusätzliche Felder zu und
+// entfernen sie, damit eine neue Server-Version ältere App-Stände nicht bricht.
 import { z } from 'zod';
 import { base64urlBytes, base64urlExact } from './encoding';
 
@@ -38,8 +40,11 @@ export type WrappedKey = z.infer<typeof WrappedKey>;
 
 export const PreloginRequest = z.strictObject({ email: Email });
 export type PreloginRequest = z.infer<typeof PreloginRequest>;
-/** Für unbekannte Adressen gibt es ein festes Schein-Salt, damit sich nicht prüfen lässt, ob ein Konto besteht. */
-export const PreloginResponse = z.strictObject({ salt: Salt, kdf: KdfParams, authScheme: AuthScheme });
+/**
+ * Für unbekannte Adressen gibt es ein Schein-Salt, je Adresse aus einem Server-Geheimnis abgeleitet und mit denselben
+ * Einstellungen wie bei echten Konten, damit sich nicht prüfen lässt, ob ein Konto besteht.
+ */
+export const PreloginResponse = z.object({ salt: Salt, kdf: KdfParams, authScheme: AuthScheme });
 export type PreloginResponse = z.infer<typeof PreloginResponse>;
 
 export const RegisterRequest = z.strictObject({
@@ -56,7 +61,10 @@ export const RegisterRequest = z.strictObject({
 });
 export type RegisterRequest = z.infer<typeof RegisterRequest>;
 
-export const SessionResponse = z.strictObject({ token: SessionToken, expiresAt: z.iso.datetime() });
+/** Feste, vom Server vergebene Konto-Kennung. Geht in die Zusatzdaten jeder Verschlüsselung ein; nie die E-Mail-Adresse. */
+export const UserId = z.uuid();
+
+export const SessionResponse = z.object({ userId: UserId, token: SessionToken, expiresAt: z.iso.datetime() });
 export type SessionResponse = z.infer<typeof SessionResponse>;
 
 export const LoginRequest = z.strictObject({ email: Email, authKey: DerivedKey });
@@ -67,7 +75,7 @@ export type LoginResponse = z.infer<typeof LoginResponse>;
 /** Wiederherstellen, Schritt 1: Mit dem Schlüssel aus dem Code gibt der Server das zweite Schlüsselpaket heraus. */
 export const RecoverStartRequest = z.strictObject({ email: Email, recoveryAuthKey: DerivedKey });
 export type RecoverStartRequest = z.infer<typeof RecoverStartRequest>;
-export const RecoverStartResponse = z.strictObject({ recoveryKeyWrap: WrappedKey });
+export const RecoverStartResponse = z.object({ recoveryKeyWrap: WrappedKey });
 export type RecoverStartResponse = z.infer<typeof RecoverStartResponse>;
 
 /** Wiederherstellen, Schritt 2: neues Passwort und neu verpackter Datenschlüssel. Alle Sitzungen werden ungültig. */
@@ -84,14 +92,14 @@ export type RecoverFinishRequest = z.infer<typeof RecoverFinishRequest>;
 /** Abmelden, Konto lesen und Schlüssel lesen haben keinen Body; das Token steht im Header. */
 export const EmptyBody = z.strictObject({});
 
-export const AccountResponse = z.strictObject({ email: Email, createdAt: z.iso.datetime() });
+export const AccountResponse = z.object({ userId: UserId, email: Email, createdAt: z.iso.datetime() });
 export type AccountResponse = z.infer<typeof AccountResponse>;
 
 /** Konto löschen verlangt den aktuellen Schlüssel erneut. */
 export const AccountDeleteRequest = z.strictObject({ authKey: DerivedKey });
 export type AccountDeleteRequest = z.infer<typeof AccountDeleteRequest>;
 
-export const KeysResponse = z.strictObject({ masterKeyWrap: WrappedKey, salt: Salt, kdf: KdfParams, authScheme: AuthScheme });
+export const KeysResponse = z.object({ masterKeyWrap: WrappedKey, salt: Salt, kdf: KdfParams, authScheme: AuthScheme });
 export type KeysResponse = z.infer<typeof KeysResponse>;
 
 /** Passwort ändern: Nur das Schlüsselpaket wird neu verpackt, die Datensätze bleiben. Verlangt den aktuellen Schlüssel. */

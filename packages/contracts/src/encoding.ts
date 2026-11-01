@@ -15,6 +15,9 @@ export function base64urlBytes(minBytes: number, maxBytes: number) {
 /** Genau so viele Bytes als base64url, z. B. ein abgeleiteter Schlüssel. */
 export const base64urlExact = (bytes: number) => base64urlBytes(bytes, bytes).length(base64urlLength(bytes));
 
+/** Anzahl Bytes hinter einem base64url-Text ohne Auffüllung. */
+export const base64urlByteLength = (value: string) => Math.floor((value.length * 3) / 4);
+
 /** Fehlerantwort aller Endpunkte: nur ein Code, keine Details über Konten oder Inhalte. */
-export const ErrorResponse = z.strictObject({ error: z.string().regex(/^[a-z_]+$/).max(64) });
+export const ErrorResponse = z.object({ error: z.string().regex(/^[a-z_]+$/).max(64) });
 export type ErrorResponse = z.infer<typeof ErrorResponse>;
