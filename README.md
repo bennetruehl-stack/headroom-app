@@ -15,15 +15,29 @@ npm run dev:all             # PWA plus lokalen Demo-Server auf 127.0.0.1:8787
 Der Server ist optional. Ohne ihn funktionieren Kernfunktionen und lokale Demodaten. Für Qualitätssicherung:
 
 ```sh
-npm test                    # Vitest: Core-, Schnittstellen- und App-Tests
+npm test                    # Vitest: Core-, Schnittstellen-, Backend- und App-Tests
 npm run test:e2e            # Playwright-Smoketests; Chromium muss verfügbar sein
-npm run typecheck           # Typprüfung aller Workspaces (Core, Schnittstellen, App, Demo-Server)
+npm run typecheck           # Typprüfung aller Workspaces (Core, Schnittstellen, Backend, App, Demo-Server)
 npm run build
 ```
 
 Dieselben Prüfungen außer den Playwright-Tests laufen bei jedem Push in GitHub Actions (`.github/workflows/ci.yml`).
 
 Fehlermeldung `Cannot find native binding` (Rolldown): Vite 8 und Vitest laden eine native Rolldown-Bibliothek. Sie fehlt, wenn `node_modules` auf einem anderen Rechner oder mit einer abgeschotteten Node-Laufzeit (z. B. aus einer Desktop-App) installiert wurde. Abhilfe: `rm -rf node_modules && npm ci` mit einem regulären Node.js.
+
+Die Backend-Tests brauchen keine Installation von Postgres: Lokal laufen sie gegen PGlite (Postgres als WebAssembly). Ist `TEST_DATABASE_URL` gesetzt, laufen sie gegen dieses Postgres, jeder Test in einem eigenen Schema; so macht es die CI mit Postgres 17.
+
+## Backend (im Aufbau)
+
+`backend/` ist das künftige Backend für Konto und verschlüsselten Abgleich (Fastify, Postgres, Kysely). Es hat bisher nur `/health` (Prozess läuft) und `/ready` (Datenbank erreichbar und migriert), dazu alle Schutzschichten: geprüfte Konfiguration, CORS nur für eingetragene Ursprünge, Rate-Limit (enger für `/v1/auth/*`), Sicherheits-Header und Logs ohne IP-Adressen, Zugangsdaten oder Inhalte. Die App nutzt es noch nicht.
+
+```sh
+cp .env.example .env                      # Passwort der Datenbank und erlaubte Ursprünge eintragen
+mkdir -p secrets && openssl rand -base64 48 > secrets/prelogin_secret
+docker compose up --build                 # Backend auf 127.0.0.1:8080, Postgres 17 mit Volume
+```
+
+Ohne Docker: `DATABASE_URL`, `ALLOWED_ORIGINS` (kommagetrennt, z. B. `app://headroom,http://localhost:5173`) und `PRELOGIN_SECRET` (mindestens 32 Zeichen) setzen und `npm run dev:backend` starten. Fehlt eine Angabe, startet das Backend nicht und nennt die fehlende Variable. `.env` und `secrets/` werden nicht eingecheckt.
 
 `HEADROOM_DB_PATH=/anderer/pfad/headroom.sqlite npm run dev:server` legt die SQLite-Datenbank des lokalen Demo-Servers an einem alternativen Ort an. Im Standardfall liegt sie unter `server/data/headroom.sqlite` und wird nicht eingecheckt.
 
@@ -61,6 +75,7 @@ packages/core/               reine TypeScript-Typen und Berechnungen
   data/references.ts         externe Informationsquellen
        │
 packages/contracts/          Zod-Schemas der künftigen Backend-Schnittstelle (Konto, Abgleich), geteilt von App und Backend
+backend/                     künftiges Backend (Fastify, Postgres, Kysely); bisher nur Zustand und Schutzschichten
        │
        └── verwendet
        ▼
@@ -90,6 +105,8 @@ Wenn optionale Funktionen manuell eingeschaltet und verwendet werden, gelten die
 - **Kalender (Kernfunktion):** Ein eingefügter iCal-Link wird nur auf dem Gerät gespeichert und nie exportiert. Zum Abrufen sendet die App ihn per POST (nicht in der URL) an den lokalen Server, der ihn ausschließlich an `calendar.google.com` oder `*.icloud.com` weiterreicht (auch bei Weiterleitungen geprüft, 10 s Timeout, max. 2 MB) und nicht protokolliert. Ohne Server funktioniert der Import einer .ics-Datei vollständig lokal.
 - **Foto/Screenshot (Kernfunktion):** Die Texterkennung (tesseract.js, Deutsch und Englisch) läuft im Browser; das Bild verlässt das Gerät nicht. Beim ersten Lauf lädt tesseract.js Programmteile und Sprachdaten von cdn.jsdelivr.net nach; dabei geht die IP-Adresse an jsDelivr.
 - Partnerkarten öffnen eine externe Seite erst nach einem Klick.
+
+**Backend (im Aufbau, noch nicht von der App genutzt):** Die Logs enthalten weder IP-Adressen noch Authorization-, Cookie- oder Weiterleitungs-Header, E-Mail-Adressen, Schlüssel oder Inhalte. Docker Compose begrenzt die Log-Dateien auf 14 Stück zu je 10 MB; eine Löschung nach spätestens 14 Tagen wird beim Hosting-Anbieter eingestellt, sobald er feststeht.
 
 Datenschutzerklärung und Impressum stehen als In-App-Seiten unter `app/src/features/legal/` (erreichbar über „Mehr“ und die Fußzeile). Persönliche Angaben sind dort als `[PLATZHALTER]` markiert und müssen vor einer Veröffentlichung ausgefüllt und rechtlich geprüft werden.
 

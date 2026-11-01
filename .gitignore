@@ -12,3 +12,7 @@ server/data/*.sqlite-*
 .claude/
 # Erzeugte Brag-Videos (Einzelbilder, MP4, Tonspuren)
 brag-output*/
+
+# Zugangsdaten für docker compose (Vorlage: .env.example)
+.env
+secrets/

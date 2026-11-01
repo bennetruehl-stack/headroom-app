@@ -325,6 +325,7 @@ packages/core/       reine TypeScript-Logik ohne Browser- oder Netzwerkzugriff
   src/index.ts              Berechnungen
   src/shiftImport.ts        iCal-Parser, Dienstplan-Parser, Jobzuordnung, Dubletten
 packages/contracts/  Zod-Schemas der künftigen Backend-Schnittstelle (Konto, Abgleich)
+backend/             künftiges Backend (Fastify, Postgres, Kysely): Konfiguration, /health, /ready, CORS, Rate-Limit, geschwärzte Logs
 server/              optionaler lokaler Demo-Server (Express, SQLite)
 design-system/headroom/MASTER.md   Gestaltungsregeln
 ```

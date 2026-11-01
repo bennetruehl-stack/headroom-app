@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+.git
+app
+desktop
+server
+demo
+docs
+design-system
+.hallmark
+**/test-results
