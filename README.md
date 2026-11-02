@@ -37,7 +37,7 @@ mkdir -p secrets && openssl rand -base64 48 > secrets/prelogin_secret
 docker compose up --build                 # Backend auf 127.0.0.1:8080, Postgres 17 mit Volume
 ```
 
-Ohne Docker: `DATABASE_URL`, `ALLOWED_ORIGINS` (kommagetrennt, z. B. `app://headroom,http://localhost:5173`) und `PRELOGIN_SECRET` (mindestens 32 Zeichen) setzen und `npm run dev:backend` starten. Fehlt eine Angabe, startet das Backend nicht und nennt die fehlende Variable. `.env` und `secrets/` werden nicht eingecheckt.
+Ohne Docker: `DATABASE_URL`, `ALLOWED_ORIGINS` (kommagetrennt, z. B. `app://headroom,http://localhost:5173`) und `PRELOGIN_SECRET` (mindestens 32 Zeichen) setzen und `npm run dev:backend` starten. Steht ein eigener Reverse-Proxy davor, gehören seine Adressen oder Netze in `TRUSTED_PROXIES` (z. B. `10.0.0.0/8` oder `loopback`); nur dann zählt das Rate-Limit nach der weitergeleiteten Adresse. Ohne Angabe wird keinem Proxy vertraut. Fehlt eine Pflichtangabe, startet das Backend nicht und nennt die fehlende Variable. `.env` und `secrets/` werden nicht eingecheckt.
 
 `HEADROOM_DB_PATH=/anderer/pfad/headroom.sqlite npm run dev:server` legt die SQLite-Datenbank des lokalen Demo-Servers an einem alternativen Ort an. Im Standardfall liegt sie unter `server/data/headroom.sqlite` und wird nicht eingecheckt.
 
@@ -106,7 +106,7 @@ Wenn optionale Funktionen manuell eingeschaltet und verwendet werden, gelten die
 - **Foto/Screenshot (Kernfunktion):** Die Texterkennung (tesseract.js, Deutsch und Englisch) läuft im Browser; das Bild verlässt das Gerät nicht. Beim ersten Lauf lädt tesseract.js Programmteile und Sprachdaten von cdn.jsdelivr.net nach; dabei geht die IP-Adresse an jsDelivr.
 - Partnerkarten öffnen eine externe Seite erst nach einem Klick.
 
-**Backend (im Aufbau, noch nicht von der App genutzt):** Die Logs enthalten weder IP-Adressen noch Authorization-, Cookie- oder Weiterleitungs-Header, E-Mail-Adressen, Schlüssel oder Inhalte. Docker Compose begrenzt die Log-Dateien auf 14 Stück zu je 10 MB; eine Löschung nach spätestens 14 Tagen wird beim Hosting-Anbieter eingestellt, sobald er feststeht.
+**Backend (im Aufbau, noch nicht von der App genutzt):** Die Logs enthalten nur Methode, Pfad ohne Parameter und wenige feste Header (Browser-Kennung, Inhaltstyp und -länge, Ursprung; `Authorization` nur geschwärzt), also keine IP-Adressen, Cookies, E-Mail-Adressen, Schlüssel oder Inhalte. Docker Compose begrenzt die Log-Dateien auf 14 Stück zu je 10 MB; eine Löschung nach spätestens 14 Tagen wird beim Hosting-Anbieter eingestellt, sobald er feststeht.
 
 Datenschutzerklärung und Impressum stehen als In-App-Seiten unter `app/src/features/legal/` (erreichbar über „Mehr“ und die Fußzeile). Persönliche Angaben sind dort als `[PLATZHALTER]` markiert und müssen vor einer Veröffentlichung ausgefüllt und rechtlich geprüft werden.
 

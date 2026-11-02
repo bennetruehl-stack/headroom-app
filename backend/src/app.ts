@@ -23,6 +23,13 @@ const redactedPaths = [
 
 const READY_TIMEOUT_MS = 2_000;
 
+/** Nur diese Header kommen ins Log; alle anderen können Adressen oder Kennungen enthalten (z. B. von einem CDN). */
+const LOGGED_HEADERS = ['user-agent', 'content-type', 'content-length', 'origin', 'authorization'];
+
+function loggedHeaders(headers: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(LOGGED_HEADERS.filter((name) => headers[name] !== undefined).map((name) => [name, headers[name]]));
+}
+
 export type AppOptions = {
   config: Config;
   db: Db;
@@ -43,13 +50,13 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 export async function buildApp({ config, db, logStream, routes }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
-    trustProxy: config.trustProxy,
+    trustProxy: config.trustedProxies.length ? config.trustedProxies : false,
     bodyLimit: 1024 * 1024,
     logger: {
       level: config.logLevel,
       redact: { paths: redactedPaths, censor: '[REDACTED]' },
       serializers: {
-        req: (request) => ({ id: request.id, method: request.method, url: request.url.split('?')[0], headers: request.headers }),
+        req: (request) => ({ id: request.id, method: request.method, url: request.url.split('?')[0], headers: loggedHeaders(request.headers) }),
       },
       ...(logStream ? { stream: logStream } : {}),
     },

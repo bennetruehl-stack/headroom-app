@@ -1,8 +1,20 @@
 import { readFileSync } from 'node:fs';
+import { isIP } from 'node:net';
 import { z } from 'zod';
 
 export class ConfigError extends Error {
   override name = 'ConfigError';
+}
+
+/** Feste Adresse, Netz (CIDR) oder ein Schlüsselwort von proxy-addr. Nie „alle“, sonst lässt sich jede Adresse fälschen. */
+function isProxyEntry(entry: string): boolean {
+  if (['loopback', 'linklocal', 'uniquelocal'].includes(entry)) return true;
+  const [address, prefix, ...rest] = entry.split('/');
+  const family = isIP(address);
+  if (!family || rest.length) return false;
+  if (prefix === undefined) return true;
+  const bits = Number(prefix);
+  return /^\d+$/.test(prefix) && bits <= (family === 4 ? 32 : 128);
 }
 
 const positiveInt = (fallback: number) => z.coerce.number().int().positive().default(fallback);
@@ -17,8 +29,12 @@ const Env = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(8080),
   HOST: z.string().min(1).default('0.0.0.0'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
-  /** Nur hinter einem eigenen Reverse-Proxy einschalten, sonst kann jede Anfrage ihre Adresse fälschen. */
-  TRUST_PROXY: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
+  /** Adressen der eigenen Reverse-Proxys. Nur deren X-Forwarded-For wird geglaubt. */
+  TRUSTED_PROXIES: z
+    .string()
+    .default('')
+    .transform((value) => value.split(',').map((entry) => entry.trim()).filter(Boolean))
+    .pipe(z.array(z.string().refine(isProxyEntry, 'IP address, CIDR or loopback/linklocal/uniquelocal'))),
   RATE_LIMIT_GLOBAL_PER_MINUTE: positiveInt(300),
   RATE_LIMIT_AUTH_PER_MINUTE: positiveInt(20),
 });
@@ -30,7 +46,7 @@ export type Config = {
   port: number;
   host: string;
   logLevel: z.infer<typeof Env>['LOG_LEVEL'];
-  trustProxy: boolean;
+  trustedProxies: string[];
   rateLimit: { globalPerMinute: number; authPerMinute: number };
 };
 
@@ -63,7 +79,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     port: value.PORT,
     host: value.HOST,
     logLevel: value.LOG_LEVEL,
-    trustProxy: value.TRUST_PROXY,
+    trustedProxies: value.TRUSTED_PROXIES,
     rateLimit: { globalPerMinute: value.RATE_LIMIT_GLOBAL_PER_MINUTE, authPerMinute: value.RATE_LIMIT_AUTH_PER_MINUTE },
   };
 }

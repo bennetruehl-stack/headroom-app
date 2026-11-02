@@ -1,9 +1,10 @@
 import { Writable } from 'node:stream';
+import { z } from 'zod';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app';
 import { loadConfig, type Config } from '../src/config';
 import { createDb, type Db } from '../src/db';
-import { migrateToLatest } from '../src/db/migrate';
+import { migrateToLatest, migrationsComplete } from '../src/db/migrate';
 import { startTestDatabase, type TestDatabase } from './helpers/db';
 
 function configFor(databaseUrl: string, overrides: Record<string, string> = {}): Config {
@@ -67,6 +68,7 @@ describe('Zustand und Bereitschaft', () => {
   it('meldet 503, solange die Migrationen fehlen', async () => {
     const empty = await startTestDatabase();
     const fresh = createDb(empty.url);
+    expect(await migrationsComplete(fresh)).toBe(false);
     const app = await buildApp({ config: configFor(empty.url), db: fresh });
     expect((await app.inject('/ready')).statusCode).toBe(503);
     await app.close();
@@ -113,6 +115,46 @@ describe('Schutzschichten', () => {
     await app.close();
   });
 
+  it('teilt das Limit nach Absender, auch hinter einem vertrauenswürdigen Proxy', async () => {
+    const ask = (app: Awaited<ReturnType<typeof buildApp>>, remoteAddress: string, forwardedFor: string) =>
+      app.inject({ url: '/health', remoteAddress, headers: { 'x-forwarded-for': forwardedFor } });
+    const direct = await buildApp({ config: configFor(database.url, { RATE_LIMIT_GLOBAL_PER_MINUTE: '2' }), db });
+    // Ohne vertrauenswürdigen Proxy zählt die echte Adresse; eine gefälschte Weiterleitung hilft nicht.
+    const spoofed = [];
+    for (const fake of ['1.1.1.1', '2.2.2.2', '3.3.3.3']) spoofed.push((await ask(direct, '203.0.113.7', fake)).statusCode);
+    expect(spoofed).toEqual([200, 200, 429]);
+    await direct.close();
+
+    const proxied = await buildApp({ config: configFor(database.url, { RATE_LIMIT_GLOBAL_PER_MINUTE: '2', TRUSTED_PROXIES: 'loopback' }), db });
+    // Hinter dem Proxy bekommt jede Person ihr eigenes Limit; vorgeschaltete Fälschungen links zählen nicht.
+    const codes = [];
+    for (let i = 0; i < 3; i += 1) codes.push((await ask(proxied, '127.0.0.1', `9.9.9.${i}, 198.51.100.1`)).statusCode);
+    expect(codes).toEqual([200, 200, 429]);
+    expect((await ask(proxied, '127.0.0.1', '198.51.100.2')).statusCode).toBe(200);
+    await proxied.close();
+  });
+
+  it('antwortet auf ungültige Eingaben mit 400 und auf Fehler mit 500, ohne Details', async () => {
+    const sink = logSink();
+    const app = await buildApp({
+      config: configFor(database.url),
+      db,
+      logStream: sink.stream,
+      routes: (instance) => {
+        instance.post('/v1/probe', { schema: { body: z.strictObject({ wert: z.int() }) } }, async () => ({ ok: true }));
+        instance.get('/v1/kaputt', async () => { throw new Error('geheimer Fehlertext'); });
+      },
+    });
+    const invalid = await app.inject({ method: 'POST', url: '/v1/probe', payload: { wert: 'x', email: 'mia@example.org' } });
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.json()).toEqual({ error: 'invalid_request' });
+    const broken = await app.inject('/v1/kaputt');
+    expect(broken.statusCode).toBe(500);
+    expect(broken.json()).toEqual({ error: 'internal_error' });
+    await app.close();
+    expect(sink.lines.join('\n')).not.toContain('mia@example.org');
+  });
+
   it('antwortet auf unbekannte Pfade mit einem knappen Fehlercode', async () => {
     const app = await buildApp({ config: configFor(database.url), db });
     const response = await app.inject('/gibt-es-nicht');
@@ -129,11 +171,20 @@ describe('Logs', () => {
     await app.inject({
       url: '/health',
       remoteAddress: '203.0.113.7',
-      headers: { authorization: 'Bearer geheimes-token', 'x-forwarded-for': '198.51.100.9', cookie: 'sitzung=geheim' },
+      headers: {
+        authorization: 'Bearer geheimes-token',
+        'x-forwarded-for': '198.51.100.9',
+        cookie: 'sitzung=geheim',
+        'cf-connecting-ip': '192.0.2.44',
+        'true-client-ip': '192.0.2.45',
+        'x-client-ip': '192.0.2.46',
+      },
     });
     await app.close();
     const log = sink.lines.join('\n');
     expect(log).toContain('[REDACTED]');
-    for (const secret of ['geheimes-token', 'sitzung=geheim', '203.0.113.7', '198.51.100.9']) expect(log).not.toContain(secret);
+    for (const secret of ['geheimes-token', 'sitzung=geheim', '203.0.113.7', '198.51.100.9', '192.0.2.44', '192.0.2.45', '192.0.2.46']) {
+      expect(log).not.toContain(secret);
+    }
   });
 });

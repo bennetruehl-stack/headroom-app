@@ -372,6 +372,7 @@ Schutzmaßnahmen am Kalender-Endpunkt: nur `https`/`webcal`, Host-Allowlist (`ca
 - App allein: `npm run dev` (http://localhost:5173). Der Vite-Proxy leitet `/api` und `/health` an den Server weiter.
 - App plus Server: `npm run dev:all`.
 - Produktionsbuild: `npm run build`. Für eine eigenständig gehostete Demo wird mit relativen Pfaden gebaut (`vite build --base ./`).
+- Backend (im Aufbau): `npm run dev:backend` mit `DATABASE_URL`, `ALLOWED_ORIGINS` und `PRELOGIN_SECRET`, oder `docker compose up --build` (API und Postgres 17). Details im README, Abschnitt „Backend“.
 
 ---
 
@@ -404,6 +405,8 @@ Schutzmaßnahmen am Kalender-Endpunkt: nur `https`/`webcal`, Host-Allowlist (`ca
 | Partnerkarten (Advanced) | nichts; externe Seite erst nach Klick | – |
 
 Alle Funktionen mit Datenübertragung oder Partnerbezug (Lohnstatistik, eigenes Inserat, Firmenprüfung, Partnerhinweise) stehen erst ab 16 Jahren zur Verfügung (Art. 8 DSGVO). Private Kalender-Links werden nicht exportiert. Die Löschfunktion entfernt lokale Daten, Flags und fordert die Löschung freiwilliger Lohndaten an. Der Server ist ausdrücklich nur für den lokalen Demo-Betrieb ausgelegt (Kapitel 18).
+
+**Backend (im Aufbau):** Die App nutzt es noch nicht, es überträgt also noch keine Nutzerdaten. Seine Logs enthalten nur Methode, Pfad ohne Parameter und wenige feste Header, keine IP-Adressen, Zugangsdaten oder Inhalte.
 
 ---
 

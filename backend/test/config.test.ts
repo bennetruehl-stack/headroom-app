@@ -33,11 +33,21 @@ describe('Konfiguration beim Start', () => {
 
   it('nennt in Fehlermeldungen nie den Wert eines Geheimnisses', () => {
     const value = 'streng-geheim-' + secret(5);
+    let error: unknown;
     try {
       loadConfig({ ...base, PRELOGIN_SECRET: value });
-      expect.unreachable();
-    } catch (error) {
-      expect(String(error)).not.toContain(value);
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toBeInstanceOf(ConfigError);
+    expect(String(error)).not.toContain(value);
+  });
+
+  it('vertraut ohne Angabe keinem Proxy und nimmt nur feste Adressen oder Netze', () => {
+    expect(loadConfig(base).trustedProxies).toEqual([]);
+    expect(loadConfig({ ...base, TRUSTED_PROXIES: 'loopback, 10.0.0.0/8, 2001:db8::1' }).trustedProxies).toEqual(['loopback', '10.0.0.0/8', '2001:db8::1']);
+    for (const value of ['true', '*', '10.0.0.0/33', 'proxy.example']) {
+      expect(() => loadConfig({ ...base, TRUSTED_PROXIES: value })).toThrow(/TRUSTED_PROXIES/);
     }
   });
 
@@ -51,5 +61,8 @@ describe('Konfiguration beim Start', () => {
   it('lehnt eine leere Liste erlaubter Ursprünge und Platzhalter ab', () => {
     expect(() => loadConfig({ ...base, ALLOWED_ORIGINS: '' })).toThrow(/ALLOWED_ORIGINS/);
     expect(() => loadConfig({ ...base, ALLOWED_ORIGINS: '*' })).toThrow(/ALLOWED_ORIGINS/);
+    for (const value of ['https://*.headroom.example', 'https://headroom.example/', 'https://headroom.example/pfad', 'headroom.example', 'app://headroom,https://*.x.example']) {
+      expect(() => loadConfig({ ...base, ALLOWED_ORIGINS: value })).toThrow(/ALLOWED_ORIGINS/);
+    }
   });
 });
