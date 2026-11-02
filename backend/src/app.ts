@@ -1,15 +1,14 @@
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { DestinationStream } from 'pino';
 import type { Config } from './config';
 import type { Db } from './db';
 import { migrationsComplete } from './db/migrate';
 
-/** Felder, die nie im Klartext ins Log dürfen. */
-export const redactedPaths = [
+const redactedPaths = [
   'req.headers.authorization',
   'req.headers.cookie',
   'req.headers["x-forwarded-for"]',
@@ -33,8 +32,14 @@ export type AppOptions = {
   routes?: (app: FastifyInstance) => unknown;
 };
 
-const withTimeout = <T>(promise: Promise<T>, ms: number) =>
-  Promise.race([promise, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms).unref())]);
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([promise, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), ms); })]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function buildApp({ config, db, logStream, routes }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
@@ -43,7 +48,6 @@ export async function buildApp({ config, db, logStream, routes }: AppOptions): P
     logger: {
       level: config.logLevel,
       redact: { paths: redactedPaths, censor: '[REDACTED]' },
-      // Keine IP-Adressen und Ports im Log.
       serializers: {
         req: (request) => ({ id: request.id, method: request.method, url: request.url.split('?')[0], headers: request.headers }),
       },
@@ -56,7 +60,7 @@ export async function buildApp({ config, db, logStream, routes }: AppOptions): P
 
   await app.register(helmet);
   await app.register(cors, {
-    origin: (origin, callback) => callback(null, origin !== undefined && config.allowedOrigins.includes(origin)),
+    origin: config.allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['content-type', 'authorization'],
     maxAge: 600,
@@ -70,7 +74,7 @@ export async function buildApp({ config, db, logStream, routes }: AppOptions): P
   await app.register(rateLimit, { global: true, max: config.rateLimit.globalPerMinute, timeWindow: '1 minute' });
 
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ error: 'not_found' }));
-  app.setErrorHandler((error: { statusCode?: number; validation?: unknown }, request, reply) => {
+  app.setErrorHandler((error: FastifyError, request, reply) => {
     if (error.validation) return reply.code(400).send({ error: 'invalid_request' });
     const status = error.statusCode && error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500;
     if (status === 429) return reply.code(429).send({ error: 'rate_limited' });
@@ -84,7 +88,7 @@ export async function buildApp({ config, db, logStream, routes }: AppOptions): P
       const ready = await withTimeout(migrationsComplete(db), READY_TIMEOUT_MS);
       if (ready) return { status: 'ready' };
     } catch {
-      // Datenbank nicht erreichbar.
+      // Datenbank nicht erreichbar oder zu langsam: nicht bereit.
     }
     return reply.code(503).send({ status: 'unavailable' });
   });

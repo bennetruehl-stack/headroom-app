@@ -1,6 +1,6 @@
 import { sql, type Kysely } from 'kysely';
 
-/** Grundgerüst: eine Zeile je Installation. `/ready` prüft daran, dass die Migrationen gelaufen sind. */
+/** Grundgerüst: eine Zeile je Installation, damit die erste Migration ein echtes Schema anlegt. */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable('instance')

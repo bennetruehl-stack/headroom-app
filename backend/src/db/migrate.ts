@@ -9,7 +9,7 @@ const migrations: Record<string, Migration> = {
 
 const provider: MigrationProvider = { getMigrations: async () => migrations };
 
-export function migrator(db: Db): Migrator {
+function migrator(db: Db): Migrator {
   return new Migrator({ db, provider });
 }
 
@@ -19,7 +19,6 @@ export async function migrateToLatest(db: Db): Promise<void> {
   if (error || failed) throw new Error('Database migration failed' + (failed ? ': ' + failed.migrationName : ''), { cause: error });
 }
 
-/** Alle bekannten Migrationen sind ausgeführt. */
 export async function migrationsComplete(db: Db): Promise<boolean> {
   const all = await migrator(db).getMigrations();
   return all.every((migration) => migration.executedAt !== undefined);

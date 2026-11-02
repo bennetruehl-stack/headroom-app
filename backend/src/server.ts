@@ -19,7 +19,6 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  // Nur Art und Meldung; die Konfigurationsmeldung nennt nie Werte.
   console.error(error instanceof ConfigError ? error.message : 'Startup failed: ' + (error instanceof Error ? error.message : 'unknown error'));
   process.exit(1);
 });

@@ -16,7 +16,7 @@ services:
       retries: 10
     logging: &logging
       driver: local
-      # Größenbegrenzt; eine Löschung nach 14 Tagen stellt der Hosting-Anbieter ein (siehe README).
+      # Höchstens 14 Dateien zu je 10 MB. Die Löschung nach 14 Tagen stellt der Hosting-Anbieter ein (README).
       options:
         max-size: 10m
         max-file: '14'
