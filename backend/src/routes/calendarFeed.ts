@@ -11,7 +11,6 @@ const BadRequest = z.union([CalendarFeedErrorResponse, ErrorResponse]);
 
 export type CalendarFetch = (input: string, init: RequestInit) => Promise<Response>;
 
-/** Nur https zu Google oder iCloud, ohne Zugangsdaten in der Adresse und ohne fremden Port. `webcal://` wird zu `https://`. */
 export function calendarUrl(value: string): URL | null {
   try {
     const url = new URL(value.trim().replace(/^webcals?:\/\//i, 'https://'));
@@ -62,12 +61,17 @@ export function calendarFeedRoutes(app: FastifyInstance, deps: { fetch: Calendar
             headers: { Accept: 'text/calendar, text/plain;q=0.8', 'User-Agent': 'Headroom/1.0' },
           });
           if (upstream.status >= 300 && upstream.status < 400) {
+            // Nicht gelesene Antworten verwerfen, sonst bleibt die Verbindung belegt.
+            void upstream.body?.cancel();
             const next = calendarUrl(new URL(upstream.headers.get('location') ?? '', url).toString());
             if (!next) return fail(reply, 502, 'redirect');
             url = next;
             continue;
           }
-          if (!upstream.ok || !upstream.body) return fail(reply, 502, upstream.status === 404 || upstream.status === 403 ? 'notFound' : 'upstream');
+          if (!upstream.ok || !upstream.body) {
+            void upstream.body?.cancel();
+            return fail(reply, 502, upstream.status === 404 || upstream.status === 403 ? 'notFound' : 'upstream');
+          }
           const text = await readLimited(upstream.body);
           if (text === null) return fail(reply, 413, 'tooLarge');
           if (!text.includes('BEGIN:VCALENDAR')) return fail(reply, 502, 'notCalendar');

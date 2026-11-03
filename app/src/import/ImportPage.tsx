@@ -147,7 +147,7 @@ function CalendarImport({
 }) {
   const [url, setUrl] = useState('');
   const [agreed, setAgreed] = useState(false);
-  const consented = Boolean(data.calendarConsent);
+  const consentDate = data.calendarConsent;
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [result, setResult] = useState('');
@@ -159,9 +159,8 @@ function CalendarImport({
       setError(t(language, 'calendarErrorHost'));
       return;
     }
-    if (!consented && !agreed) return;
-    // Die Einwilligung gilt ab jetzt für dieses Gerät; sie wird vor dem ersten Abruf gespeichert.
-    if (!consented) onUpdate({ calendarConsent: localToday() });
+    if (!consentDate && !agreed) return;
+    if (!consentDate) onUpdate({ calendarConsent: localToday() });
     setBusy('new');
     try {
       const text = await fetchCalendarFeed(url.trim());
@@ -211,7 +210,7 @@ function CalendarImport({
 
   const syncNow = async (calendar: CalendarSource) => {
     if (!calendar.url) return;
-    if (!consented) {
+    if (!consentDate) {
       setError(t(language, 'calendarConsentNeeded'));
       return;
     }
@@ -287,9 +286,9 @@ function CalendarImport({
           />
           <small>{t(language, 'calendarLinkPrivacy')}</small>
         </label>
-        {consented ? (
+        {consentDate ? (
           <div>
-            <p className="field-hint">{t(language, 'calendarConsentGiven', { date: dateText(data.calendarConsent!, language) })}</p>
+            <p className="field-hint">{t(language, 'calendarConsentGiven', { date: dateText(consentDate, language) })}</p>
             <button className="text-button" type="button" onClick={() => onUpdate({ calendarConsent: undefined })}>{t(language, 'calendarConsentWithdraw')}</button>
           </div>
         ) : (
@@ -298,7 +297,7 @@ function CalendarImport({
             <span>{t(language, 'calendarConsent')}</span>
           </label>
         )}
-        <button className="button button-primary" type="button" disabled={!url.trim() || busy !== null || (!consented && !agreed)} onClick={() => void connect()}>
+        <button className="button button-primary" type="button" disabled={!url.trim() || busy !== null || (!consentDate && !agreed)} onClick={() => void connect()}>
           {busy === 'new' ? t(language, 'calendarSyncing') : t(language, 'calendarConnect')}
         </button>
         <details className="method-details">

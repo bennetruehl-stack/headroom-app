@@ -98,7 +98,6 @@ function App() {
   useEffect(() => {
     if (!ready || syncStarted.current) return;
     syncStarted.current = true;
-    // Ohne Einwilligung geht kein Kalender-Link über den Server.
     const due = data.calendarConsent ? data.calendars.filter((calendar) => syncDue(calendar)) : [];
     if (!due.length) return;
     void (async () => {

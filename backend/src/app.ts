@@ -38,7 +38,6 @@ export type AppOptions = {
   logStream?: DestinationStream;
   /** Fachliche Routen, die nach den Schutzschichten registriert werden. */
   routes?: (app: FastifyInstance) => unknown;
-  /** Abruf nach außen für den Kalender; Standard ist `fetch`, Tests setzen einen Nachbau ein. */
   calendarFetch?: CalendarFetch;
 };
 

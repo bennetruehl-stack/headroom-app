@@ -13,5 +13,4 @@ export type CalendarFeedErrorCode = (typeof CALENDAR_FEED_ERRORS)[number];
 
 export const CalendarFeedErrorResponse = z.object({ error: z.enum(CALENDAR_FEED_ERRORS) });
 
-/** Größte Kalenderdatei, die der Server weiterreicht. */
 export const MAX_CALENDAR_BYTES = 2 * 1024 * 1024;

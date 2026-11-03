@@ -162,7 +162,8 @@ describe('Kalender-Abruf', () => {
   it('nimmt nur eine Adresse bis 2048 Zeichen und keine weiteren Felder an', () => {
     expect(CalendarFeedRequest.safeParse({ url: 'https://calendar.google.com/x.ics' }).success).toBe(true);
     expect(CalendarFeedRequest.safeParse({ url: '' }).success).toBe(false);
-    expect(CalendarFeedRequest.safeParse({ url: 'https://' + 'a'.repeat(2048) }).success).toBe(false);
+    expect(CalendarFeedRequest.safeParse({ url: 'a'.repeat(2048) }).success).toBe(true);
+    expect(CalendarFeedRequest.safeParse({ url: 'a'.repeat(2049) }).success).toBe(false);
     expect(CalendarFeedRequest.safeParse({ url: 'https://calendar.google.com/x.ics', token: 'x' }).success).toBe(false);
   });
 });

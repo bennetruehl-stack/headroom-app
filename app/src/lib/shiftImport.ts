@@ -118,13 +118,9 @@ export class CalendarFeedError extends Error {
   }
 }
 
-/** Ohne Backend-Adresse im Build bleibt der lokale Demo-Server zuständig. */
 const calendarFeedEndpoint = () => (backendUrl ? backendUrl + '/v1/calendar/feed' : '/api/calendar-feed');
 
-/**
- * Holt einen abonnierten Kalender über den Headroom-Server (Google/iCloud erlauben keinen Direktabruf im Browser).
- * Link und Inhalt laufen dabei durch den Server; vorher braucht es die Einwilligung der Person.
- */
+/** Holt einen abonnierten Kalender über den Headroom-Server (Google/iCloud erlauben keinen Direktabruf im Browser). */
 export async function fetchCalendarFeed(url: string): Promise<string> {
   let response: Response;
   try {
