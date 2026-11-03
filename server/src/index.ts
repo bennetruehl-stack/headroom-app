@@ -256,6 +256,8 @@ async function readLimited(body: ReadableStream<Uint8Array>): Promise<string | n
   return Buffer.concat(chunks).toString('utf8');
 }
 
+// Zieht ins Backend um (`backend/src/routes/calendarFeed.ts`, `/v1/calendar/feed`). Bleibt vorerst für die Web-App ohne
+// eingetragene Backend-Adresse.
 app.post('/api/calendar-feed', async (request, response) => {
   if (!isPlainObject(request.body) || !hasExactKeys(request.body, ['url'])) {
     response.status(400).json({ error: 'invalid' });

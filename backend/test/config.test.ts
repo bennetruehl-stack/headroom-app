@@ -16,7 +16,7 @@ describe('Konfiguration beim Start', () => {
     const config = loadConfig(base);
     expect(config.allowedOrigins).toEqual(['app://headroom', 'https://headroom.example']);
     expect(config.port).toBe(8080);
-    expect(config.rateLimit).toEqual({ globalPerMinute: 300, authPerMinute: 20 });
+    expect(config.rateLimit).toEqual({ globalPerMinute: 300, authPerMinute: 20, calendarPerMinute: 30 });
   });
 
   it('bricht ohne DATABASE_URL mit klarer Meldung ab', () => {

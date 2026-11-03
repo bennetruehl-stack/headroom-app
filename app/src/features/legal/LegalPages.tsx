@@ -62,11 +62,12 @@ export function PrivacyPage({ language, onNavigate, backTo }: { language: Langua
       <LegalSection title="3. Kalender und Foto (Kernfunktionen, nur auf deine Aktion)">
         <ul>
           <li>
-            <strong>Kalender:</strong> Ein eingefügter privater iCal-Link wird nur auf dem Gerät gespeichert und nie exportiert.
-            Zum Abrufen sendet die App ihn per POST (nicht in der URL) an den lokalen Headroom-Demo-Server. Dieser leitet die
-            Anfrage nur an calendar.google.com oder *.icloud.com weiter, prüft diese Ziele auch nach Weiterleitungen, bricht
-            nach 10 Sekunden ab, akzeptiert höchstens 2 MB und protokolliert den Link nicht. Der Import einer .ics-Datei läuft
-            vollständig lokal.
+            <strong>Kalender:</strong> Ein eingefügter privater iCal-Link wird nie exportiert. Vor dem ersten Abruf fragt die App
+            nach deiner Einwilligung; du kannst sie auf der Import-Seite widerrufen. Zum Abrufen sendet die App den Link per POST
+            (nicht in der URL) an den Headroom-Server. Dieser leitet die Anfrage nur an calendar.google.com oder *.icloud.com
+            weiter, prüft diese Ziele auch nach Weiterleitungen, bricht nach 10 Sekunden ab, akzeptiert höchstens 2 MB und gibt
+            den Kalender zurück. Link und Kalenderinhalt mit allen Terminen laufen dabei unverschlüsselt durch den Server; er
+            speichert und protokolliert beides nicht. Der Import einer .ics-Datei läuft vollständig lokal.
           </li>
           <li>
             <strong>Foto oder Screenshot:</strong> Die Texterkennung (tesseract.js) läuft im Browser; das Bild verlässt das

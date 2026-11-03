@@ -7,6 +7,7 @@ import type { DestinationStream } from 'pino';
 import type { Config } from './config';
 import type { Db } from './db';
 import { migrationsComplete } from './db/migrate';
+import { calendarFeedRoutes, type CalendarFetch } from './routes/calendarFeed';
 
 const redactedPaths = [
   'req.headers.authorization',
@@ -37,6 +38,8 @@ export type AppOptions = {
   logStream?: DestinationStream;
   /** Fachliche Routen, die nach den Schutzschichten registriert werden. */
   routes?: (app: FastifyInstance) => unknown;
+  /** Abruf nach außen für den Kalender; Standard ist `fetch`, Tests setzen einen Nachbau ein. */
+  calendarFetch?: CalendarFetch;
 };
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -48,7 +51,7 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   }
 }
 
-export async function buildApp({ config, db, logStream, routes }: AppOptions): Promise<FastifyInstance> {
+export async function buildApp({ config, db, logStream, routes, calendarFetch = (input, init) => fetch(input, init) }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     trustProxy: config.trustedProxies.length ? config.trustedProxies : false,
     bodyLimit: 1024 * 1024,
@@ -77,6 +80,9 @@ export async function buildApp({ config, db, logStream, routes }: AppOptions): P
     if (route.url.startsWith('/v1/auth/')) {
       route.config = { ...route.config, rateLimit: { max: config.rateLimit.authPerMinute, timeWindow: '1 minute' } };
     }
+    if (route.url.startsWith('/v1/calendar/')) {
+      route.config = { ...route.config, rateLimit: { max: config.rateLimit.calendarPerMinute, timeWindow: '1 minute' } };
+    }
   });
   await app.register(rateLimit, { global: true, max: config.rateLimit.globalPerMinute, timeWindow: '1 minute' });
 
@@ -85,7 +91,8 @@ export async function buildApp({ config, db, logStream, routes }: AppOptions): P
     if (error.validation) return reply.code(400).send({ error: 'invalid_request' });
     const status = error.statusCode && error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500;
     if (status === 429) return reply.code(429).send({ error: 'rate_limited' });
-    if (status >= 500) request.log.error({ err: error }, 'request failed');
+    // Nur Art und Code: Fehlertexte der Datenbank können Werte wie E-Mail-Adressen enthalten.
+    if (status >= 500) request.log.error({ errName: error.name, errCode: error.code }, 'request failed');
     return reply.code(status).send({ error: status >= 500 ? 'internal_error' : 'bad_request' });
   });
 
@@ -100,6 +107,9 @@ export async function buildApp({ config, db, logStream, routes }: AppOptions): P
     return reply.code(503).send({ status: 'unavailable' });
   });
 
+  await app.register(async (instance) => {
+    calendarFeedRoutes(instance, { fetch: calendarFetch });
+  });
   if (routes) await app.register(async (instance) => { await routes(instance); });
   await app.ready();
   return app;

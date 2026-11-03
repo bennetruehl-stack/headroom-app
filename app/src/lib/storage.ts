@@ -23,6 +23,8 @@ export type AppState = {
   calendars: CalendarSource[];
   /** Beim automatischen Abgleich gefundene Termine, die noch geprüft werden müssen. */
   pendingImports: ShiftCandidate[];
+  /** Tag der Einwilligung, dass Kalender-Link und -Inhalt zum Abrufen über den Headroom-Server laufen. Nur auf diesem Gerät. */
+  calendarConsent?: string;
 };
 
 export type CalendarSource = {

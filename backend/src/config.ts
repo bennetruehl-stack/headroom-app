@@ -37,6 +37,8 @@ const Env = z.object({
     .pipe(z.array(z.string().refine(isProxyEntry, 'IP address, CIDR or loopback/linklocal/uniquelocal'))),
   RATE_LIMIT_GLOBAL_PER_MINUTE: positiveInt(300),
   RATE_LIMIT_AUTH_PER_MINUTE: positiveInt(20),
+  /** Kalender-Abruf: jeder Aufruf fragt Google oder iCloud an, deshalb enger als das allgemeine Limit. */
+  RATE_LIMIT_CALENDAR_PER_MINUTE: positiveInt(30),
 });
 
 export type Config = {
@@ -47,7 +49,7 @@ export type Config = {
   host: string;
   logLevel: z.infer<typeof Env>['LOG_LEVEL'];
   trustedProxies: string[];
-  rateLimit: { globalPerMinute: number; authPerMinute: number };
+  rateLimit: { globalPerMinute: number; authPerMinute: number; calendarPerMinute: number };
 };
 
 /** Ein Docker-Secret liegt als Datei vor; die Umgebung nennt dann nur den Pfad. */
@@ -80,6 +82,6 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     host: value.HOST,
     logLevel: value.LOG_LEVEL,
     trustedProxies: value.TRUSTED_PROXIES,
-    rateLimit: { globalPerMinute: value.RATE_LIMIT_GLOBAL_PER_MINUTE, authPerMinute: value.RATE_LIMIT_AUTH_PER_MINUTE },
+    rateLimit: { globalPerMinute: value.RATE_LIMIT_GLOBAL_PER_MINUTE, authPerMinute: value.RATE_LIMIT_AUTH_PER_MINUTE, calendarPerMinute: value.RATE_LIMIT_CALENDAR_PER_MINUTE },
   };
 }

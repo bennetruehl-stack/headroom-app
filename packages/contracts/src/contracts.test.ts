@@ -14,6 +14,7 @@ import {
   RegisterRequest,
 } from './auth';
 import { MAX_PUSH_CIPHERTEXT_BYTES, MAX_RECORD_BYTES, MAX_RECORDS_PER_PUSH, PullQuery, PullResponse, PushRequest } from './sync';
+import { CalendarFeedRequest } from './calendar';
 
 /** Zufällige Bytes als base64url, wie die App sie schickt. */
 const b64 = (bytes: number) => Buffer.alloc(bytes, 7).toString('base64url');
@@ -154,5 +155,14 @@ describe('Abgleich', () => {
     expect(PullQuery.safeParse({ since: '0', limit: '501' }).success).toBe(false);
     for (const since of ['', ' ', '1e3', '0x10', '1.5', '01']) expect(PullQuery.safeParse({ since }).success).toBe(false);
     expect(PullQuery.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('Kalender-Abruf', () => {
+  it('nimmt nur eine Adresse bis 2048 Zeichen und keine weiteren Felder an', () => {
+    expect(CalendarFeedRequest.safeParse({ url: 'https://calendar.google.com/x.ics' }).success).toBe(true);
+    expect(CalendarFeedRequest.safeParse({ url: '' }).success).toBe(false);
+    expect(CalendarFeedRequest.safeParse({ url: 'https://' + 'a'.repeat(2048) }).success).toBe(false);
+    expect(CalendarFeedRequest.safeParse({ url: 'https://calendar.google.com/x.ics', token: 'x' }).success).toBe(false);
   });
 });

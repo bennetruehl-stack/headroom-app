@@ -10,6 +10,7 @@ import {
   type ShiftSource,
 } from '@headroom/core';
 import type { CalendarSource } from './storage';
+import { backendUrl } from './account/config';
 
 export function newId(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -117,11 +118,17 @@ export class CalendarFeedError extends Error {
   }
 }
 
-/** Holt einen abonnierten Kalender über den lokalen Server (Google/iCloud erlauben keinen Direktabruf im Browser). */
+/** Ohne Backend-Adresse im Build bleibt der lokale Demo-Server zuständig. */
+const calendarFeedEndpoint = () => (backendUrl ? backendUrl + '/v1/calendar/feed' : '/api/calendar-feed');
+
+/**
+ * Holt einen abonnierten Kalender über den Headroom-Server (Google/iCloud erlauben keinen Direktabruf im Browser).
+ * Link und Inhalt laufen dabei durch den Server; vorher braucht es die Einwilligung der Person.
+ */
 export async function fetchCalendarFeed(url: string): Promise<string> {
   let response: Response;
   try {
-    response = await fetch('/api/calendar-feed', {
+    response = await fetch(calendarFeedEndpoint(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
@@ -135,6 +142,7 @@ export async function fetchCalendarFeed(url: string): Promise<string> {
     const body = await response.json() as { error?: string };
     if (body.error === 'host' || body.error === 'notFound' || body.error === 'tooLarge' || body.error === 'notCalendar') code = body.error;
     else if (body.error === 'redirect') code = 'host';
+    else if (body.error === 'timeout' || body.error === 'rate_limited') code = 'offline';
   } catch {
     // Keine JSON-Antwort: Der Dev-Proxy erreicht den lokalen Server nicht.
     code = 'offline';

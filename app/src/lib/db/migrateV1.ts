@@ -32,7 +32,7 @@ function shiftIds(shifts: readonly Partial<Shift>[]): string[] {
 }
 
 type SettingsFields = Pick<AppState, 'language' | 'darkMode'>;
-type DeviceFields = Pick<AppState, 'onboarded' | 'isPremium' | 'dismissedRecommendations' | 'peerOptIn' | 'peerToken' | 'example' | 'pendingImports'>;
+type DeviceFields = Pick<AppState, 'onboarded' | 'isPremium' | 'dismissedRecommendations' | 'peerOptIn' | 'peerToken' | 'example' | 'pendingImports' | 'calendarConsent'>;
 
 function settingsFields(source: Partial<AppState>): SettingsFields {
   return { language: source.language === 'en' ? 'en' : 'de', darkMode: Boolean(source.darkMode) };
@@ -54,6 +54,7 @@ function deviceFields(source: Partial<AppState>): DeviceFields {
       ? source.pendingImports.filter((item): item is ShiftCandidate =>
         Boolean(item) && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && Number.isFinite(item.hours) && (item.source === 'calendar' || item.source === 'photo'))
       : [],
+    calendarConsent: typeof source.calendarConsent === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(source.calendarConsent) ? source.calendarConsent : undefined,
   };
 }
 

@@ -83,7 +83,7 @@ Unter den Nutzer:innen sind Minderjährige. Deshalb muss jede Datenübertragung 
 
 - R15. Mit Konto gleichen sich Profil, Jobs, Schichten, Zahlungen, Kalenderquellen und Einstellungen (Sprache, Dunkelmodus) zwischen Geräten ab. Advanced-Flags, `isPremium`, `peerToken`, `pendingImports` und Beispielprofile bleiben auf dem Gerät.
 - R16. Änderungen, die offline auf zwei Geräten entstehen, gehen beim Abgleich nicht verloren. Bei Konflikten im selben Feld gewinnt die spätere Änderung.
-- R17. Der Server speichert nur verschlüsselte Datensätze. Die einzige Ausnahme ist der Kalender-Abruf: Er reicht die Kalender-Adresse im Klartext durch, speichert sie aber nicht. Er braucht eine eigene Einwilligung.
+- R17. Der Server speichert nur verschlüsselte Datensätze. Die einzige Ausnahme ist der Kalender-Abruf: Kalender-Adresse und abgerufener Kalenderinhalt laufen im Klartext durch den Server, er speichert und protokolliert beides aber nicht. Der Abruf braucht eine eigene Einwilligung, die beides nennt.
 - R18. Wer sich auf einem Gerät mit eigenen lokalen Daten anmeldet, entscheidet, ob diese mit dem Konto zusammengeführt oder durch den Kontostand ersetzt werden.
 - R19. Beim Abmelden werden die Kontodaten von diesem Gerät entfernt. Gibt es noch nicht übertragene Änderungen, warnt die App vorher.
 - R20. Ein älterer App-Stand, der neuere Datensätze empfängt, verändert sie nicht und verliert keine Felder, die er nicht kennt.
@@ -623,6 +623,7 @@ Diese Einträge sind offene Punkte aus der Prüfung des Plans für Bennet. Sie �
 
   Der Abruf reicht nicht nur die geheime Kalender-Adresse durch, sondern auch die ganze Kalenderdatei mit allen Schichten. Einwilligung und README würden sonst weniger offenlegen, als geschieht.
   Change: R17 und Objective präzisieren: Adresse und abgerufener Kalenderinhalt laufen im Klartext über den Server, werden aber weder gespeichert noch geloggt. Einwilligungstext und README nennen beides.
+  **Entschieden am 2026-11-03** (Bennet: „Über Server, offen benannt“): so übernommen, R17 ist angepasst. Die Einwilligung gilt je Gerät, lässt sich auf der Import-Seite widerrufen, und ohne sie ruft die App keinen Kalender-Link ab.
 
 - **Der Schutz vor dem Betreiber hängt an der Passwortstärke** — Konto, R11/R12 (P2, security-lens, adversarial, confidence 75)
 
