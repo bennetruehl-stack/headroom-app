@@ -32,11 +32,13 @@ function shiftIds(shifts: readonly Partial<Shift>[]): string[] {
 }
 
 type SettingsFields = Pick<AppState, 'language' | 'darkMode'>;
-type DeviceFields = Pick<AppState, 'onboarded' | 'isPremium' | 'dismissedRecommendations' | 'peerOptIn' | 'peerToken' | 'example' | 'pendingImports'>;
+type DeviceFields = Pick<AppState, 'onboarded' | 'isPremium' | 'dismissedRecommendations' | 'peerOptIn' | 'peerToken' | 'example' | 'pendingImports' | 'calendarConsent'>;
 
 function settingsFields(source: Partial<AppState>): SettingsFields {
   return { language: source.language === 'en' ? 'en' : 'de', darkMode: Boolean(source.darkMode) };
 }
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 function deviceFields(source: Partial<AppState>): DeviceFields {
   const example: ExampleProfile | undefined =
@@ -52,8 +54,9 @@ function deviceFields(source: Partial<AppState>): DeviceFields {
     example,
     pendingImports: Array.isArray(source.pendingImports)
       ? source.pendingImports.filter((item): item is ShiftCandidate =>
-        Boolean(item) && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && Number.isFinite(item.hours) && (item.source === 'calendar' || item.source === 'photo'))
+        Boolean(item) && ISO_DAY.test(item.date) && Number.isFinite(item.hours) && (item.source === 'calendar' || item.source === 'photo'))
       : [],
+    calendarConsent: typeof source.calendarConsent === 'string' && ISO_DAY.test(source.calendarConsent) ? source.calendarConsent : undefined,
   };
 }
 

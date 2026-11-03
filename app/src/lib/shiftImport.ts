@@ -9,7 +9,8 @@ import {
   type ShiftCandidate,
   type ShiftSource,
 } from '@headroom/core';
-import type { CalendarSource } from './storage';
+import type { AppState, CalendarSource } from './storage';
+import { backendUrl } from './account/config';
 
 export function newId(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -117,11 +118,13 @@ export class CalendarFeedError extends Error {
   }
 }
 
-/** Holt einen abonnierten Kalender über den lokalen Server (Google/iCloud erlauben keinen Direktabruf im Browser). */
+const calendarFeedEndpoint = () => (backendUrl ? backendUrl + '/v1/calendar/feed' : '/api/calendar-feed');
+
+/** Holt einen abonnierten Kalender über den Headroom-Server (Google/iCloud erlauben keinen Direktabruf im Browser). */
 export async function fetchCalendarFeed(url: string): Promise<string> {
   let response: Response;
   try {
-    response = await fetch('/api/calendar-feed', {
+    response = await fetch(calendarFeedEndpoint(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
@@ -135,6 +138,7 @@ export async function fetchCalendarFeed(url: string): Promise<string> {
     const body = await response.json() as { error?: string };
     if (body.error === 'host' || body.error === 'notFound' || body.error === 'tooLarge' || body.error === 'notCalendar') code = body.error;
     else if (body.error === 'redirect') code = 'host';
+    else if (body.error === 'timeout' || body.error === 'rate_limited') code = 'offline';
   } catch {
     // Keine JSON-Antwort: Der Dev-Proxy erreicht den lokalen Server nicht.
     code = 'offline';
@@ -183,6 +187,11 @@ export function syncFromIcs(
 }
 
 export const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+/** Kalender, die beim Start abgerufen werden. Ohne Einwilligung keiner: Link und Inhalt liefen sonst ungefragt über den Server. */
+export function calendarsToAutoSync(data: Pick<AppState, 'calendars' | 'calendarConsent'>, now = Date.now()): CalendarSource[] {
+  return data.calendarConsent ? data.calendars.filter((calendar) => syncDue(calendar, now)) : [];
+}
 
 export function syncDue(calendar: CalendarSource, now = Date.now()): boolean {
   if (calendar.kind !== 'url' || !calendar.url) return false;

@@ -66,7 +66,7 @@ export const recordKinds: Record<RecordKind, KindInfo> = {
   settings: { synced: true, knownFields: ['language', 'darkMode'] },
   deviceState: {
     synced: false,
-    knownFields: ['example', 'isPremium', 'peerToken', 'pendingImports', 'onboarded', 'dismissedRecommendations', 'peerOptIn'],
+    knownFields: ['example', 'isPremium', 'peerToken', 'pendingImports', 'onboarded', 'dismissedRecommendations', 'peerOptIn', 'calendarConsent'],
   },
 };
 

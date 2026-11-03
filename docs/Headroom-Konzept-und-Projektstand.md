@@ -216,7 +216,7 @@ Der Schicht-Tracker ist die wichtigste Erweiterung des aktuellen Stands. Er ist 
 - **Jobzuordnung:** über die Stichwörter des Jobs, dann über Jobtitel oder Firma im Termintitel. Bei keinem oder mehrdeutigem Treffer bleibt der Termin ohne Job.
 - **Prüfschritt:** Termine mit Job sind vorausgewählt; andere Termine (Arzt, Geburtstag) sind eingeklappt und abgewählt. Datum, Zeiten und Job sind editierbar. Ordnet man einen Termin von Hand zu, merkt sich die App dessen Titel als Stichwort.
 - **Automatischer Abgleich:** Verbundene Kalender-Links werden beim Öffnen höchstens alle sechs Stunden abgefragt. Eindeutig zugeordnete neue Termine werden direkt übernommen; Termine, die nach Arbeit klingen („Schicht“, „Dienst“, „Arbeit“ …), aber zu keinem Job passen, landen als „zu prüfen“ auf dem Dashboard.
-- Der Abruf eines Links läuft über den lokalen Server, weil Google und iCloud keinen direkten Abruf aus dem Browser erlauben (CORS). Ohne Server funktioniert der Datei-Import vollständig.
+- Der Abruf eines Links läuft über das Backend (`POST /v1/calendar/feed`; ohne eingetragene Backend-Adresse über den lokalen Demo-Server), weil Google und iCloud keinen direkten Abruf aus dem Browser erlauben (CORS). Link und Kalenderinhalt laufen dabei im Klartext durch den Server, er speichert und protokolliert beides nicht. Vor dem ersten Abruf holt die App eine eigene Einwilligung ein; sie gilt nur auf diesem Gerät, geht nicht mit in die Sicherungsdatei und lässt sich auf der Import-Seite widerrufen. Ohne sie ruft die App keinen Link ab, auch nicht beim Start. Ohne Server funktioniert der Datei-Import vollständig.
 
 ### 6.2 Foto und Screenshot
 
@@ -363,9 +363,9 @@ Wichtige Funktionen: `activeLimits` (Profilfilter), `monthTotal`, `monthlySummar
 | `GET /api/listings`, `POST /api/listings` | Demo-Jobbörse (SQLite, 40 Startinserate) |
 | `POST /api/peer-opt-in`, `DELETE /api/peer-opt-in/:token` | freiwillige Lohndaten, Löschung |
 | `GET /api/peer-stats` | Gruppenwerte (erst ab 20 Datensätzen) |
-| `POST /api/calendar-feed` | Kalender-Abruf für Google/iCloud |
+| `POST /api/calendar-feed` | Kalender-Abruf für Google/iCloud (Demo-Server; im Backend als `POST /v1/calendar/feed`) |
 
-Schutzmaßnahmen am Kalender-Endpunkt: nur `https`/`webcal`, Host-Allowlist (`calendar.google.com`, `*.icloud.com`), Prüfung auch jeder Weiterleitung, keine Zugangsdaten in der URL, 10 Sekunden Timeout, maximal 2 MB, Link im Request-Body statt in der URL, keine Protokollierung des Links. Eingaben an allen Endpunkten werden auf genaue Felder und Wertebereiche geprüft; JSON-Bodys sind auf 8 KB begrenzt.
+Schutzmaßnahmen am Kalender-Endpunkt (Demo-Server und Backend gleich, im Backend zusätzlich ein eigenes Rate-Limit): nur `https`/`webcal`, Host-Allowlist (`calendar.google.com`, `*.icloud.com`), Prüfung auch jeder Weiterleitung, keine Zugangsdaten in der URL, 10 Sekunden Timeout, maximal 2 MB, Link im Request-Body statt in der URL, keine Protokollierung des Links. Eingaben an allen Endpunkten werden auf genaue Felder und Wertebereiche geprüft; JSON-Bodys sind auf 8 KB begrenzt.
 
 ### 10.6 Ausführung
 
@@ -396,7 +396,7 @@ Schutzmaßnahmen am Kalender-Endpunkt: nur `https`/`webcal`, Host-Allowlist (`ca
 
 | Funktion | Was übertragen wird | Wohin |
 |---|---|---|
-| Kalender-Link | der private iCal-Link (im Body, nicht in der URL) | lokaler Server → nur Google bzw. iCloud |
+| Kalender-Link (eigene Einwilligung) | der private iCal-Link (im Body, nicht in der URL); zurück kommt der Kalenderinhalt, beides im Klartext, weder gespeichert noch protokolliert | Backend (sonst lokaler Demo-Server) → nur Google bzw. iCloud |
 | Kalender-Datei | nichts | – (lokal) |
 | Foto/Screenshot | nichts; nur Sprachdaten werden einmalig nachgeladen | – (Erkennung lokal) |
 | Lohnstatistik (Advanced, Einwilligung, ab 16) | zufälliges Geräte-Token, Job-Preset, Stadt, tatsächlicher und erwarteter Stundenlohn, Monat – keine Firma | lokaler Demo-Server |
@@ -524,7 +524,7 @@ Die Artifacts sind privat und müssen zum Teilen freigegeben werden. Die Musik i
 
 ### 18.3 Bekannte Lücken im Schicht-Tracker
 
-- Kalender-Abo braucht den lokalen Server; gehostet fehlt ein abgesicherter Abruf-Dienst.
+- Kalender-Abo braucht einen Server: das Backend (mit `VITE_BACKEND_URL`) oder den lokalen Demo-Server.
 - Monatliche Kalender-Wiederholungen (`FREQ=MONTHLY`) werden nur als Einzeltermin gelesen.
 - Im Kalender gelöschte Termine werden beim Abgleich nicht entfernt.
 - Die OCR-Qualität hängt stark von Bild und Layout ab; komplexe Tabellen brauchen Korrektur im Prüfschritt.

@@ -17,7 +17,7 @@ import { ShiftCheckDialog } from './features/shifts/ShiftCheckDialog';
 import { ShiftsPage } from './features/shifts/ShiftsPage';
 import { t, type Language } from './i18n/translations';
 import { getAdvancedMode, getFeatureFlags } from './lib/flags';
-import { CalendarFeedError, fetchCalendarFeed, syncDue, syncFromIcs } from './lib/shiftImport';
+import { CalendarFeedError, calendarsToAutoSync, fetchCalendarFeed, syncFromIcs } from './lib/shiftImport';
 import { localToday } from './lib/format';
 import { uniqueById } from './lib/db/recordStore';
 import { addToQuarantine, clearLocalState, createDemoState, createEmptyState, createLenaState, createMiaState, discardQuarantine, loadState, saveState, type AppState } from './lib/storage';
@@ -98,7 +98,7 @@ function App() {
   useEffect(() => {
     if (!ready || syncStarted.current) return;
     syncStarted.current = true;
-    const due = data.calendars.filter((calendar) => syncDue(calendar));
+    const due = calendarsToAutoSync(data);
     if (!due.length) return;
     void (async () => {
       let added = 0;

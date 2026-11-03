@@ -23,6 +23,8 @@ export type AppState = {
   calendars: CalendarSource[];
   /** Beim automatischen Abgleich gefundene Termine, die noch geprüft werden müssen. */
   pendingImports: ShiftCandidate[];
+  /** Tag der Einwilligung, dass Kalender-Link und -Inhalt zum Abrufen über den Headroom-Server laufen. Nur auf diesem Gerät. */
+  calendarConsent?: string;
 };
 
 export type CalendarSource = {
@@ -406,7 +408,9 @@ export function createEmptyState(): AppState {
 
 /** Für den JSON-Export: private Kalender-Links entfernen, sie sind wie ein Passwort. */
 export function stateForExport(state: AppState): AppState {
-  return { ...state, calendars: state.calendars.map(({ url: _url, ...calendar }) => calendar) };
+  // Die Einwilligung zum Kalender-Abruf gilt nur für dieses Gerät und geht nicht mit.
+  const { calendarConsent: _consent, ...rest } = state;
+  return { ...rest, calendars: state.calendars.map(({ url: _url, ...calendar }) => calendar) };
 }
 
 /** Aussortierte Kalender ohne privaten Link: Er ist wie ein Passwort und wird nie exportiert. */

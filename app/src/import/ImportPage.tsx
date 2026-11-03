@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { dedupeCandidates, hoursBetween, parseIcs, parseScheduleText, type Job, type ShiftCandidate, parseLocaleNumber } from '@headroom/core';
 import { t, type Language, type MessageKey } from '../i18n/translations';
+import { dateText, localToday } from '../lib/format';
 import type { AppState, CalendarSource } from '../lib/storage';
 import {
   applyImport,
@@ -145,6 +146,8 @@ function CalendarImport({
   onReview: (candidates: ShiftCandidate[], calendarId: string) => void;
 }) {
   const [url, setUrl] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const consentDate = data.calendarConsent;
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [result, setResult] = useState('');
@@ -155,6 +158,12 @@ function CalendarImport({
     if (!isCalendarLink(url)) {
       setError(t(language, 'calendarErrorHost'));
       return;
+    }
+    if (!consentDate && !agreed) return;
+    if (!consentDate) {
+      onUpdate({ calendarConsent: localToday() });
+      // Nach einem Widerruf soll es wieder ein neues, bewusstes Häkchen brauchen.
+      setAgreed(false);
     }
     setBusy('new');
     try {
@@ -205,6 +214,10 @@ function CalendarImport({
 
   const syncNow = async (calendar: CalendarSource) => {
     if (!calendar.url) return;
+    if (!consentDate) {
+      setError(t(language, 'calendarConsentNeeded'));
+      return;
+    }
     setBusy(calendar.id);
     setError('');
     setResult('');
@@ -277,7 +290,18 @@ function CalendarImport({
           />
           <small>{t(language, 'calendarLinkPrivacy')}</small>
         </label>
-        <button className="button button-primary" type="button" disabled={!url.trim() || busy !== null} onClick={() => void connect()}>
+        {consentDate ? (
+          <div>
+            <p className="field-hint">{t(language, 'calendarConsentGiven', { date: dateText(consentDate, language) })}</p>
+            <button className="text-button" type="button" onClick={() => { setAgreed(false); onUpdate({ calendarConsent: undefined }); }}>{t(language, 'calendarConsentWithdraw')}</button>
+          </div>
+        ) : (
+          <label className="check-row">
+            <input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
+            <span>{t(language, 'calendarConsent')}</span>
+          </label>
+        )}
+        <button className="button button-primary" type="button" disabled={!url.trim() || busy !== null || (!consentDate && !agreed)} onClick={() => void connect()}>
           {busy === 'new' ? t(language, 'calendarSyncing') : t(language, 'calendarConnect')}
         </button>
         <details className="method-details">
