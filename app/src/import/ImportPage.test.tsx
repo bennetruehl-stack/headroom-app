@@ -66,6 +66,26 @@ describe('Einwilligung zum Kalender-Abruf', () => {
     expect(onUpdate).toHaveBeenCalledWith({ calendarConsent: undefined });
   });
 
+  it('verlangt nach dem Widerrufen ein neues Häkchen', async () => {
+    const onUpdate = render(withJob());
+    typeLink(LINK);
+    act(() => consentBox()!.click());
+    await act(async () => button('Verbinden')!.click());
+    render(withJob({ calendarConsent: '2026-11-03' }), onUpdate);
+    act(() => button('Einwilligung widerrufen')!.click());
+    render(withJob(), onUpdate);
+    typeLink(LINK);
+    expect(consentBox()!.checked).toBe(false);
+    expect(button('Verbinden')!.disabled).toBe(true);
+  });
+
+  it('gleicht einen gespeicherten Kalender ohne Einwilligung nicht ab', async () => {
+    render(withJob({ calendars: [{ id: 'c', name: 'Google Kalender', kind: 'url', url: LINK }] }));
+    await act(async () => button('Jetzt abgleichen')!.click());
+    expect(feed.fetchCalendarFeed).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('braucht es zuerst deine Einwilligung');
+  });
+
   it('braucht für den Import einer Datei keine Einwilligung', () => {
     render(withJob());
     expect(container.querySelector('input[type="file"]')).not.toBeNull();

@@ -9,7 +9,7 @@ import {
   type ShiftCandidate,
   type ShiftSource,
 } from '@headroom/core';
-import type { CalendarSource } from './storage';
+import type { AppState, CalendarSource } from './storage';
 import { backendUrl } from './account/config';
 
 export function newId(): string {
@@ -187,6 +187,11 @@ export function syncFromIcs(
 }
 
 export const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+/** Kalender, die beim Start abgerufen werden. Ohne Einwilligung keiner: Link und Inhalt liefen sonst ungefragt über den Server. */
+export function calendarsToAutoSync(data: Pick<AppState, 'calendars' | 'calendarConsent'>, now = Date.now()): CalendarSource[] {
+  return data.calendarConsent ? data.calendars.filter((calendar) => syncDue(calendar, now)) : [];
+}
 
 export function syncDue(calendar: CalendarSource, now = Date.now()): boolean {
   if (calendar.kind !== 'url' || !calendar.url) return false;

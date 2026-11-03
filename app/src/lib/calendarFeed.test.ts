@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createEmptyState } from './storage';
+import { createBackup, createEmptyState } from './storage';
 import { inputsToState, stateToInputs } from './db/migrateV1';
 
 afterEach(() => {
@@ -61,5 +61,26 @@ describe('Einwilligung zum Kalender-Abruf', () => {
     const inputs = stateToInputs(state);
     expect(inputs.find((input) => input.kind === 'deviceState')?.fields.calendarConsent).toBe('2026-11-03');
     expect(inputsToState(inputs).calendarConsent).toBe('2026-11-03');
+  });
+});
+
+describe('Einwilligung bleibt auf dem Gerät', () => {
+  it('geht nicht mit der Sicherungsdatei auf ein anderes Gerät', () => {
+    const backup = createBackup({ ...createEmptyState(), calendarConsent: '2026-11-03' }, [], {});
+    expect(backup.state).not.toHaveProperty('calendarConsent');
+  });
+});
+
+describe('Automatischer Abgleich beim Start', () => {
+  const calendar = { id: 'c', name: 'Arbeit', kind: 'url' as const, url: LINK };
+
+  it('ruft ohne Einwilligung keinen Kalender-Link ab', async () => {
+    const { calendarsToAutoSync } = await import('./shiftImport');
+    expect(calendarsToAutoSync({ ...createEmptyState(), calendars: [calendar] })).toEqual([]);
+  });
+
+  it('ruft mit Einwilligung fällige Kalender ab', async () => {
+    const { calendarsToAutoSync } = await import('./shiftImport');
+    expect(calendarsToAutoSync({ ...createEmptyState(), calendars: [calendar], calendarConsent: '2026-11-03' })).toEqual([calendar]);
   });
 });

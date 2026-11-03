@@ -29,7 +29,7 @@ Die Backend-Tests brauchen keine Installation von Postgres: Lokal laufen sie geg
 
 ## Backend (im Aufbau)
 
-`backend/` ist das künftige Backend für Konto und verschlüsselten Abgleich (Fastify, Postgres, Kysely). Es hat bisher nur `/health` (Prozess läuft) und `/ready` (Datenbank erreichbar und migriert), dazu alle Schutzschichten: geprüfte Konfiguration, CORS nur für eingetragene Ursprünge, Rate-Limit (enger für `/v1/auth/*`), Sicherheits-Header und Logs ohne IP-Adressen, Zugangsdaten oder Inhalte. Die App nutzt es noch nicht.
+`backend/` ist das künftige Backend für Konto und verschlüsselten Abgleich (Fastify, Postgres, Kysely). Es hat bisher nur `/health` (Prozess läuft) und `/ready` (Datenbank erreichbar und migriert), dazu alle Schutzschichten: geprüfte Konfiguration, CORS nur für eingetragene Ursprünge, Rate-Limit (enger für `/v1/auth/*` und für den Kalender-Abruf, `RATE_LIMIT_CALENDAR_PER_MINUTE`, Standard 30), Sicherheits-Header und Logs ohne IP-Adressen, Zugangsdaten oder Inhalte. Die App nutzt es bisher nur für den Kalender-Abruf (`POST /v1/calendar/feed`), und nur wenn sie mit `VITE_BACKEND_URL` gebaut wurde.
 
 ```sh
 cp .env.example .env                      # Passwort der Datenbank und erlaubte Ursprünge eintragen
@@ -106,7 +106,7 @@ Wenn optionale Funktionen manuell eingeschaltet und verwendet werden, gelten die
 - **Foto/Screenshot (Kernfunktion):** Die Texterkennung (tesseract.js, Deutsch und Englisch) läuft im Browser; das Bild verlässt das Gerät nicht. Beim ersten Lauf lädt tesseract.js Programmteile und Sprachdaten von cdn.jsdelivr.net nach; dabei geht die IP-Adresse an jsDelivr.
 - Partnerkarten öffnen eine externe Seite erst nach einem Klick.
 
-**Backend (im Aufbau, noch nicht von der App genutzt):** Die Logs enthalten nur Methode, Pfad ohne Parameter und wenige feste Header (Browser-Kennung, Inhaltstyp und -länge, Ursprung; `Authorization` nur geschwärzt), also keine IP-Adressen, Cookies, E-Mail-Adressen, Schlüssel oder Inhalte. Docker Compose begrenzt die Log-Dateien auf 14 Stück zu je 10 MB; eine Löschung nach spätestens 14 Tagen wird beim Hosting-Anbieter eingestellt, sobald er feststeht.
+**Backend (im Aufbau, von der App bisher nur für den Kalender-Abruf genutzt):** Die Logs enthalten nur Methode, Pfad ohne Parameter und wenige feste Header (Browser-Kennung, Inhaltstyp und -länge, Ursprung; `Authorization` nur geschwärzt), also keine IP-Adressen, Cookies, E-Mail-Adressen, Schlüssel oder Inhalte. Docker Compose begrenzt die Log-Dateien auf 14 Stück zu je 10 MB; eine Löschung nach spätestens 14 Tagen wird beim Hosting-Anbieter eingestellt, sobald er feststeht.
 
 Datenschutzerklärung und Impressum stehen als In-App-Seiten unter `app/src/features/legal/` (erreichbar über „Mehr“ und die Fußzeile). Persönliche Angaben sind dort als `[PLATZHALTER]` markiert und müssen vor einer Veröffentlichung ausgefüllt und rechtlich geprüft werden.
 

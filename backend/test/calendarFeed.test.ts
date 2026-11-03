@@ -136,10 +136,20 @@ describe('Kalender-Abruf', () => {
       throw new TypeError('fetch failed: ' + GOOGLE);
     });
     const response = await down.fetchFeed(GOOGLE);
-    expect(response.statusCode).toBe(504);
-    expect(response.json()).toEqual({ error: 'timeout' });
+    expect(response.statusCode).toBe(502);
+    expect(response.json()).toEqual({ error: 'upstream' });
+    // Für den Betrieb steht die Art des Fehlers im Log, nie die Adresse.
+    expect(down.logs()).toContain('TypeError');
     expect(down.logs()).not.toContain('private-abc123');
     await down.app.close();
+
+    const slow = await appWith(() => {
+      throw new DOMException('The operation timed out.', 'TimeoutError');
+    });
+    const timedOut = await slow.fetchFeed(GOOGLE);
+    expect(timedOut.statusCode).toBe(504);
+    expect(timedOut.json()).toEqual({ error: 'timeout' });
+    await slow.app.close();
   });
 
   it('bremst viele Abrufe hintereinander', async () => {

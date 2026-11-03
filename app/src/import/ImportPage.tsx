@@ -160,7 +160,11 @@ function CalendarImport({
       return;
     }
     if (!consentDate && !agreed) return;
-    if (!consentDate) onUpdate({ calendarConsent: localToday() });
+    if (!consentDate) {
+      onUpdate({ calendarConsent: localToday() });
+      // Nach einem Widerruf soll es wieder ein neues, bewusstes Häkchen brauchen.
+      setAgreed(false);
+    }
     setBusy('new');
     try {
       const text = await fetchCalendarFeed(url.trim());
@@ -289,7 +293,7 @@ function CalendarImport({
         {consentDate ? (
           <div>
             <p className="field-hint">{t(language, 'calendarConsentGiven', { date: dateText(consentDate, language) })}</p>
-            <button className="text-button" type="button" onClick={() => onUpdate({ calendarConsent: undefined })}>{t(language, 'calendarConsentWithdraw')}</button>
+            <button className="text-button" type="button" onClick={() => { setAgreed(false); onUpdate({ calendarConsent: undefined }); }}>{t(language, 'calendarConsentWithdraw')}</button>
           </div>
         ) : (
           <label className="check-row">

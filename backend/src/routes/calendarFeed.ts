@@ -9,6 +9,11 @@ const MAX_REDIRECTS = 3;
 /** Ungültige Anfragen beantwortet die allgemeine Fehlerbehandlung mit `invalid_request`. */
 const BadRequest = z.union([CalendarFeedErrorResponse, ErrorResponse]);
 
+/** Nicht gelesene Antworten verwerfen, sonst bleibt die Verbindung belegt. Scheitert das, ist nichts mehr offen. */
+function discard(response: Response) {
+  response.body?.cancel().catch(() => undefined);
+}
+
 export type CalendarFetch = (input: string, init: RequestInit) => Promise<Response>;
 
 export function calendarUrl(value: string): URL | null {
@@ -61,15 +66,14 @@ export function calendarFeedRoutes(app: FastifyInstance, deps: { fetch: Calendar
             headers: { Accept: 'text/calendar, text/plain;q=0.8', 'User-Agent': 'Headroom/1.0' },
           });
           if (upstream.status >= 300 && upstream.status < 400) {
-            // Nicht gelesene Antworten verwerfen, sonst bleibt die Verbindung belegt.
-            void upstream.body?.cancel();
+            discard(upstream);
             const next = calendarUrl(new URL(upstream.headers.get('location') ?? '', url).toString());
             if (!next) return fail(reply, 502, 'redirect');
             url = next;
             continue;
           }
           if (!upstream.ok || !upstream.body) {
-            void upstream.body?.cancel();
+            discard(upstream);
             return fail(reply, 502, upstream.status === 404 || upstream.status === 403 ? 'notFound' : 'upstream');
           }
           const text = await readLimited(upstream.body);
@@ -78,9 +82,12 @@ export function calendarFeedRoutes(app: FastifyInstance, deps: { fetch: Calendar
           return reply.type('text/calendar; charset=utf-8').header('cache-control', 'no-store').send(text);
         }
         return fail(reply, 502, 'redirect');
-      } catch {
-        // Fehlertexte von fetch können die Adresse enthalten; deshalb hier nichts loggen.
-        return fail(reply, 504, 'timeout');
+      } catch (error) {
+        // Nur die Art des Fehlers: Fehlertexte von fetch können die Adresse enthalten.
+        const name = error instanceof Error ? error.name : 'unknown';
+        if (name === 'TimeoutError' || name === 'AbortError') return fail(reply, 504, 'timeout');
+        request.log.warn({ errName: name }, 'calendar fetch failed');
+        return fail(reply, 502, 'upstream');
       }
     },
   );

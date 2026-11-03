@@ -54,7 +54,8 @@ export function SettingsPage({
       const parsed = JSON.parse(await file.text()) as { state?: unknown; quarantine?: unknown; featureFlags?: unknown };
       const imported = parseBackup(parsed?.state ?? parsed, parsed?.quarantine);
       if (!imported) throw new Error('Invalid backup');
-      onUpdate({ ...imported.state, onboarded: true });
+      // Eine Einwilligung aus einer fremden Sicherung gilt hier nicht; die dieses Geräts bleibt.
+      onUpdate({ ...imported.state, calendarConsent: data.calendarConsent, onboarded: true });
       onImportQuarantine(imported.quarantine);
       if (parsed.featureFlags && typeof parsed.featureFlags === 'object') {
         onFeatureUpdate(sanitizeFeatures(parsed.featureFlags));
