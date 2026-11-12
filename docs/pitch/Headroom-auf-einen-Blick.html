@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Headroom auf einen Blick</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: eine ruhige Lesespalte im Headroom-Design, Hero mit der Spielraum-Karte aus der App, danach Kapitel als Abschnitte mit Tabellen und Kartenlisten. Tokens aus design-system/headroom/MASTER.md. */
+:root {
+  --bg: #F4F5F7; --card: #FFFFFF; --card-soft: #F2F4F7;
+  --ink: #0E1116; --ink-soft: #475467; --muted: #5D6676;
+  --line: #E5E7EB; --line-strong: #D0D5DD;
+  --accent: #2456F5; --accent-strong: #1A43CC; --accent-soft: #EAF0FF; --on-accent: #FFFFFF;
+  --safe: #0F7A55; --safe-bg: #E7F6EF; --close: #A35400; --close-bar: #E08A00; --close-bg: #FFF3E0; --over: #C4291D; --over-bg: #FDECEA;
+  --hero-a: #2D63FF; --hero-b: #1F47D6; --hero-c: #1A3CB8; --hero-shadow: rgba(36,86,245,.55);
+  --shadow: 0 1px 2px rgba(16,24,40,.04), 0 2px 8px rgba(16,24,40,.04);
+  --font: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --r-lg: 22px; --r-md: 14px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0B0D12; --card: #151922; --card-soft: #1E2330;
+  --ink: #F2F4F7; --ink-soft: #C3C9D4; --muted: #9AA3B2;
+  --line: #262C38; --line-strong: #353D4D;
+  --accent: #6B8CFF; --accent-strong: #8AA4FF; --accent-soft: #1B2547;
+  --safe: #4CD39B; --safe-bg: #12291F; --close: #FFB84D; --close-bar: #FFB84D; --close-bg: #2E2312; --over: #FF8A80; --over-bg: #331A18;
+  --hero-shadow: rgba(0,0,0,.5); --shadow: none; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0B0D12; --card: #151922; --card-soft: #1E2330;
+  --ink: #F2F4F7; --ink-soft: #C3C9D4; --muted: #9AA3B2;
+  --line: #262C38; --line-strong: #353D4D;
+  --accent: #6B8CFF; --accent-strong: #8AA4FF; --accent-soft: #1B2547;
+  --safe: #4CD39B; --safe-bg: #12291F; --close: #FFB84D; --close-bar: #FFB84D; --close-bg: #2E2312; --over: #FF8A80; --over-bg: #331A18;
+  --hero-shadow: rgba(0,0,0,.5); --shadow: none; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 72px; display: grid; gap: 64px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; }
+h2 { font-size: clamp(1.5rem, 3.4vw, 1.9rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.15; }
+h3 { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em; }
+p { margin: 0; }
+.eyebrow { color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: 0.01em; }
+.lead { font-size: 1.15rem; color: var(--ink-soft); max-width: 60ch; }
+.muted { color: var(--muted); font-size: 13px; }
+.num { font-variant-numeric: tabular-nums; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+/* Kopf */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em; }
+.brand svg { width: 34px; height: 34px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--card-soft); color: var(--ink-soft); }
+
+/* Hero */
+.hero { display: grid; grid-template-columns: 1.25fr 1fr; gap: 48px; align-items: center; }
+.hero-text { display: grid; gap: 20px; min-width: 0; }
+.hero-metric { position: relative; overflow: hidden; border-radius: var(--r-lg); padding: 26px; color: #fff; background: linear-gradient(155deg, var(--hero-a), var(--hero-b) 55%, var(--hero-c)); box-shadow: 0 18px 40px -16px var(--hero-shadow); display: grid; gap: 14px; }
+.hero-metric::after { content: ""; position: absolute; inset: -40% -30% auto auto; width: 70%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.18), transparent 70%); pointer-events: none; }
+.hm-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; opacity: .92; }
+.hm-badge { background: #FFF3E0; color: #A35400; border-radius: 999px; padding: 4px 11px; font-size: 12px; font-weight: 700; }
+.hm-big { font-size: clamp(3rem, 9vw, 4.4rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1; font-variant-numeric: tabular-nums; }
+.hm-sub { font-size: 14px; opacity: .9; }
+.hm-track { height: 10px; border-radius: 999px; background: rgba(255,255,255,.22); overflow: hidden; }
+.hm-fill { height: 100%; width: 80.8%; background: #fff; border-radius: 999px; }
+.hm-foot { font-size: 12px; opacity: .8; }
+.hero-note { font-size: 12px; color: var(--muted); margin-top: 10px; text-align: center; }
+
+/* Abschnitte */
+section { display: grid; gap: 24px; }
+.sec-head { display: grid; gap: 8px; max-width: 70ch; }
+.surface { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 24px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); padding: 20px; display: grid; gap: 8px; align-content: start; box-shadow: var(--shadow); min-width: 0; }
+.card p { color: var(--ink-soft); font-size: 15px; }
+
+/* Geschichte */
+.story { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+.steps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; counter-reset: s; }
+.steps li { display: grid; grid-template-columns: 30px 1fr; gap: 12px; counter-increment: s; }
+.steps li::before { content: counter(s); width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 14px; display: grid; place-items: center; }
+.steps b { display: block; }
+.steps span { color: var(--ink-soft); font-size: 15px; }
+.quote { font-size: clamp(1.3rem, 3vw, 1.6rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.25; text-wrap: balance; }
+
+/* Tabellen */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--card); box-shadow: var(--shadow); }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-size: 13px; font-weight: 700; color: var(--muted); background: var(--card-soft); }
+td.r, th.r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+td .muted { display: block; margin-top: 2px; }
+tfoot td { font-weight: 800; background: var(--card-soft); }
+
+/* Analogie */
+.analogy { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; }
+.analogy > div { padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 15px; }
+.analogy .h { font-size: 13px; font-weight: 700; color: var(--muted); background: var(--card-soft); }
+.analogy .mid { color: var(--muted); text-align: center; padding-inline: 4px; }
+.analogy .hr { font-weight: 700; }
+.analogy > div:nth-last-child(-n+3) { border-bottom: 0; }
+
+/* Status */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.b-safe { background: var(--safe-bg); color: var(--safe); }
+.b-close { background: var(--close-bg); color: var(--close); }
+.b-over { background: var(--over-bg); color: var(--over); }
+.b-neutral { background: var(--card-soft); color: var(--ink-soft); }
+
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.stat { display: grid; gap: 4px; }
+.stat .v { font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat .l { color: var(--ink-soft); font-size: 15px; }
+
+.rules { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.rules li { display: flex; gap: 10px; align-items: baseline; }
+.rules li::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transform: translateY(-1px); }
+
+.callout { background: var(--accent-soft); border-radius: var(--r-lg); padding: 24px; display: grid; gap: 10px; }
+.callout p { color: var(--ink-soft); }
+
+.foot { border-top: 1px solid var(--line); padding-top: 24px; display: grid; gap: 6px; color: var(--muted); font-size: 13px; }
+
+@media (max-width: 860px) {
+  .hero, .story { grid-template-columns: 1fr; gap: 28px; }
+  .grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .wrap { gap: 48px; padding-block: 24px 56px; }
+  .grid2, .grid3, .stats { grid-template-columns: 1fr; }
+  th, td { padding: 11px 12px; font-size: 14px; }
+  .analogy > div { padding: 12px; font-size: 14px; }
+}
+@page { size: A4; margin: 0; }
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-shadow: none !important; }
+  html, body { background: var(--bg); }
+  body { font-size: 12.5px; line-height: 1.5; }
+  .wrap { max-width: none; padding: 14mm 14mm !important; gap: 30px; }
+  h1 { font-size: 2.4rem; }
+  h2 { font-size: 1.35rem; }
+  .lead { font-size: 1rem; }
+  section { gap: 14px; }
+  .card { padding: 14px; gap: 6px; }
+  .card p, .steps span { font-size: 12.5px; }
+  .surface, .callout { padding: 16px; }
+  th, td { padding: 8px 12px; font-size: 12.5px; }
+  .analogy > div { padding: 8px 12px; font-size: 12.5px; }
+  .hm-big { font-size: 3.2rem; }
+  .hero-metric { padding: 20px; }
+  .card, .surface, .tbl, .callout, .hero, .story { break-inside: avoid; }
+  .sec-head { break-after: avoid; }
+  .hero { grid-template-columns: 1.3fr 1fr; gap: 32px; }
+  .story { grid-template-columns: 1fr 1fr; }
+  .grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#2456F5"/><g transform="translate(13 12) scale(0.123)"><path d="M0 0H67V127C78 96 108 78 142 78C194 78 228 111 228 171V328H161V182C161 149 143 132 115 132C89 132 71 148 67 170V328H0Z" fill="#fff"/><circle cx="285" cy="195" r="36.5" fill="#fff" fill-opacity="0.7"/></g></svg>
+      Headroom
+    </div>
+    <span class="pill">Vertraulich · Stand 2. November 2026</span>
+  </header>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-text">
+      <span class="eyebrow">Für dich zum Kennenlernen, Bereich Go-to-Market</span>
+      <h1>Wie ein Kalorien-Tracker für deine Jobs.</h1>
+      <p class="lead">Headroom ist eine mobile App für Menschen in Deutschland, die mehrere Jobs kombinieren. Sie rechnet Verdienst und Stunden über alle Jobs zusammen und zeigt, wie viel Spielraum bis zur nächsten gesetzlichen Grenze bleibt: Minijob-Grenze, 70-Tage-Regel, Familienversicherung, 20-Stunden-Regel und mehr.</p>
+      <p class="muted">Headroom informiert mit amtlichen Quellen. Es gibt keine individuelle Steuer- oder Rechtsberatung.</p>
+    </div>
+    <div>
+      <div class="hero-metric" role="img" aria-label="Beispiel aus der App: Noch 116 Euro verfügbar in diesem Monat, etwa 8 Stunden, Status Knapp, 487 von 603 Euro">
+        <div class="hm-row"><span>Dein Spielraum · Oktober</span><span class="hm-badge">Knapp</span></div>
+        <div>
+          <div class="hm-big">116 €</div>
+          <div class="hm-sub">noch verfügbar in diesem Monat, etwa 8 Stunden</div>
+        </div>
+        <div class="hm-track"><div class="hm-fill"></div></div>
+        <div class="hm-row"><span class="num">487 € von 603 €</span><span>Minijob-Grenze 2026</span></div>
+        <div class="hm-foot">Quelle: Minijob-Zentrale · geprüft</div>
+      </div>
+      <p class="hero-note">So sieht die Hauptzahl in der App aus (Beispielprofil).</p>
+    </div>
+  </div>
+
+  <!-- Problem -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Der Auslöser</span>
+      <h2>Ein Brief der Krankenkasse um Mitternacht</h2>
+      <p class="lead">Die Idee kommt aus einem echten Fall (anonymisiert). Ein Freund mit mehreren Jobs schickte nachts um 00:32 Uhr ein Foto von einem Brief seiner Krankenkasse.</p>
+    </div>
+    <div class="story">
+      <ol class="steps">
+        <li><div><b>Mehrere Jobs, kein Überblick.</b><span>Jeder Job für sich wirkte harmlos. Niemand hat zusammengerechnet.</span></div></li>
+        <li><div><b>Eine übersehene Pflicht.</b><span>Er war freiwillig gesetzlich versichert und hätte sein Einkommen selbst nachweisen müssen. Er wusste es nicht.</span></div></li>
+        <li><div><b>Höchstbeitrag per Gesetz.</b><span>Ohne Nachweis rechnet die Kasse so, als verdiene er 5.812,50 € im Monat.</span></div></li>
+        <li><div><b>Nachzahlung mit zwei Wochen Frist.</b><span>3.538,08 € rückwirkend für drei Monate, danach 1.179,36 € pro Monat.</span></div></li>
+      </ol>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Beitrag pro Monat</th><th class="r">Satz</th><th class="r">Betrag</th></tr></thead>
+          <tbody>
+            <tr><td>Krankenversicherung</td><td class="r">14,0 %</td><td class="r">813,75 €</td></tr>
+            <tr><td>Zusatzbeitrag</td><td class="r">2,69 %</td><td class="r">156,36 €</td></tr>
+            <tr><td>Pflegeversicherung</td><td class="r">3,6 %</td><td class="r">209,25 €</td></tr>
+          </tbody>
+          <tfoot><tr><td>Summe</td><td></td><td class="r">1.179,36 €</td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="surface" style="display:grid;gap:12px">
+      <p class="quote">Das Problem war nicht das Geld. Es war der fehlende Überblick.</p>
+      <p style="color:var(--ink-soft);max-width:70ch">Die Regeln sind über Minijob-Zentrale, Krankenkassen, Rentenversicherung und Gesetzestexte verteilt. Niemand zeigt sie an einer Stelle und bezogen auf die eigene Lage. Ein zweites, typisches Beispiel steckt als Demoprofil in der App: Lena, 20, hat zwei Minijobs mit 340 € und 280 €. Jeder liegt unter 603 €, zusammen sind es 620 €. Damit liegt sie 17 € <span class="badge b-over">Über</span> der Grenze, und in der Regel werden beide Jobs versicherungspflichtig.</p>
+    </div>
+  </section>
+
+  <!-- Idee -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Die Idee</span>
+      <h2>Ein Budget, viele Einträge, ein Blick auf das, was übrig ist</h2>
+      <p class="lead">Jeder kennt das Prinzip vom Kalorienzählen. Headroom überträgt es auf Jobs, damit niemand Regeln auswendig kennen muss.</p>
+    </div>
+    <div class="tbl">
+      <div class="analogy">
+        <div class="h">Kalorien-Tracker</div><div class="h mid"></div><div class="h">Headroom</div>
+        <div>Tagesbudget 2.000 kcal</div><div class="mid">→</div><div class="hr">Minijob-Grenze 603 € im Monat</div>
+        <div>Mahlzeit eintragen</div><div class="mid">→</div><div class="hr">Schicht eintragen oder aus Kalender und Foto übernehmen</div>
+        <div>„Noch 400 kcal übrig“</div><div class="mid">→</div><div class="hr">„Noch 116 € übrig, etwa 8 Stunden“</div>
+        <div>Vor dem Snack nachsehen</div><div class="mid">→</div><div class="hr">„Was würde diese Schicht verändern?“</div>
+      </div>
+    </div>
+    <div class="grid3">
+      <div class="card"><h3>Warnt vorher</h3><p>Die App zeigt den Spielraum, bevor eine Grenze überschritten ist, und nicht erst, wenn der Brief kommt.</p></div>
+      <div class="card"><h3>Passt sich der Person an</h3><p>Was groß oben steht, hängt vom Status ab. Eine Schülerin sieht andere Grenzen als ein Werkstudent.</p></div>
+      <div class="card"><h3>Jede Zahl mit Quelle</h3><p>Jede Grenze trägt Quelle, Gültigkeit und Prüfdatum. Ungeprüfte Werte sind markiert und lösen keine Warnung aus.</p></div>
+    </div>
+  </section>
+
+  <!-- Zielgruppen und Markt -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Zielgruppen und Markt</span>
+      <h2>Fünf Profile, ein gemeinsames Problem</h2>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Profil</th><th>Typische Lage</th><th>Was für sie zuerst zählt</th></tr></thead>
+        <tbody>
+          <tr><td><b>Student:in</b></td><td>Minijobs und Saisonjobs neben dem Studium, oft familienversichert, teils BAföG</td><td>Minijob-Grenze, Familienversicherung, BAföG, 70 Tage</td></tr>
+          <tr><td><b>Werkstudent:in</b></td><td>Werkstudentenjob, eventuell Minijob daneben</td><td>20 Stunden pro Woche in der Vorlesungszeit</td></tr>
+          <tr><td><b>Minijobber:in</b></td><td>ein oder mehrere Minijobs, kurzfristige Saisonjobs</td><td>Minijob-Grenze über alle Jobs, 70 Tage</td></tr>
+          <tr><td><b>Angestellte mit Nebenjob</b></td><td>Hauptjob plus Minijob</td><td>nur ein Minijob neben dem Hauptjob, Steuerklasse VI</td></tr>
+          <tr><td><b>Schüler:in</b></td><td>erster Job, oft unter 18</td><td>Jugendarbeitsschutz, Ferienjob-Tage, Familienversicherung</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="surface">
+      <div class="stats">
+        <div class="stat"><span class="v">2,88 Mio.</span><span class="l">Studierende in Deutschland, Wintersemester 2025/26</span><span class="muted">Statistisches Bundesamt, vorläufig</span></div>
+        <div class="stat"><span class="v">63 %</span><span class="l">arbeiten neben dem Studium, im Schnitt rund 15 Stunden pro Woche</span><span class="muted">DZHW, 22. Sozialerhebung (2021)</span></div>
+        <div class="stat"><span class="v">≈ 1,8 Mio.</span><span class="l">Studierende mit Job, allein in der ersten Zielgruppe</span><span class="muted">eigene Hochrechnung, keine amtliche Zahl</span></div>
+      </div>
+    </div>
+    <p class="muted">Die 63 % stammen aus 2021 (Corona-Zeit); 2016 lag die Quote fünf Punkte höher. Schüler:innen, Minijobber:innen und Angestellte mit Nebenjob kommen als weitere Gruppen dazu.</p>
+  </section>
+
+  <!-- Produkt -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Das Produkt heute</span>
+      <h2>Was die App schon kann</h2>
+      <p class="lead">Headroom läuft als installierbare Web-App auf dem Handy, im Browser und als Mac-App. Deutsch und Englisch, hell und dunkel.</p>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>Dashboard „Dein Spielraum“</h3><p>Monat, Jahr und Saison auf einen Blick. Eine große Zahl, ein Balken, ein Status als Wort und Farbe: <span class="badge b-safe">Sicher</span> <span class="badge b-close">Knapp</span> <span class="badge b-over">Über</span></p></div>
+      <div class="card"><h3>„Was würde diese Schicht verändern?“</h3><p>Vor dem Zusagen eine Schicht durchrechnen: „Danach blieben noch 47 € bis zur Grenze.“ Für Monat, Jahr, Familienversicherung und Wochenstunden.</p></div>
+      <div class="card"><h3>Schichten aus Kalender und Foto</h3><p>Schichten aus Google- oder Apple-Kalender übernehmen oder einen Dienstplan fotografieren. Die Texterkennung läuft auf dem Gerät. Doppelte Schichten werden erkannt.</p></div>
+      <div class="card"><h3>Grenzwerte mit Quelle</h3><p>Alle Grenzen eines Jahres mit Wert, Folge beim Überschreiten, verlinkter Quelle und Prüfdatum, sortiert nach dem eigenen Status.</p></div>
+      <div class="card"><h3>Schüler-Modus</h3><p>Für unter 18-Jährige: Prüfung nach Jugendarbeitsschutzgesetz, Ferienjob-Zähler, Eltern-Seite mit Einwilligung als PDF. Keine Werbung, kein Premium, keine Partner.</p></div>
+      <div class="card"><h3>Konto und Abgleich</h3><p>Freiwillig ab 16. Daten gleichen sich Ende-zu-Ende-verschlüsselt zwischen Handy, Browser und Mac ab. Der Server kann sie nicht lesen.</p></div>
+    </div>
+  </section>
+
+  <!-- Haltung -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Haltung</span>
+      <h2>Vertrauen ist die Positionierung</h2>
+      <p class="lead">Die Zielgruppe ist jung, oft zum ersten Mal mit Sozialversicherung konfrontiert und skeptisch gegenüber Finanz-Apps. Deshalb gelten feste Regeln, die auch für Marketing und Partner bindend sind.</p>
+    </div>
+    <div class="grid2">
+      <div class="surface" style="display:grid;gap:14px">
+        <h3>Was Headroom verspricht</h3>
+        <ul class="rules">
+          <li>Grenzen und Tracking bleiben kostenlos.</li>
+          <li>Ohne Konto verlassen keine Daten das Gerät.</li>
+          <li>Keine Datenverkäufe.</li>
+          <li>Partner sind immer als Partner gekennzeichnet und ausblendbar.</li>
+          <li>Unter 18: keine Partner-, Premium- oder Steuer-App-Hinweise.</li>
+        </ul>
+      </div>
+      <div class="surface" style="display:grid;gap:14px">
+        <h3>Wie Headroom spricht</h3>
+        <ul class="rules">
+          <li>Klartext statt Fachbegriff. Fachbegriffe bekommen eine Ein-Satz-Erklärung.</li>
+          <li>„Gilt in der Regel“ statt „du musst“ oder „du darfst“. Headroom informiert und berät nicht.</li>
+          <li>Pro Bildschirm eine Hauptaussage und eine Hauptaktion.</li>
+          <li>Ruhiges Design mit einer blauen Akzentfarbe. Ampelfarben nur für den Status einer Grenze.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Geschäftsmodell -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Geschäftsmodell</span>
+      <h2>Kostenlos, wo es um Grenzen geht. Bezahlt, wo es Mehrwert gibt.</h2>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Stufe</th><th>Was Nutzer:innen bekommen</th><th>Erlös</th><th>Stand</th></tr></thead>
+        <tbody>
+          <tr><td><b>Kostenlos</b></td><td>alle Grenzen, Tracking, Kalender- und Foto-Import</td><td>Reichweite und Vertrauen</td><td><span class="badge b-safe">gebaut</span></td></tr>
+          <tr><td><b>Premium</b></td><td>Jahresbericht als PDF, Verlauf über mehrere Jahre, Erinnerungen</td><td class="num">5 € pro Monat</td><td><span class="badge b-neutral">Demo, ohne Zahlung</span></td></tr>
+          <tr><td><b>Partner-Jobbörsen</b></td><td>offene Schichten, die in den eigenen Spielraum passen</td><td>Provision je Vermittlung <span class="muted">Höhe offen</span></td><td><span class="badge b-neutral">Demo, fiktive Partner</span></td></tr>
+          <tr><td><b>Partnerangebote</b></td><td>Steuer, Versicherung, nur bei echtem Anlass</td><td>Provision je Abschluss <span class="muted">Höhe offen</span></td><td><span class="badge b-neutral">Demo, fiktive Partner</span></td></tr>
+          <tr><td><b>Hochschulen (B2B)</b></td><td>Lizenz für Beratungsstellen, die zu Nebenjobs beraten</td><td>Lizenzgebühr <span class="muted">offen</span></td><td><span class="badge b-neutral">Idee</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">Rechtlicher Prüfpunkt: Vor einer Kooperation mit gesetzlichen Krankenkassen sind die Regeln zur Mitgliederwerbung zu klären.</p>
+  </section>
+
+  <!-- Stand -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Projektstand</span>
+      <h2>Wo Headroom heute steht</h2>
+      <p class="lead">Das Produkt ist vorführbar und technisch solide. Vor einem öffentlichen Start fehlen Betrieb, fachliche Prüfung und die Festlegung des Erlösmodells.</p>
+    </div>
+    <div class="grid3">
+      <div class="card"><span class="badge b-safe" style="justify-self:start">Fertig</span><p>Onboarding, Dashboard, Grenzwerte, Jobs und Schichten, Schicht-Check, Kalender- und Foto-Import, Schüler-Modus, Konto mit verschlüsseltem Abgleich, Mac-App. Durchgehend mit automatischen Tests.</p></div>
+      <div class="card"><span class="badge b-close" style="justify-self:start">Demo</span><p>Jobbörse, Partnerhinweise, Premium und Lohnstatistik. Alles mit erfundenen Partnern oder Daten, hinter einem Schalter, standardmäßig aus.</p></div>
+      <div class="card"><span class="badge b-neutral" style="justify-self:start">Offen</span><p>Gehosteter Betrieb, Erinnerungen per Push, Erinnerung an die Meldepflicht für freiwillig Versicherte, fachliche Prüfung einzelner Grenzwerte.</p></div>
+    </div>
+  </section>
+
+  <!-- GTM -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Wo du ansetzen würdest</span>
+      <h2>Fragen, die für den Markteintritt noch offen sind</h2>
+      <p class="lead">Das Produkt gibt es. Wie es zu den Menschen kommt, die es brauchen, ist noch nicht entschieden. Diese Punkte liegen auf dem Tisch:</p>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>Erste Zielgruppe und Zugang</h3><p>Studierende sind die größte und am besten belegte Gruppe. Wie erreichen wir sie zum richtigen Zeitpunkt, etwa beim ersten Minijob oder vor dem Sommer-Saisonjob?</p></div>
+      <div class="card"><h3>Hochschulen als Kanal</h3><p>Beratungsstellen erklären Nebenjob-Regeln heute von Hand. Lizenz, Kooperation oder kostenlose Empfehlung: Was passt?</p></div>
+      <div class="card"><h3>Partner und Provisionen</h3><p>Jobbörsen, Steuer-Apps, Versicherungen: Welche Partner passen zur Haltung, und welche Provisionen sind realistisch?</p></div>
+      <div class="card"><h3>Premium-Preis</h3><p>5 € im Monat ist eine Annahme. Was ist ein Jahresbericht und Verlauf der Zielgruppe wirklich wert?</p></div>
+      <div class="card"><h3>Jüngere Zielgruppe</h3><p>Für Schüler:innen gibt es eine eigene „Teen Edition“ als Pitch. Hier zählen Eltern und Schulen, nicht Werbung.</p></div>
+      <div class="card"><h3>Botschaft</h3><p>„Kalorien-Tracker für deine Jobs“ funktioniert im Pitch. Trägt das Bild auch in Kampagnen, ohne nach Rechtsberatung zu klingen?</p></div>
+    </div>
+  </section>
+
+  <!-- Material -->
+  <section>
+    <div class="callout">
+      <span class="eyebrow">Material zum Weiterschauen</span>
+      <h3>Pitch-Decks, Demo und Videos gibt es auf Anfrage</h3>
+      <p>Pitch-Deck auf Deutsch und Englisch (10 Folien), eine Handy-Demo zum selbst Ausprobieren, kurze Produktvideos und ein ausführliches Konzeptdokument mit allen Regeln, Quellen und dem technischen Stand. In der Demo am besten das Beispielprofil „Lena, 20“ laden und dann „Was würde diese Schicht verändern?“ ausprobieren.</p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Headroom · Bennet Ruhl · Stand 2. November 2026</span>
+    <span>Vertraulich. Alle Grenzwerte gelten für 2026, Quellen in der App. Beispielprofile und Partnernamen außer ELSTER sind erfunden.</span>
+  </footer>
+
+</div>
+</body>
+</html>

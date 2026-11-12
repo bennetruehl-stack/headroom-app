@@ -219,7 +219,7 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
       if (total > cap.value) {
         add('childDailyHours', 'error', cap, entries,
           why.de + 'Am ' + dayLabel(date) + ' sind es ' + fmt(total) + ' Stunden. Erlaubt sind höchstens ' + cap.value + '.',
-          why.en + 'On ' + date + ' it’s ' + fmtEn(total) + ' hours. At most ' + cap.value + ' are allowed.', date);
+          why.en + 'On ' + dayLabelEn(date) + ' it’s ' + fmtEn(total) + ' hours. At most ' + cap.value + ' are allowed.', date);
       }
       const windowStart = toMinutes(CHILD_WORK_WINDOW.value.from);
       const windowEnd = toMinutes(CHILD_WORK_WINDOW.value.to);
@@ -229,7 +229,7 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
         if (day.start < base + windowStart || day.end > base + windowEnd) {
           add('childTimeWindow', 'error', CHILD_WORK_WINDOW, [day],
             why.de + 'Deine Schicht am ' + dayLabel(date) + ' liegt außerhalb von 8 bis 18 Uhr.',
-            why.en + 'Your shift on ' + date + ' is outside 8 am to 6 pm.', date);
+            why.en + 'Your shift on ' + dayLabelEn(date) + ' is outside 8 am to 6 pm.', date);
         }
       }
     } else {
@@ -238,7 +238,7 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
         const rule = total > YOUTH_EXTENDED_HOURS_PER_DAY.value ? YOUTH_EXTENDED_HOURS_PER_DAY : YOUTH_MAX_HOURS_PER_DAY;
         add('dailyHours', 'error', rule, entries,
           'Am ' + dayLabel(date) + ' sind es ' + fmt(total) + ' Stunden. Erlaubt sind 8, an einzelnen Tagen 8,5, wenn die Woche dafür kürzer ist.',
-          'On ' + date + ' it’s ' + fmtEn(total) + ' hours. 8 are allowed, 8.5 on single days if the week is shorter.', date);
+          'On ' + dayLabelEn(date) + ' it’s ' + fmtEn(total) + ' hours. 8 are allowed, 8.5 on single days if the week is shorter.', date);
       }
       for (const day of entries) checkNight(day, age, add);
       for (const day of entries) checkBreaks(day, add);
@@ -249,11 +249,11 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
       if (collision === 'during') {
         add('duringSchool', group === 'child' ? 'error' : 'warning', { lawRef: '§ 5 Abs. 3 JArbSchG', url: CHILD_MAX_HOURS_PER_DAY.url }, [day],
           'Deine Schicht am ' + dayLabel(date) + ' fällt in deine Unterrichtszeit.',
-          'Your shift on ' + date + ' overlaps your school hours.', date);
+          'Your shift on ' + dayLabelEn(date) + ' overlaps your school hours.', date);
       } else if (collision === 'before' && group === 'child') {
         add('beforeSchool', 'error', { lawRef: '§ 5 Abs. 3 JArbSchG', url: CHILD_MAX_HOURS_PER_DAY.url }, [day],
           why.de + 'Am ' + dayLabel(date) + ' arbeitest du vor dem Unterricht. Das ist nicht erlaubt.',
-          why.en + 'On ' + date + ' you work before school. That isn’t allowed.', date);
+          why.en + 'On ' + dayLabelEn(date) + ' you work before school. That isn’t allowed.', date);
       }
     }
     // Wochenende (§§ 16, 17 gelten über § 5 Abs. 3 auch für Kinder)
@@ -285,14 +285,14 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
     if (workdays > MAX_WORKDAYS_PER_WEEK.value) {
       add('workdaysPerWeek', 'error', MAX_WORKDAYS_PER_WEEK, entries,
         'In der Woche ab ' + dayLabel(monday) + ' arbeitest du an ' + workdays + ' Tagen. Erlaubt sind höchstens 5.',
-        'In the week of ' + monday + ' you work on ' + workdays + ' days. At most 5 are allowed.', monday);
+        'In the week of ' + dayLabelEn(monday) + ' you work on ' + workdays + ' days. At most 5 are allowed.', monday);
     }
     const youthEntries = entries.filter((day) => groupOf(day.date) === 'youth' || groupOf(day.date) === 'holidayYouth');
     const hours = youthEntries.reduce((sum, day) => sum + day.hours, 0);
     if (hours > YOUTH_MAX_HOURS_PER_WEEK.value) {
       add('weeklyHours', 'error', YOUTH_MAX_HOURS_PER_WEEK, youthEntries,
         'In der Woche ab ' + dayLabel(monday) + ' sind es ' + fmt(hours) + ' Stunden. Erlaubt sind höchstens 40.',
-        'In the week of ' + monday + ' it’s ' + fmtEn(hours) + ' hours. At most 40 are allowed.', monday);
+        'In the week of ' + dayLabelEn(monday) + ' it’s ' + fmtEn(hours) + ' hours. At most 40 are allowed.', monday);
     }
   }
 
@@ -306,7 +306,7 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
     if (gap < MIN_REST_BETWEEN_DAYS_HOURS.value) {
       add('restBetweenDays', 'error', MIN_REST_BETWEEN_DAYS_HOURS, [previous, next],
         'Zwischen ' + dayLabel(previous.date) + ' und ' + dayLabel(next.date) + ' hast du nur ' + fmt(Math.max(0, gap)) + ' Stunden frei. Nötig sind 12.',
-        'Between ' + previous.date + ' and ' + next.date + ' you only have ' + fmtEn(Math.max(0, gap)) + ' hours off. 12 are required.', next.date);
+        'Between ' + dayLabelEn(previous.date) + ' and ' + dayLabelEn(next.date) + ' you only have ' + fmtEn(Math.max(0, gap)) + ' hours off. 12 are required.', next.date);
     }
   }
 
@@ -326,8 +326,8 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
             ? 'Im ' + monthLabel(month) + ' bleiben nur ' + free + ' Samstage frei. Mindestens 2 sollen frei bleiben.'
             : 'Im ' + monthLabel(month) + ' bleiben nur ' + free + ' Sonntage frei. Mindestens 2 müssen frei bleiben.',
           weekday === 6
-            ? 'Only ' + free + ' Saturdays stay free in ' + month + '. At least 2 should.'
-            : 'Only ' + free + ' Sundays stay free in ' + month + '. At least 2 must.', month + '-01');
+            ? 'Only ' + free + ' Saturdays stay free in ' + monthShort[Number(month.slice(5, 7)) - 1] + '. At least 2 should.'
+            : 'Only ' + free + ' Sundays stay free in ' + monthShort[Number(month.slice(5, 7)) - 1] + '. At least 2 must.', month + '-01');
       }
     }
   }
@@ -376,11 +376,11 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
     if (!fits.length) {
       report('nightRest', 'error', YOUTH_NIGHT_REST, [day],
         'Deine Schicht am ' + dayLabel(day.date) + ' (' + clock(day.start) + '–' + clock(day.end) + ') fällt in die Nachtruhe.',
-        'Your shift on ' + day.date + ' (' + clock(day.start) + '–' + clock(day.end) + ') falls into the night rest.', day.date);
+        'Your shift on ' + dayLabelEn(day.date) + ' (' + clock(day.start) + '–' + clock(day.end) + ') falls into the night rest.', day.date);
     } else if (fits.every((window) => window.exception)) {
       report('nightException', 'info', NIGHT_EXCEPTIONS, [day],
         'Am ' + dayLabel(day.date) + ' gilt für dich eine Branchenausnahme von der Nachtruhe.',
-        'On ' + day.date + ' an industry exception to the night rest applies to you.', day.date);
+        'On ' + dayLabelEn(day.date) + ' an industry exception to the night rest applies to you.', day.date);
     }
   }
 
@@ -403,14 +403,14 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
     if (!breaks.length) {
       report('breaksMissing', 'warning', BREAK_RULES, [day],
         'Am ' + dayLabel(day.date) + ' arbeitest du ' + fmt(day.hours) + ' Stunden. Du brauchst mindestens ' + required + ' Minuten Pause – trag sie ein.',
-        'On ' + day.date + ' you work ' + fmtEn(day.hours) + ' hours. You need at least ' + required + ' minutes of breaks – add them.', day.date);
+        'On ' + dayLabelEn(day.date) + ' you work ' + fmtEn(day.hours) + ' hours. You need at least ' + required + ' minutes of breaks – add them.', day.date);
       return;
     }
     const total = breaks.reduce((sum, item) => sum + item.end - item.start, 0);
     if (total < required) {
       report('breakTooShort', 'error', BREAK_RULES, [day],
         'Am ' + dayLabel(day.date) + ' sind es nur ' + total + ' Minuten Pause. Nötig sind ' + required + '.',
-        'On ' + day.date + ' there are only ' + total + ' minutes of breaks. ' + required + ' are required.', day.date);
+        'On ' + dayLabelEn(day.date) + ' there are only ' + total + ' minutes of breaks. ' + required + ' are required.', day.date);
     }
     if (day.start !== undefined && day.end !== undefined) {
       let cursor = day.start;
@@ -423,7 +423,7 @@ export function checkYouthLabor({ profile, jobs, shifts, from, to }: YouthLaborI
       if (longest > rules.maxContinuousHours * 60) {
         report('continuousWork', 'error', BREAK_RULES, [day],
           'Am ' + dayLabel(day.date) + ' arbeitest du ' + fmt(longest / 60) + ' Stunden am Stück. Höchstens 4,5 sind erlaubt.',
-          'On ' + day.date + ' you work ' + fmtEn(longest / 60) + ' hours in a row. At most 4.5 are allowed.', day.date);
+          'On ' + dayLabelEn(day.date) + ' you work ' + fmtEn(longest / 60) + ' hours in a row. At most 4.5 are allowed.', day.date);
       }
     }
   }
@@ -440,6 +440,11 @@ function weekHours(byDate: Map<string, WorkDay[]>, monday: string): number {
 function datesInMonth(month: string): string[] {
   const last = Number(lastDayOfMonth(month).slice(8));
   return Array.from({ length: last }, (_, index) => month + '-' + String(index + 1).padStart(2, '0'));
+}
+
+const monthShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function dayLabelEn(date: string): string {
+  return Number(date.slice(8, 10)) + ' ' + monthShort[Number(date.slice(5, 7)) - 1];
 }
 
 function dayLabel(date: string): string {

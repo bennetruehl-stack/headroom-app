@@ -1,0 +1,27 @@
+[
+ {
+  "mode": "redesign",
+  "depth": "full",
+  "scope": "app",
+  "shape": "app screen",
+  "theme": "almanac",
+  "axes": "mid/grotesk-sans/chromatic-magenta",
+  "hero": "none (app)",
+  "nav": "bottom tab bar under a 2px ink rule",
+  "footer": "one disclaimer line",
+  "imagery": "none",
+  "photos": [],
+  "entry": "onboarding",
+  "fingerprint": "almanac/app/ledger-rows/month-sheet",
+  "sections": [
+   "month sheet",
+   "limits ledger",
+   "jobs ledger",
+   "notices"
+  ],
+  "signature": "the month sheet: money left as one printed mono figure over its limit rule",
+  "waived": [],
+  "prompt": "Headroom: mobile app adding up side-job income against German earning limits",
+  "date": "2026-10-26"
+ }
+]

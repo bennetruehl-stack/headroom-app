@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Headroom Firmenportfolio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: eine ruhige Lesespalte im Headroom-Design, Hero mit der Spielraum-Karte aus der App, danach Kapitel als Abschnitte mit Tabellen und Kartenlisten. Tokens aus design-system/headroom/MASTER.md. */
+:root {
+  --bg: #F4F5F7; --card: #FFFFFF; --card-soft: #F2F4F7;
+  --ink: #0E1116; --ink-soft: #475467; --muted: #5D6676;
+  --line: #E5E7EB; --line-strong: #D0D5DD;
+  --accent: #2456F5; --accent-strong: #1A43CC; --accent-soft: #EAF0FF; --on-accent: #FFFFFF;
+  --safe: #0F7A55; --safe-bg: #E7F6EF; --close: #A35400; --close-bar: #E08A00; --close-bg: #FFF3E0; --over: #C4291D; --over-bg: #FDECEA;
+  --hero-a: #2D63FF; --hero-b: #1F47D6; --hero-c: #1A3CB8; --hero-shadow: rgba(36,86,245,.55);
+  --shadow: 0 1px 2px rgba(16,24,40,.04), 0 2px 8px rgba(16,24,40,.04);
+  --font: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --r-lg: 22px; --r-md: 14px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0B0D12; --card: #151922; --card-soft: #1E2330;
+  --ink: #F2F4F7; --ink-soft: #C3C9D4; --muted: #9AA3B2;
+  --line: #262C38; --line-strong: #353D4D;
+  --accent: #6B8CFF; --accent-strong: #8AA4FF; --accent-soft: #1B2547;
+  --safe: #4CD39B; --safe-bg: #12291F; --close: #FFB84D; --close-bar: #FFB84D; --close-bg: #2E2312; --over: #FF8A80; --over-bg: #331A18;
+  --hero-shadow: rgba(0,0,0,.5); --shadow: none; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0B0D12; --card: #151922; --card-soft: #1E2330;
+  --ink: #F2F4F7; --ink-soft: #C3C9D4; --muted: #9AA3B2;
+  --line: #262C38; --line-strong: #353D4D;
+  --accent: #6B8CFF; --accent-strong: #8AA4FF; --accent-soft: #1B2547;
+  --safe: #4CD39B; --safe-bg: #12291F; --close: #FFB84D; --close-bar: #FFB84D; --close-bg: #2E2312; --over: #FF8A80; --over-bg: #331A18;
+  --hero-shadow: rgba(0,0,0,.5); --shadow: none; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 72px; display: grid; gap: 64px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; }
+h2 { font-size: clamp(1.5rem, 3.4vw, 1.9rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.15; }
+h3 { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em; }
+p { margin: 0; }
+.eyebrow { color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: 0.01em; }
+.lead { font-size: 1.15rem; color: var(--ink-soft); max-width: 60ch; }
+.muted { color: var(--muted); font-size: 13px; }
+.num { font-variant-numeric: tabular-nums; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+/* Kopf */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em; }
+.brand svg { width: 34px; height: 34px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--card-soft); color: var(--ink-soft); }
+
+/* Hero */
+.hero { display: grid; grid-template-columns: 1.25fr 1fr; gap: 48px; align-items: center; }
+.hero-text { display: grid; gap: 20px; min-width: 0; }
+.hero-metric { position: relative; overflow: hidden; border-radius: var(--r-lg); padding: 26px; color: #fff; background: linear-gradient(155deg, var(--hero-a), var(--hero-b) 55%, var(--hero-c)); box-shadow: 0 18px 40px -16px var(--hero-shadow); display: grid; gap: 14px; }
+.hero-metric::after { content: ""; position: absolute; inset: -40% -30% auto auto; width: 70%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.18), transparent 70%); pointer-events: none; }
+.hm-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; opacity: .92; }
+.hm-badge { background: #FFF3E0; color: #A35400; border-radius: 999px; padding: 4px 11px; font-size: 12px; font-weight: 700; }
+.hm-big { font-size: clamp(3rem, 9vw, 4.4rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1; font-variant-numeric: tabular-nums; }
+.hm-sub { font-size: 14px; opacity: .9; }
+.hm-track { height: 10px; border-radius: 999px; background: rgba(255,255,255,.22); overflow: hidden; }
+.hm-fill { height: 100%; width: 80.8%; background: #fff; border-radius: 999px; }
+.hm-foot { font-size: 12px; opacity: .8; }
+.hero-note { font-size: 12px; color: var(--muted); margin-top: 10px; text-align: center; }
+
+/* Abschnitte */
+section { display: grid; gap: 24px; }
+.sec-head { display: grid; gap: 8px; max-width: 70ch; }
+.surface { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 24px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); padding: 20px; display: grid; gap: 8px; align-content: start; box-shadow: var(--shadow); min-width: 0; }
+.card p { color: var(--ink-soft); font-size: 15px; }
+
+/* Geschichte */
+.story { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+.steps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; counter-reset: s; }
+.steps li { display: grid; grid-template-columns: 30px 1fr; gap: 12px; counter-increment: s; }
+.steps li::before { content: counter(s); width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 14px; display: grid; place-items: center; }
+.steps b { display: block; }
+.steps span { color: var(--ink-soft); font-size: 15px; }
+.quote { font-size: clamp(1.3rem, 3vw, 1.6rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.25; text-wrap: balance; }
+
+/* Tabellen */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--card); box-shadow: var(--shadow); }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-size: 13px; font-weight: 700; color: var(--muted); background: var(--card-soft); }
+td.r, th.r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+td .muted { display: block; margin-top: 2px; }
+tfoot td { font-weight: 800; background: var(--card-soft); }
+
+/* Analogie */
+.analogy { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; }
+.analogy > div { padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 15px; }
+.analogy .h { font-size: 13px; font-weight: 700; color: var(--muted); background: var(--card-soft); }
+.analogy .mid { color: var(--muted); text-align: center; padding-inline: 4px; }
+.analogy .hr { font-weight: 700; }
+.analogy > div:nth-last-child(-n+3) { border-bottom: 0; }
+
+/* Status */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.b-safe { background: var(--safe-bg); color: var(--safe); }
+.b-close { background: var(--close-bg); color: var(--close); }
+.b-over { background: var(--over-bg); color: var(--over); }
+.b-neutral { background: var(--card-soft); color: var(--ink-soft); }
+
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.stat { display: grid; gap: 4px; }
+.stat .v { font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat .l { color: var(--ink-soft); font-size: 15px; }
+
+.rules { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.rules li { display: flex; gap: 10px; align-items: baseline; }
+.rules li::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transform: translateY(-1px); }
+
+.callout { background: var(--accent-soft); border-radius: var(--r-lg); padding: 24px; display: grid; gap: 10px; }
+.callout p { color: var(--ink-soft); }
+
+.foot { border-top: 1px solid var(--line); padding-top: 24px; display: grid; gap: 6px; color: var(--muted); font-size: 13px; }
+
+@media (max-width: 860px) {
+  .hero, .story { grid-template-columns: 1fr; gap: 28px; }
+  .grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .wrap { gap: 48px; padding-block: 24px 56px; }
+  .grid2, .grid3, .stats { grid-template-columns: 1fr; }
+  th, td { padding: 11px 12px; font-size: 14px; }
+  .analogy > div { padding: 12px; font-size: 14px; }
+}
+@page { size: A4; margin: 0; }
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-shadow: none !important; }
+  html, body { background: var(--bg); }
+  body { font-size: 12.5px; line-height: 1.5; }
+  .wrap { max-width: none; padding: 14mm 14mm !important; gap: 30px; }
+  h1 { font-size: 2.4rem; }
+  h2 { font-size: 1.35rem; }
+  .lead { font-size: 1rem; }
+  section { gap: 14px; }
+  .card { padding: 14px; gap: 6px; }
+  .card p, .steps span { font-size: 12.5px; }
+  .surface, .callout { padding: 16px; }
+  th, td { padding: 8px 12px; font-size: 12.5px; }
+  .analogy > div { padding: 8px 12px; font-size: 12.5px; }
+  .hm-big { font-size: 3.2rem; }
+  .hero-metric { padding: 20px; }
+  .card, .surface, .tbl, .callout, .hero, .story { break-inside: avoid; }
+  .sec-head { break-after: avoid; }
+  .hero { grid-template-columns: 1.3fr 1fr; gap: 32px; }
+  .story { grid-template-columns: 1fr 1fr; }
+  .grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+</head>
+<style>
+@page { size: A4; margin: 12mm 13mm; }
+@media print {
+  :root, :root:not([data-theme="light"]) { --bg: #FFFFFF; }
+  html, body { background: #FFFFFF; }
+  .wrap { display: block; padding: 0 !important; }
+  .wrap > * + * { margin-top: 26px; }
+  section { display: block; }
+  section > * + * { margin-top: 12px; }
+  .grid2, .grid3, .story, .stats, .tbl, .callout, .surface, .card, .hero { break-inside: avoid; }
+  .sec-head { break-after: avoid; break-inside: avoid; }
+  .foot { break-inside: avoid; }
+  .tbl { break-inside: auto; overflow: visible; }
+  tr { break-inside: avoid; }
+  .card .rules li, .surface .rules li { font-size: 12.5px; }
+  .rules { gap: 6px; }
+  h1 { font-size: 2.2rem; }
+}
+</style>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#2456F5"/><g transform="translate(13 12) scale(0.123)"><path d="M0 0H67V127C78 96 108 78 142 78C194 78 228 111 228 171V328H161V182C161 149 143 132 115 132C89 132 71 148 67 170V328H0Z" fill="#fff"/><circle cx="285" cy="195" r="36.5" fill="#fff" fill-opacity="0.7"/></g></svg>
+      Headroom
+    </div>
+    <span class="pill">Entwurf · Vertraulich · Stand 3. November 2026</span>
+  </header>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-text">
+      <span class="eyebrow">Firmenportfolio und grober Businessplan · für das Team</span>
+      <h1>Wo Headroom steht und wo es hin will.</h1>
+      <p class="lead">Headroom ist eine App für Menschen in Deutschland, die mehrere Jobs kombinieren. Sie rechnet Verdienst und Stunden über alle Jobs zusammen und zeigt, wie viel Spielraum bis zur nächsten gesetzlichen Grenze bleibt. Das Bild dafür: ein Kalorien-Tracker für deine Jobs.</p>
+      <p class="muted">Dieses Dokument ist provisorisch. Zahlen ohne Quelle sind als Annahme markiert. Headroom informiert mit amtlichen Quellen und gibt keine individuelle Steuer- oder Rechtsberatung.</p>
+    </div>
+    <div>
+      <div class="hero-metric" role="img" aria-label="Beispiel aus der App: Noch 116 Euro verfügbar in diesem Monat, etwa 8 Stunden, Status Knapp, 487 von 603 Euro">
+        <div class="hm-row"><span>Dein Spielraum · Oktober</span><span class="hm-badge">Knapp</span></div>
+        <div>
+          <div class="hm-big">116 €</div>
+          <div class="hm-sub">noch verfügbar in diesem Monat, etwa 8 Stunden</div>
+        </div>
+        <div class="hm-track"><div class="hm-fill"></div></div>
+        <div class="hm-row"><span class="num">487 € von 603 €</span><span>Minijob-Grenze 2026</span></div>
+        <div class="hm-foot">Quelle: Minijob-Zentrale · geprüft</div>
+      </div>
+      <p class="hero-note">So sieht die Hauptzahl in der App aus (Beispielprofil).</p>
+    </div>
+  </div>
+
+  <!-- Überblick -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Auf einen Blick</span>
+      <h2>Der Stand in drei Zahlen</h2>
+    </div>
+    <div class="surface">
+      <div class="stats">
+        <div class="stat"><span class="v">≈ 1,8 Mio.</span><span class="l">Studierende mit Job, allein in der ersten Zielgruppe</span><span class="muted">eigene Hochrechnung aus Destatis und DZHW</span></div>
+        <div class="stat"><span class="v">371</span><span class="l">automatische Tests (357 Unit, 14 Ende-zu-Ende), alle grün</span><span class="muted">Stand 3. November 2026</span></div>
+        <div class="stat"><span class="v">0 €</span><span class="l">Umsatz und Finanzierung bisher; keine Firma gegründet, keine öffentlichen Nutzer:innen</span><span class="muted">Ausgangspunkt</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Das Problem</span>
+      <h2>Ein Brief der Krankenkasse um Mitternacht</h2>
+      <p class="lead">Echter Fall, anonymisiert: Ein Freund mit mehreren Jobs schickte nachts um 00:32 Uhr das Foto eines Briefs seiner Krankenkasse.</p>
+    </div>
+    <div class="story">
+      <ol class="steps">
+        <li><div><b>Mehrere Jobs, kein Überblick.</b><span>Jeder Job für sich wirkte harmlos. Niemand hat zusammengerechnet.</span></div></li>
+        <li><div><b>Eine übersehene Pflicht.</b><span>Er war freiwillig gesetzlich versichert und hätte sein Einkommen selbst nachweisen müssen. Er wusste es nicht.</span></div></li>
+        <li><div><b>Höchstbeitrag per Gesetz.</b><span>Ohne Nachweis rechnet die Kasse so, als verdiene er 5.812,50 € im Monat.</span></div></li>
+        <li><div><b>Nachzahlung mit zwei Wochen Frist.</b><span>3.538,08 € rückwirkend für drei Monate, danach 1.179,36 € pro Monat. Kranken- und Pflegeversicherung, keine Steuer.</span></div></li>
+      </ol>
+      <div class="surface" style="display:grid;gap:12px">
+        <p class="quote">Das Problem war nicht das Geld. Es war der fehlende Überblick.</p>
+        <p style="color:var(--ink-soft)">Die Regeln sind über Minijob-Zentrale, Krankenkassen, Rentenversicherung und Gesetzestexte verteilt. Zweites Beispiel aus der App: Lena, 20, hat zwei Minijobs mit 340 € und 280 €. Zusammen sind es 620 €, also 17 € <span class="badge b-over">Über</span> der Grenze von 603 €. In der Regel werden damit beide Jobs versicherungspflichtig.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Produkt -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Was Headroom macht</span>
+      <h2>Das Produkt heute</h2>
+      <p class="lead">Installierbare Web-App auf dem Handy, im Browser und als Mac-App. Deutsch und Englisch, hell und dunkel.</p>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Funktion</th><th>Was sie leistet</th><th>Stand</th></tr></thead>
+        <tbody>
+          <tr><td><b>Dashboard „Dein Spielraum“</b></td><td>Wie viel bis zur strengsten Grenze übrig ist, in Euro und Stunden. Status als Wort und Farbe. Monat, Jahr, Saison.</td><td><span class="badge b-safe">fertig</span></td></tr>
+          <tr><td><b>„Was würde diese Schicht verändern?“</b></td><td>Vor dem Zusagen eine Schicht durchrechnen.</td><td><span class="badge b-safe">fertig</span></td></tr>
+          <tr><td><b>Schichten aus Kalender und Foto</b></td><td>Google-/Apple-Kalender oder Foto des Dienstplans; Texterkennung auf dem Gerät; Doppelte werden erkannt.</td><td><span class="badge b-safe">fertig</span></td></tr>
+          <tr><td><b>Grenzwerte mit Quelle</b></td><td>Jede Grenze mit Wert, Folge, Quelle, Gültigkeit und Prüfdatum.</td><td><span class="badge b-safe">fertig</span></td></tr>
+          <tr><td><b>Rollenbasierte Darstellung</b></td><td>Was oben steht, hängt vom Status ab.</td><td><span class="badge b-safe">fertig</span></td></tr>
+          <tr><td><b>Schüler-Modus</b></td><td>Unter 18: Jugendarbeitsschutz, Ferienjob-Zähler, Eltern-Seite mit Einwilligung als PDF. Keine Werbung, kein Premium, keine Partner.</td><td><span class="badge b-safe">fertig</span></td></tr>
+          <tr><td><b>Konto und verschlüsselter Abgleich</b></td><td>Freiwillig ab 16. Handy, Browser und Mac gleichen sich Ende-zu-Ende-verschlüsselt ab; der Server kann nichts lesen.</td><td><span class="badge b-close">gebaut, nicht freigegeben</span></td></tr>
+          <tr><td><b>Advanced-Modus</b></td><td>Partner-Jobbörse, Partnerhinweise, Premium, Lohnstatistik. Erfundene Partner und Daten, standardmäßig aus.</td><td><span class="badge b-neutral">Demo</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="grid2">
+      <div class="surface" style="display:grid;gap:14px">
+        <h3>Was Headroom verspricht</h3>
+        <ul class="rules">
+          <li>Grenzen und Tracking bleiben kostenlos.</li>
+          <li>Ohne Konto verlassen keine Daten das Gerät. Keine Datenverkäufe.</li>
+          <li>Partner sind immer gekennzeichnet und ausblendbar.</li>
+          <li>Unter 18: keine Partner-, Premium- oder Steuer-App-Hinweise.</li>
+        </ul>
+      </div>
+      <div class="surface" style="display:grid;gap:14px">
+        <h3>Wie Headroom spricht</h3>
+        <ul class="rules">
+          <li>Klartext statt Fachbegriff.</li>
+          <li>„Gilt in der Regel“ statt „du musst“. Headroom informiert, berät nicht.</li>
+          <li>Pro Bildschirm eine Hauptaussage und eine Hauptaktion.</li>
+          <li>Diese Regeln gelten auch für Marketing und Partner.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Markt -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Zielgruppen und Markt</span>
+      <h2>Fünf Profile, ein gemeinsames Problem</h2>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Profil</th><th>Typische Lage</th><th>Was zuerst zählt</th></tr></thead>
+        <tbody>
+          <tr><td><b>Student:in</b></td><td>Minijobs und Saisonjobs, oft familienversichert, teils BAföG</td><td>Minijob-Grenze, Familienversicherung, BAföG, 70 Tage</td></tr>
+          <tr><td><b>Werkstudent:in</b></td><td>Werkstudentenjob, eventuell Minijob daneben</td><td>20 Stunden pro Woche in der Vorlesungszeit</td></tr>
+          <tr><td><b>Minijobber:in</b></td><td>ein oder mehrere Minijobs</td><td>Minijob-Grenze über alle Jobs</td></tr>
+          <tr><td><b>Angestellte mit Nebenjob</b></td><td>Hauptjob plus Minijob</td><td>nur ein Minijob neben dem Hauptjob</td></tr>
+          <tr><td><b>Schüler:in</b></td><td>erster Job, oft unter 18</td><td>Jugendarbeitsschutz, Ferienjob-Tage, Familienversicherung</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="surface">
+      <div class="stats">
+        <div class="stat"><span class="v">2,88 Mio.</span><span class="l">Studierende in Deutschland, Wintersemester 2025/26</span><span class="muted">Statistisches Bundesamt, vorläufig</span></div>
+        <div class="stat"><span class="v">63 %</span><span class="l">arbeiten neben dem Studium, im Schnitt rund 15 Stunden pro Woche</span><span class="muted">DZHW, 22. Sozialerhebung (2021)</span></div>
+        <div class="stat"><span class="v">≈ 1,8 Mio.</span><span class="l">Studierende mit Job</span><span class="muted">eigene Hochrechnung, keine amtliche Zahl</span></div>
+      </div>
+    </div>
+    <p class="muted">Noch offen: Zahlen mit Quelle zu Minijobber:innen gesamt, Schüler:innen mit Job und Angestellten mit Nebenjob. Eine Wettbewerbsanalyse fehlt noch ganz.</p>
+  </section>
+
+  <!-- Geschäftsmodell -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Geschäftsmodell (Entwurf)</span>
+      <h2>Kostenlos, wo es um Grenzen geht. Bezahlt, wo es Mehrwert gibt.</h2>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Stufe</th><th>Inhalt</th><th>Erlös</th><th>Stand</th></tr></thead>
+        <tbody>
+          <tr><td><b>Kostenlos</b></td><td>alle Grenzen, Tracking, Kalender- und Foto-Import</td><td>Reichweite und Vertrauen</td><td><span class="badge b-safe">gebaut</span></td></tr>
+          <tr><td><b>Premium</b></td><td>Jahresbericht als PDF, Verlauf über mehrere Jahre, Erinnerungen</td><td class="num">5 € pro Monat <span class="muted">Annahme</span></td><td><span class="badge b-neutral">Demo, ohne Zahlung</span></td></tr>
+          <tr><td><b>Partner-Jobbörsen</b></td><td>offene Schichten, die in den eigenen Spielraum passen</td><td>Provision je Vermittlung <span class="muted">Höhe offen</span></td><td><span class="badge b-neutral">Demo</span></td></tr>
+          <tr><td><b>Partnerangebote</b></td><td>Steuer, Versicherung, nur bei echtem Anlass</td><td>Provision je Abschluss <span class="muted">Höhe offen</span></td><td><span class="badge b-neutral">Demo</span></td></tr>
+          <tr><td><b>Hochschulen (B2B)</b></td><td>Lizenz für Beratungsstellen zu Nebenjobs</td><td>Lizenzgebühr <span class="muted">offen</span></td><td><span class="badge b-neutral">Idee</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <span class="eyebrow">Rechenbeispiel, nur zur Orientierung</span>
+      <p>Erreicht Headroom 1 % der ≈ 1,8 Mio. Studierenden mit Job, sind das rund <b>18.000 Nutzer:innen</b>. Zahlen davon 5 % für Premium zu 5 € im Monat, ergibt das rund <b>4.500 € im Monat</b> bzw. 54.000 € im Jahr, ohne Partner- und B2B-Erlöse. Alle Werte sind Annahmen; Reichweite, Conversion und Preis müssen erst getestet werden.</p>
+    </div>
+    <p class="muted">Rechtlicher Prüfpunkt: Vor einer Kooperation mit gesetzlichen Krankenkassen sind die Regeln zur Mitgliederwerbung zu klären.</p>
+  </section>
+
+  <!-- Stand -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Aktueller Stand</span>
+      <h2>Wo Headroom heute steht</h2>
+      <p class="lead">Entwicklung seit 24. Oktober 2026, entstanden aus einer Aufgabe für den Admission Day der CODE University. Seitdem rund 55 Commits.</p>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Bereich</th><th>Stand</th></tr></thead>
+        <tbody>
+          <tr><td><b>Produkt</b></td><td>vorführbar und technisch solide, durchgehend mit automatischen Tests</td></tr>
+          <tr><td><b>Backend</b></td><td>Grundgerüst, Konto, verschlüsselter Abgleich und Kalender-Abruf gebaut. Konto und Abgleich warten auf die Klärung der Rechtsgrundlage. Noch nicht gehostet.</td></tr>
+          <tr><td><b>Pitch-Material</b></td><td>Pitch-Deck DE und EN (10 Folien mit Sprechernotizen), Handy-Demo, vier kurze Produktvideos, „Headroom auf einen Blick“, ausführliches Konzeptdokument</td></tr>
+          <tr><td><b>Team</b></td><td>Bennet (Gründer, BWL; hat Produkt und Technik bisher allein gebaut). Vorgesehen, noch nicht fest: Nico (Finanzen?), Arne (Go-to-Market und Pitch?), Johanna (Allrounderin, in Klärung). Gesucht: Software Engineering, eventuell Design oder Marketing.</td></tr>
+          <tr><td><b>Firma</b></td><td>noch nicht gegründet, Rechtsform offen</td></tr>
+          <tr><td><b>Finanzierung</b></td><td>keine; bisher eigene Arbeitszeit</td></tr>
+          <tr><td><b>Nutzer:innen</b></td><td>noch keine öffentlichen, nur Demo und Tests</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Vision -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Wo Headroom hin will</span>
+      <h2>Niemand soll von einem Brief überrascht werden, nur weil er mehrere Jobs hat.</h2>
+      <p class="lead">Headroom soll die Stelle sein, an der man vorher sieht, was gilt. Die Etappen und Zeiten sind Annahmen.</p>
+    </div>
+    <div class="grid2">
+      <div class="card"><span class="badge b-neutral" style="justify-self:start">Phase 1 · bis ca. Anfang 2027</span><h3>Validieren</h3><p>Mit echten Studierenden testen, ob Problem und Lösung ankommen. Ziel: 20–30 Interviews, eine Testgruppe nutzt die App über mehrere Wochen.</p></div>
+      <div class="card"><span class="badge b-neutral" style="justify-self:start">Phase 2 · ca. Sommersemester 2027</span><h3>Öffentlicher Start</h3><p>Gehostete Version, fachlich geprüfte Grenzwerte, vollständiger Datenschutz. Start rechtzeitig vor den Saisonjobs im Sommer. Ziel: erste 1.000 aktive Nutzer:innen (Annahme).</p></div>
+      <div class="card"><span class="badge b-neutral" style="justify-self:start">Phase 3</span><h3>Erlöse testen</h3><p>Premium mit echter Zahlung, erster echter Partner, erste Hochschule als Pilot.</p></div>
+      <div class="card"><span class="badge b-neutral" style="justify-self:start">Phase 4</span><h3>Ausbauen</h3><p>Weitere Zielgruppen: Schüler:innen über Eltern und Schulen, Angestellte mit Nebenjob. Eventuell App-Stores für iOS und Android.</p></div>
+    </div>
+  </section>
+
+  <!-- To-dos -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Was gemacht werden muss</span>
+      <h2>Drei Baustellen bis zum Start</h2>
+    </div>
+    <div class="grid3">
+      <div class="card"><h3>Produkt und Technik</h3><p><b>Bennet, Software Engineering</b></p>
+        <ul class="rules">
+          <li>Gehosteten Betrieb aufsetzen: Server, Datenschutzhinweise, Löschkonzept, Sicherheit</li>
+          <li>Erinnerung an die Meldepflicht für freiwillig Versicherte</li>
+          <li>Erinnerungen per Push</li>
+          <li>Lücken im Kalender-Import, Barrierefreiheit</li>
+        </ul></div>
+      <div class="card"><h3>Fachlich und rechtlich</h3><p><b>extern prüfen lassen, BWL koordiniert</b></p>
+        <ul class="rules">
+          <li>Einzelne Grenzwerte durch sachkundige Stelle prüfen</li>
+          <li>„Information statt Rechtsberatung“ absichern, u. a. Rechtsdienstleistungsgesetz</li>
+          <li>Rechtsgrundlage für Konten klären</li>
+          <li>Mitgliederwerbung bei Krankenkassen-Kooperationen</li>
+        </ul></div>
+      <div class="card"><h3>Business, Finanzen, Markt</h3><p><b>BWL, Finanzen, Go-to-Market</b></p>
+        <ul class="rules">
+          <li>Erste Zielgruppe und Zugangsweg festlegen</li>
+          <li>Erlösmodell konkretisieren</li>
+          <li>Finanzmodell, Förderung und Finanzierung</li>
+          <li>Gründung vorbereiten</li>
+        </ul></div>
+    </div>
+  </section>
+
+  <!-- Team -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Team und Rollen</span>
+      <h2>Wer was machen könnte – und wo wir noch Leute suchen</h2>
+      <p class="lead">Bennet hat Headroom bisher allein gebaut. Jetzt entsteht ein kleines Team. Mit Bennet, Arne und Johanna gibt es drei Leute mit BWL-Hintergrund; für Technik und eventuell Design oder Marketing suchen wir noch.</p>
+    </div>
+    <div class="callout">
+      <span class="eyebrow">Wichtig</span>
+      <p><b>Die Rollen sind noch nicht fest.</b> Namen mit Fragezeichen sind vorgesehen, aber nicht beschlossen. Aufgaben, Aufteilung und Namen werden gemeinsam geklärt und können sich ändern.</p>
+    </div>
+    <div class="grid2">
+      <div class="card"><span class="badge b-neutral" style="justify-self:start">Rolle 1 · gesucht</span><h3>Software Engineering</h3>
+        <ul class="rules">
+          <li>Gehosteten Betrieb mit aufbauen: Server, Sicherheit, Datenschutz</li>
+          <li>Erinnerungen per Push und Erinnerung an die Meldepflicht</li>
+          <li>Kalender-Import verbessern, Barrierefreiheit, später evtl. App-Stores</li>
+          <li>Technik: React-Web-App mit TypeScript, Node-Backend mit Postgres, Tests zuerst</li>
+        </ul>
+        <p><b>Erste 30 Tage:</b> Projekt lokal starten, Tests laufen lassen, eine kleine Funktion von Anfang bis Ende bauen.</p></div>
+      <div class="card"><span class="badge b-close" style="justify-self:start">Rolle 2 · vorgesehen: Nico (?)</span><h3>Finanzen</h3>
+        <ul class="rules">
+          <li>Finanzmodell für zwei bis drei Jahre: Betriebskosten, Erlösszenarien</li>
+          <li>Premium-Preis und Provisionen mit Zahlen hinterlegen</li>
+          <li>Förderungen und Finanzierung finden, z. B. Gründungsstipendien und Programme, mit Fristen</li>
+          <li>Später: Budget, Buchhaltung, Zahlungsabwicklung</li>
+        </ul>
+        <p><b>Erste 30 Tage:</b> Kostenaufstellung für den Betrieb, Liste passender Förderprogramme.</p></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><span class="badge b-close" style="justify-self:start">Rolle 3 · Bennet, Arne, Johanna</span><h3>BWL und Strategie</h3>
+        <ul class="rules">
+          <li>Geschäftsmodell schärfen: Partner, die zur Haltung passen, B2B-Modell für Hochschulen</li>
+          <li>Wettbewerb und Alternativen erfassen: Apps, Rechner, Beratungsstellen, Krankenkassen</li>
+          <li>Gründung vorbereiten: Rechtsform, Verträge, rechtliche Prüfung koordinieren</li>
+          <li>Wer welchen Teil übernimmt, ist noch offen</li>
+        </ul>
+        <p><b>Erste 30 Tage:</b> Wettbewerbsübersicht auf einer Seite, Vorschlag für das B2B-Modell.</p></div>
+      <div class="card"><span class="badge b-close" style="justify-self:start">Rolle 4 · vorgesehen: Arne (?)</span><h3>Go-to-Market und Pitch</h3>
+        <ul class="rules">
+          <li>Erste Zielgruppe und Startzeitpunkt: erster Minijob, Sommer-Saisonjob, Semesterstart</li>
+          <li>Kanäle: Hochschulen, Fachschaften, Studierendenwerke, Social Media, Startup-Initiativen wie Think!</li>
+          <li>Interviews mit Studierenden; Botschaft testen, ohne nach Rechtsberatung zu klingen</li>
+          <li>Pitch-Deck erweitern, Pitch-Wettbewerbe und -Termine</li>
+        </ul>
+        <p><b>Erste 30 Tage:</b> 10 Gespräche mit Studierenden, Vorschlag für Zielgruppe, Kanal und Start.</p></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><span class="badge b-close" style="justify-self:start">Rolle 5 · Johanna, in Klärung</span><h3>Allrounder:in</h3>
+        <ul class="rules">
+          <li>Springt dort ein, wo gerade am meisten zu tun ist: BWL, Go-to-Market, Pitch</li>
+          <li>Organisation: Termine, Absprachen, Überblick über offene Aufgaben</li>
+          <li>Recherche und Interviews mit unterstützen</li>
+          <li>Verbindung zwischen den Rollen</li>
+        </ul>
+        <p><b>Erste 30 Tage:</b> Überblick über alle Rollen gewinnen, eine Aufgabe aus BWL oder Go-to-Market mit übernehmen.</p></div>
+      <div class="card"><span class="badge b-neutral" style="justify-self:start">Rolle 6 · eventuell, gesucht</span><h3>Design oder Marketing</h3>
+        <ul class="rules">
+          <li>Auftritt nach außen: Website bzw. Landingpage, Social-Media-Inhalte</li>
+          <li>Material für Kampagnen und Pitch im bestehenden Headroom-Design</li>
+          <li>Ton und Haltung beibehalten: Klartext, informieren statt beraten</li>
+        </ul>
+        <p><b>Erste 30 Tage:</b> Entwurf für eine Landingpage, erste Vorlagen für Social Media.</p></div>
+    </div>
+    <div class="grid2">
+      <div class="surface" style="display:grid;gap:14px;align-content:start">
+        <h3>Für alle in den ersten Wochen</h3>
+        <ol class="steps">
+          <li><div><b>Produkt kennenlernen.</b><span>Demo öffnen, Beispielprofil „Lena, 20“ laden, „Was würde diese Schicht verändern?“ ausprobieren.</span></div></li>
+          <li><div><b>Konzeptdokument lesen.</b><span>Alle Regeln, Quellen und der technische Stand.</span></div></li>
+          <li><div><b>Haltung verinnerlichen.</b><span>Informieren statt beraten, Daten bleiben auf dem Gerät, Partner immer gekennzeichnet.</span></div></li>
+        </ol>
+      </div>
+      <div class="surface" style="display:grid;gap:14px;align-content:start">
+        <h3>Zusammenarbeit – noch zu klären</h3>
+        <ul class="rules">
+          <li>Wer welche Rolle endgültig übernimmt</li>
+          <li>Umfang in Stunden pro Woche und Dauer, je Rolle</li>
+          <li>Vergütung bzw. Beteiligung, z. B. Anteile mit Vesting – bewusst noch offen</li>
+          <li>Vertraulichkeit und Entscheidungswege im Team</li>
+          <li>Später: Rechtsform, Gründungszeitpunkt, wer gründet mit</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Risiken -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Offene Fragen und Risiken</span>
+      <h2>Was schiefgehen kann und wie wir damit umgehen</h2>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Thema</th><th>Risiko</th><th>Umgang</th></tr></thead>
+        <tbody>
+          <tr><td><b>Rechtsberatung</b></td><td>Die App könnte als Rechtsberatung verstanden werden.</td><td>Strikte Sprache, Quelle an jeder Zahl, rechtliche Prüfung vor dem Start</td></tr>
+          <tr><td><b>Fachliche Fehler</b></td><td>Ein falscher Grenzwert schadet dem Vertrauen.</td><td>Jede Zahl mit Quelle und Prüfstatus; ungeprüfte Werte lösen keine Warnung aus</td></tr>
+          <tr><td><b>Zahlungsbereitschaft</b></td><td>Junge Zielgruppe zahlt ungern.</td><td>Kern bleibt gratis; Premium, Partner und B2B früh testen</td></tr>
+          <tr><td><b>Datenschutz</b></td><td>Sensible Daten zu Einkommen und Versicherung.</td><td>Daten bleiben auf dem Gerät; Abgleich nur verschlüsselt und freiwillig</td></tr>
+          <tr><td><b>Saisonalität</b></td><td>Bedarf steigt vor Sommerjobs und zum Semesterstart.</td><td>Start und Kampagnen danach planen</td></tr>
+          <tr><td><b>Kleines Team</b></td><td>Vieles hängt an einer Person.</td><td>Team mit klaren Rollen aufbauen: Technik, Finanzen, BWL, Go-to-Market</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Material -->
+  <section>
+    <div class="callout">
+      <span class="eyebrow">Material zum Weiterschauen</span>
+      <h3>Headroom auf einen Blick, Konzeptdokument, Funktionskatalog</h3>
+      <p>Pitch-Deck auf Deutsch und Englisch, eine Handy-Demo zum selbst Ausprobieren und kurze Produktvideos gibt es auf Anfrage bei Bennet. Das Konzeptdokument enthält alle Regeln, Quellen und den technischen Stand.</p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Headroom · Bennet Ruhl · Entwurf, Stand 3. November 2026</span>
+    <span>Vertraulich. Alle Grenzwerte gelten für 2026, Quellen in der App. Beispielprofile und Partnernamen außer ELSTER sind erfunden. Zahlen ohne Quelle sind Annahmen.</span>
+  </footer>
+
+</div>
+</body>
+</html>

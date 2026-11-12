@@ -16,3 +16,6 @@ brag-output*/
 # Zugangsdaten für docker compose (Vorlage: .env.example)
 .env
 secrets/
+
+# Leerer Klon des alten GitHub-Repos, gehört nicht ins Projekt
+Headroom/
